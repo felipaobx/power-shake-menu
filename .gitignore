@@ -1,5 +1,6 @@
 .vercel/
 .gemini/
 .agents/
+node_modules/
 
 .vercel

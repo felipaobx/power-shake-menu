@@ -1,5 +1,6 @@
 // Vercel Serverless Function: Save Menu Data
 // URL: /api/save-menu
+const { createClient } = require('redis');
 
 module.exports = async (req, res) => {
     // Enable CORS for testing
@@ -18,17 +19,18 @@ module.exports = async (req, res) => {
         return;
     }
 
-    const { KV_REST_API_URL, KV_REST_API_TOKEN } = process.env;
+    const { REDIS_URL } = process.env;
 
-    // Check if KV is connected on Vercel
-    if (!KV_REST_API_URL || !KV_REST_API_TOKEN) {
+    // Check if Redis is connected on Vercel
+    if (!REDIS_URL) {
         res.status(500).json({ 
             success: false, 
-            error: 'Banco de dados Vercel KV não conectado! Vá no painel da Vercel, clique na aba "Storage", crie um banco de dados "KV" e conecte-o a este projeto para habilitar o salvamento global.' 
+            error: 'Banco de dados Vercel Redis não está conectado! Por favor, certifique-se de que a variável de ambiente REDIS_URL está ativa no painel da Vercel.' 
         });
         return;
     }
 
+    let client;
     try {
         const { menuData, settings, pin } = req.body || {};
         
@@ -47,37 +49,29 @@ module.exports = async (req, res) => {
             return;
         }
 
-        // Save menu_data and settings to the Vercel KV database in parallel
-        // Send stringified values in the POST body to avoid URL size limit issues
-        const [menuSaveRes, settingsSaveRes] = await Promise.all([
-            fetch(`${KV_REST_API_URL}/set/menu_data`, {
-                method: 'POST',
-                headers: { 
-                    Authorization: `Bearer ${KV_REST_API_TOKEN}`,
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify(menuData)
-            }),
-            fetch(`${KV_REST_API_URL}/set/settings`, {
-                method: 'POST',
-                headers: { 
-                    Authorization: `Bearer ${KV_REST_API_TOKEN}`,
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify(settings)
-            })
+        // Connect to Redis
+        client = createClient({ url: REDIS_URL });
+        client.on('error', (err) => console.error('Redis Client Error', err));
+        await client.connect();
+
+        // Write menu_data and settings to Redis
+        await Promise.all([
+            client.set('menu_data', JSON.stringify(menuData)),
+            client.set('settings', JSON.stringify(settings))
         ]);
 
-        if (menuSaveRes.ok && settingsSaveRes.ok) {
-            res.status(200).json({ success: true });
-        } else {
-            const menuErr = await menuSaveRes.text();
-            const settingsErr = await settingsSaveRes.text();
-            throw new Error(`Failed to save database. Menu: ${menuSaveRes.status} (${menuErr}), Settings: ${settingsSaveRes.status} (${settingsErr})`);
-        }
+        res.status(200).json({ success: true });
 
     } catch (err) {
         console.error('Serverless save error:', err);
         res.status(500).json({ success: false, error: err.message });
+    } finally {
+        if (client) {
+            try {
+                await client.disconnect();
+            } catch (e) {
+                // ignore error on disconnect
+            }
+        }
     }
 };

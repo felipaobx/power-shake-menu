@@ -1,5 +1,6 @@
 // Vercel Serverless Function: Get Menu Data
 // URL: /api/get-menu
+const { createClient } = require('redis');
 
 module.exports = async (req, res) => {
     // Enable CORS for testing
@@ -13,53 +14,49 @@ module.exports = async (req, res) => {
         return;
     }
 
-    const { KV_REST_API_URL, KV_REST_API_TOKEN } = process.env;
+    const { REDIS_URL } = process.env;
 
-    // Check if Vercel KV is connected
-    if (!KV_REST_API_URL || !KV_REST_API_TOKEN) {
-        console.warn('Vercel KV Storage not connected.');
+    // Check if REDIS_URL is connected
+    if (!REDIS_URL) {
+        console.warn('Vercel Redis Storage not connected.');
         res.status(200).json({
             success: false,
-            error: 'Vercel KV Storage not connected.',
+            error: 'Vercel Redis Storage not connected.',
             menuData: null,
             settings: null
         });
         return;
     }
 
+    let client;
     try {
-        // Fetch menu_data and settings from Vercel KV using REST API
-        const [menuRes, settingsRes] = await Promise.all([
-            fetch(`${KV_REST_API_URL}/get/menu_data`, {
-                headers: { Authorization: `Bearer ${KV_REST_API_TOKEN}` }
-            }),
-            fetch(`${KV_REST_API_URL}/get/settings`, {
-                headers: { Authorization: `Bearer ${KV_REST_API_TOKEN}` }
-            })
+        // Connect to Redis using TCP connection
+        client = createClient({ url: REDIS_URL });
+        client.on('error', (err) => console.error('Redis Client Error', err));
+        await client.connect();
+
+        // Get key values in parallel
+        const [menuRaw, settingsRaw] = await Promise.all([
+            client.get('menu_data'),
+            client.get('settings')
         ]);
 
         let menuData = null;
         let settings = null;
 
-        if (menuRes.ok) {
-            const menuJson = await menuRes.json();
-            if (menuJson && menuJson.result) {
-                try {
-                    menuData = typeof menuJson.result === 'string' ? JSON.parse(menuJson.result) : menuJson.result;
-                } catch (e) {
-                    menuData = menuJson.result;
-                }
+        if (menuRaw) {
+            try {
+                menuData = JSON.parse(menuRaw);
+            } catch (e) {
+                console.error('Failed to parse menu JSON:', e);
             }
         }
 
-        if (settingsRes.ok) {
-            const settingsJson = await settingsRes.json();
-            if (settingsJson && settingsJson.result) {
-                try {
-                    settings = typeof settingsJson.result === 'string' ? JSON.parse(settingsJson.result) : settingsJson.result;
-                } catch (e) {
-                    settings = settingsJson.result;
-                }
+        if (settingsRaw) {
+            try {
+                settings = JSON.parse(settingsRaw);
+            } catch (e) {
+                console.error('Failed to parse settings JSON:', e);
             }
         }
 
@@ -77,5 +74,13 @@ module.exports = async (req, res) => {
             menuData: null,
             settings: null
         });
+    } finally {
+        if (client) {
+            try {
+                await client.disconnect();
+            } catch (e) {
+                // ignore error on disconnect
+            }
+        }
     }
 };

@@ -1,0 +1,24 @@
+{
+  "name": "power-shake-menu",
+  "version": "1.0.0",
+  "description": "",
+  "main": "app.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/felipaobx/power-shake-menu.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/felipaobx/power-shake-menu/issues"
+  },
+  "homepage": "https://github.com/felipaobx/power-shake-menu#readme",
+  "dependencies": {
+    "redis": "^6.1.0"
+  }
+}
