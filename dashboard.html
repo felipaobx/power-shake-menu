@@ -1,0 +1,272 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Administração - Power Shake Menu</title>
+    <link rel="stylesheet" href="dashboard_style.css">
+    <script type="module" src="https://unpkg.com/ionicons@7.1.0/dist/ionicons/ionicons.esm.js"></script>
+    <script nomodule src="https://unpkg.com/ionicons@7.1.0/dist/ionicons/ionicons.js"></script>
+</head>
+<body>
+
+    <div class="dashboard-container">
+        <!-- Header -->
+        <header class="dashboard-header">
+            <h1>Admin <span>Power Shake</span></h1>
+            <a href="index.html" class="back-btn">
+                <ion-icon name="arrow-back-outline"></ion-icon>
+                Voltar ao Cardápio
+            </a>
+        </header>
+
+        <!-- Navigation Tabs -->
+        <nav class="tabs-navigation">
+            <button class="tab-btn active" onclick="switchTab('tab-general')">Textos e Banners</button>
+            <button class="tab-btn" onclick="switchTab('tab-items')">Gerenciar Itens</button>
+        </nav>
+
+        <!-- Tab 1: General Settings Form -->
+        <main id="tab-general" class="tab-content active">
+            
+            <!-- Hero Settings -->
+            <section class="form-section">
+                <h3 class="form-section-title">Cabeçalho (Hero Banner)</h3>
+                <div class="grid-2">
+                    <div class="form-group">
+                        <label for="hero-title-input">Título do Banner</label>
+                        <input type="text" id="hero-title-input" class="form-control" placeholder="Ex: Monte o Shake Perfeito">
+                    </div>
+                    <div class="form-group">
+                        <label>Imagem de Fundo do Cabeçalho</label>
+                        <div class="image-uploader-wrapper">
+                            <div id="hero-image-preview" class="image-preview"></div>
+                            <label class="file-input-btn">
+                                <ion-icon name="cloud-upload-outline"></ion-icon>
+                                Upload Nova Imagem
+                                <input type="file" id="hero-image-file" accept="image/*">
+                            </label>
+                        </div>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label for="hero-subtitle-input">Subtítulo / Descrição</label>
+                    <textarea id="hero-subtitle-input" class="form-control" placeholder="Descrição do cabeçalho..."></textarea>
+                </div>
+            </section>
+
+            <!-- Mid Promotion Banner Settings -->
+            <section class="form-section">
+                <h3 class="form-section-title">Banner Promocional Central</h3>
+                <div class="grid-2">
+                    <div class="form-group">
+                        <label for="mid-title-input">Título do Banner Promocional</label>
+                        <input type="text" id="mid-title-input" class="form-control" placeholder="Ex: Experimente um novo estilo de vida">
+                    </div>
+                    <div class="form-group">
+                        <label>Imagem de Fundo do Banner</label>
+                        <div class="image-uploader-wrapper">
+                            <div id="mid-image-preview" class="image-preview"></div>
+                            <label class="file-input-btn">
+                                <ion-icon name="cloud-upload-outline"></ion-icon>
+                                Upload Nova Imagem
+                                <input type="file" id="mid-image-file" accept="image/*">
+                            </label>
+                        </div>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label for="mid-subtitle-input">Texto do Banner Promocional</label>
+                    <textarea id="mid-subtitle-input" class="form-control" placeholder="Texto promocional..."></textarea>
+                </div>
+            </section>
+
+            <!-- Address and Maps Settings -->
+            <section class="form-section">
+                <h3 class="form-section-title">Endereço & Contato (Rodapé)</h3>
+                <div class="form-group">
+                    <label for="address-input">Endereço Principal (HTML Suportado)</label>
+                    <input type="text" id="address-input" class="form-control" placeholder="Ex: 📍 <strong>Endereço:</strong> Rua Zeferino Galvão...">
+                </div>
+                <div class="grid-2">
+                    <div class="form-group">
+                        <label for="subaddress-input">Complemento / Informação Adicional</label>
+                        <input type="text" id="subaddress-input" class="form-control" placeholder="Ex: Em frente ao receptivo de lotação...">
+                    </div>
+                    <div class="form-group">
+                        <label for="mapurl-input">Link do Google Maps</label>
+                        <input type="text" id="mapurl-input" class="form-control" placeholder="https://maps.google.com/?q=...">
+                    </div>
+                </div>
+            </section>
+
+        </main>
+
+        <!-- Tab 2: Menu Items List Manager -->
+        <main id="tab-items" class="tab-content">
+            
+            <div class="category-select-wrapper">
+                <div style="display: flex; gap: 12px; align-items: flex-end; flex-wrap: wrap;">
+                    <div>
+                        <label style="font-size:0.85rem; color:var(--text-secondary); display:block; margin-bottom:5px;">Categoria do Item</label>
+                        <select id="category-select" class="category-select-control" onchange="renderItemsTable()">
+                            <!-- Populated dynamically by dashboard.js -->
+                        </select>
+                    </div>
+                    <button class="add-item-btn" id="add-category-btn" style="background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); color: var(--text-primary);">
+                        <ion-icon name="folder-open-outline"></ion-icon>
+                        Nova Categoria
+                    </button>
+                    <button class="add-item-btn" id="delete-category-btn" style="background: rgba(255, 77, 79, 0.15); border: 1px solid rgba(255, 77, 79, 0.2); color: var(--danger);" title="Excluir Categoria Atual">
+                        <ion-icon name="trash-outline"></ion-icon>
+                        Excluir Categoria
+                    </button>
+                </div>
+                <button class="add-item-btn" id="add-item-btn">
+                    <ion-icon name="add-outline"></ion-icon>
+                    Adicionar Item
+                </button>
+            </div>
+
+            <!-- Items Table List -->
+            <div class="items-list-container">
+                <table class="items-table">
+                    <thead>
+                        <tr id="table-headers">
+                            <!-- Headers dynamically set by JS -->
+                        </tr>
+                    </thead>
+                    <tbody id="items-table-body">
+                        <!-- Table rows populated dynamically -->
+                    </tbody>
+                </table>
+            </div>
+
+        </main>
+
+        <!-- Bottom Actions Bar -->
+        <footer class="dashboard-actions-bar">
+            <button class="reset-btn" id="reset-defaults-btn">Restaurar Padrões do Cardápio</button>
+            <button class="save-all-btn" id="save-settings-btn">Salvar Alterações</button>
+        </footer>
+
+    </div>
+
+    <!-- Product Editing Modal Popup Form -->
+    <div class="modal-overlay" id="editor-modal">
+        <div class="modal-content">
+            <button class="modal-close" id="modal-close-btn">&times;</button>
+            <h3 class="modal-title" id="modal-form-title">Editar Item</h3>
+            <form id="item-editor-form" onsubmit="event.preventDefault()">
+                <input type="hidden" id="edit-item-id">
+                
+                <div class="grid-2">
+                    <div class="form-group">
+                        <label for="item-name-input">Nome do Item</label>
+                        <input type="text" id="item-name-input" class="form-control" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="item-media-type">Tipo de Imagem</label>
+                        <select id="item-media-type" class="form-control">
+                            <option value="icon">Emoji / Ícone de Texto</option>
+                            <option value="image">Foto Real (Upload)</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="grid-2">
+                    <div class="form-group" id="icon-field-wrapper">
+                        <label for="item-icon-input">Emoji / Ícone</label>
+                        <input type="text" id="item-icon-input" class="form-control" placeholder="Ex: 🍌">
+                    </div>
+                    <div class="form-group" id="photo-field-wrapper" style="display: none;">
+                        <label>Foto do Produto</label>
+                        <div class="image-uploader-wrapper">
+                            <div id="product-image-preview" class="image-preview" style="width: 50px; height: 50px; border-radius: 50%;"></div>
+                            <label class="file-input-btn">
+                                <ion-icon name="image-outline"></ion-icon>
+                                Upload Foto
+                                <input type="file" id="product-image-file" accept="image/*">
+                            </label>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="grid-2" id="macros-fields-wrapper">
+                    <div class="form-group">
+                        <label for="item-kcal-input">Calorias (kcal)</label>
+                        <input type="number" step="any" id="item-kcal-input" class="form-control" value="0">
+                    </div>
+                    <div class="form-group">
+                        <label for="item-protein-input">Proteínas (g)</label>
+                        <input type="number" step="any" id="item-protein-input" class="form-control" value="0">
+                    </div>
+                </div>
+
+                <div class="grid-2">
+                    <div class="form-group" id="price-field-wrapper">
+                        <label for="item-price-input">Preço (R$)</label>
+                        <input type="number" step="0.01" id="item-price-input" class="form-control" value="0.00">
+                    </div>
+                    <div class="form-group" id="desc-field-wrapper">
+                        <label for="item-desc-input">Descrição / Observação</label>
+                        <input type="text" id="item-desc-input" class="form-control" placeholder="Ex: 200ml">
+                    </div>
+                </div>
+
+                <!-- Special field for Milk versions list -->
+                <div class="form-group" id="versions-field-wrapper" style="display: none;">
+                    <label for="item-versions-input">Sub-versões do Leite (Separadas por vírgula)</label>
+                    <input type="text" id="item-versions-input" class="form-control" placeholder="Ex: regular, A2, zero lactose">
+                </div>
+
+                <div class="modal-actions">
+                    <button type="button" class="modal-btn cancel-btn" id="modal-cancel-btn">Cancelar</button>
+                    <button type="submit" class="modal-btn confirm-btn" id="modal-confirm-btn">Salvar</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Category Editing Modal Popup Form -->
+    <div class="modal-overlay" id="category-modal">
+        <div class="modal-content">
+            <button class="modal-close" id="category-modal-close-btn">&times;</button>
+            <h3 class="modal-title" id="category-modal-form-title">Nova Categoria</h3>
+            <form id="category-editor-form" onsubmit="event.preventDefault()">
+                <div class="form-group">
+                    <label for="cat-name-input">Nome da Categoria</label>
+                    <input type="text" id="cat-name-input" class="form-control" required placeholder="Ex: Sobremesas">
+                </div>
+                <div class="form-group">
+                    <label for="cat-subtitle-input">Subtítulo / Descrição da Categoria</label>
+                    <input type="text" id="cat-subtitle-input" class="form-control" required placeholder="Ex: Doces saudáveis para complementar seu dia">
+                </div>
+                <div class="grid-2">
+                    <div class="form-group">
+                        <label for="cat-position-input">Tipo da Categoria</label>
+                        <select id="cat-position-input" class="form-control">
+                            <option value="step">Passo do Shake (Builder Steps)</option>
+                            <option value="extra">Adicional / Extra (Renders below mid-banner)</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="cat-selection-input">Modo de Seleção</label>
+                        <select id="cat-selection-input" class="form-control">
+                            <option value="multi">Seleção Múltipla (Vários itens)</option>
+                            <option value="single">Seleção Única (Apenas 1 item)</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="modal-actions">
+                    <button type="button" class="modal-btn cancel-btn" id="category-modal-cancel-btn">Cancelar</button>
+                    <button type="submit" class="modal-btn confirm-btn" id="category-modal-confirm-btn">Criar Categoria</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Script loading -->
+    <script src="dashboard.js"></script>
+</body>
+</html>

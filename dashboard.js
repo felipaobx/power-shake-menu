@@ -1,0 +1,631 @@
+// Power Shake Default Database (List of Categories Schema)
+const DEFAULT_MENU_DATA = {
+    categories: [
+        {
+            id: 'fruits',
+            name: 'Escolha a Fruta',
+            subtitle: 'Base do Shake (100g)',
+            isStep: true,
+            selectionType: 'single',
+            items: [
+                { id: 'mamao', name: 'Mamão', kcal: 43, protein: 0.5, price: 0.0, icon: '🥭', image: '' },
+                { id: 'banana', name: 'Banana', kcal: 89, protein: 1.1, price: 0.0, icon: '🍌', image: '' },
+                { id: 'morango', name: 'Morango', kcal: 33, protein: 0.7, price: 0.0, icon: '🍓', image: '' },
+                { id: 'frutas_vermelhas', name: 'Frutas vermelhas', kcal: 45, protein: 0.5, price: 0.0, icon: '🍒', image: '' },
+                { id: 'maracuja', name: 'Maracujá', kcal: 80, protein: 1.8, price: 0.0, icon: '🍋', image: '' },
+                { id: 'goiaba', name: 'Goiaba', kcal: 68, protein: 2.6, price: 0.0, icon: '🍑', image: '' },
+                { id: 'abacate', name: 'Abacate', kcal: 160, protein: 2.0, price: 0.0, icon: '🥑', image: '' }
+            ]
+        },
+        {
+            id: 'milks',
+            name: 'Escolha o Leite',
+            subtitle: '200ml',
+            isStep: true,
+            selectionType: 'single',
+            items: [
+                { id: 'leite_vegetal_barista', name: 'Leite vegetal Barista', kcal: 0, protein: 0, price: 10.90, icon: '🥛', description: '200ml', image: '' },
+                { id: 'leite_vegetal', name: 'Leite vegetal', kcal: 0, protein: 0, price: 9.90, icon: '🥛', description: '200ml', image: '' },
+                { 
+                    id: 'leite_ninho_levinho', 
+                    name: 'Leite Ninho levinho', 
+                    kcal: 85.5, 
+                    protein: 6.4, 
+                    price: 6.90, 
+                    icon: '🥛', 
+                    description: '200ml',
+                    versions: ['regular', 'A2', 'zero lactose'],
+                    image: ''
+                },
+                { 
+                    id: 'leite_molico', 
+                    name: 'Leite Molico', 
+                    kcal: 0, 
+                    protein: 0, 
+                    price: 6.90, 
+                    icon: '🥛', 
+                    description: '200ml',
+                    versions: ['regular', 'zero lactose'],
+                    image: ''
+                },
+                { id: 'leite_camponesa', name: 'Leite Camponesa', kcal: 0, protein: 14.0, price: 8.50, icon: '🥛', description: '200ml', image: '' },
+                { id: 'leite_avela', name: 'Leite de Avelã', kcal: 58, protein: 1.0, price: 9.90, icon: '🥛', description: '200ml (Sob Consulta)', image: '' },
+                { id: 'leite_amendoas', name: 'Leite de Amêndoas', kcal: 30, protein: 2.0, price: 9.90, icon: '🥛', description: '200ml (Sob Consulta)', image: '' },
+                { id: 'leite_desnatado', name: 'Leite Desnatado', kcal: 65, protein: 7.0, price: 6.90, icon: '🥛', description: '200ml (Sob Consulta)', image: '' },
+                { id: 'leite_aveia', name: 'Leite de Aveia', kcal: 110, protein: 1.8, price: 9.90, icon: '🥛', description: '200ml (Sob Consulta)', image: '' },
+                { id: 'leite_soja', name: 'Leite de Soja', kcal: 95, protein: 7.3, price: 9.90, icon: '🥛', description: '200ml (Sob Consulta)', image: '' },
+                { id: 'leite_castanha', name: 'Leite de Castanha', kcal: 85, protein: 1.9, price: 9.90, icon: '🥛', description: '200ml (Sob Consulta)', image: '' }
+            ]
+        },
+        {
+            id: 'whey',
+            name: 'Adicione Whey Protein',
+            subtitle: 'Proteína Pura',
+            isStep: true,
+            selectionType: 'single',
+            items: [
+                { 
+                    id: 'whey_100', 
+                    name: 'Whey 100% Concentrado (40g)', 
+                    kcal: 115, 
+                    protein: 20.0, 
+                    price: 15.90, 
+                    icon: '💪', 
+                    description: 'Mais performance, recuperação muscular acelerada e ganho de massa.',
+                    image: ''
+                }
+            ]
+        },
+        {
+            id: 'toppings',
+            name: 'Toppings & Acompanhamentos',
+            subtitle: 'Toque Final',
+            isStep: true,
+            selectionType: 'multi',
+            items: [
+                { id: 'hey_mu', name: 'Hey Mu (20g)', kcal: 29, protein: 1.5, price: 5.90, icon: '🐮', image: '' },
+                { id: 'sorvete_zero', name: 'Sorvete zero açúcar (60g)', kcal: 60, protein: 2.2, price: 0.0, icon: '🍦', image: '' },
+                { id: 'leite_moca_light', name: 'Leite moça Light (20g)', kcal: 56, protein: 1.9, price: 0.0, icon: '🍯', image: '' }
+            ]
+        },
+        {
+            id: 'peanutButters',
+            name: 'Adicione Pasta Dr. Peanut',
+            subtitle: 'Cremosidade (30g)',
+            isStep: false,
+            selectionType: 'multi',
+            items: [
+                { id: 'peanut_cookies', name: 'Cookies & Cream', price: 5.90, icon: '🥜', image: '' },
+                { id: 'peanut_bombom', name: 'Bombom Italiano', price: 6.90, icon: '🥜', image: '' },
+                { id: 'peanut_brownie', name: 'Brownie', price: 6.90, icon: '🥜', image: '' },
+                { id: 'peanut_avela', name: 'Avelã', price: 4.99, icon: '🥜', image: '' },
+                { id: 'peanut_buenissimo', name: 'Buenissimo', price: 4.99, icon: '🥜', image: '' },
+                { id: 'peanut_leite_po', name: 'Leite em pó', price: 4.99, icon: '🥜', image: '' },
+                { id: 'peanut_caramelo', name: 'Caramelo salgado', price: 12.50, icon: '🥜', image: '' },
+                { id: 'peanut_doce_leite', name: 'Doce de leite', price: 7.90, icon: '🥜', image: '' },
+                { id: 'peanut_beijinho', name: 'Beijinho', price: 7.90, icon: '🥜', image: '' },
+                { id: 'peanut_pistache', name: 'Pistache', price: 7.90, icon: '🥜', image: '' }
+            ]
+        },
+        {
+            id: 'supplements',
+            name: 'Suplementos & Extras',
+            subtitle: 'Potencialize',
+            isStep: false,
+            selectionType: 'multi',
+            items: [
+                { id: 'sup_multivitaminico', name: 'Multivitamínico + Ômega 3 (Max Titanium)', price: 5.99, icon: '💊', description: '2 cáps. de cada', image: '' },
+                { id: 'sup_creatina_7belos', name: 'Creatina 7 Belos', price: 3.99, icon: '⚡', image: '' },
+                { id: 'sup_creatina_max', name: 'Creatina Max Titanium', price: 2.99, icon: '⚡', image: '' },
+                { id: 'sup_pre_horus_7belos', name: 'Pré-Treino Horus 7 Belos', price: 5.90, icon: '🔥', image: '' },
+                { id: 'sup_pre_horus_frutas', name: 'Pré-Treino Horus Frutas Vermelhas', price: 5.90, icon: '🔥', image: '' }
+            ]
+        }
+    ]
+};
+
+const DEFAULT_SETTINGS = {
+    heroTitle: 'Monte o Shake Perfeito',
+    heroSubtitle: 'Escolha a fruta, o leite, adicione whey e os toppings ideais para o seu treino e a sua dieta. Sabor, energia e resultado em cada copo.',
+    heroImage: 'assets/hero.png',
+    midBannerTitle: 'Experimente um novo estilo de vida',
+    midBannerSubtitle: 'Venha conhecer a Power Shake! Nossa missão é trazer sabor incomparável alinhado com a sua rotina fitness.',
+    midBannerImage: 'assets/fruits.png',
+    address: '📍 <strong>Endereço:</strong> Rua Zeferino Galvão, nº 508, 1º andar, sala 01',
+    subAddress: 'Em frente ao receptivo de lotação (Acima da Medic Center)',
+    mapUrl: 'https://maps.google.com/?q=Rua+Zeferino+Galvão,+508+Caruaru'
+};
+
+// Database State
+let MENU_DATA = JSON.parse(localStorage.getItem('power_shake_menu_data'));
+let SETTINGS = JSON.parse(localStorage.getItem('power_shake_settings')) || DEFAULT_SETTINGS;
+
+// Migration Check: If old data structure doesn't support categories lists, reload
+if (MENU_DATA && !MENU_DATA.categories) {
+    MENU_DATA = DEFAULT_MENU_DATA;
+    localStorage.setItem('power_shake_menu_data', JSON.stringify(DEFAULT_MENU_DATA));
+} else if (!MENU_DATA) {
+    MENU_DATA = DEFAULT_MENU_DATA;
+    localStorage.setItem('power_shake_menu_data', JSON.stringify(DEFAULT_MENU_DATA));
+}
+
+// Temporary file uploader state
+let uploadedProductImageBase64 = '';
+
+// DOM selectors
+const dom = {
+    // General Settings Inputs
+    heroTitle: document.getElementById('hero-title-input'),
+    heroSubtitle: document.getElementById('hero-subtitle-input'),
+    heroPreview: document.getElementById('hero-image-preview'),
+    heroFile: document.getElementById('hero-image-file'),
+    
+    midTitle: document.getElementById('mid-title-input'),
+    midSubtitle: document.getElementById('mid-subtitle-input'),
+    midPreview: document.getElementById('mid-image-preview'),
+    midFile: document.getElementById('mid-image-file'),
+
+    address: document.getElementById('address-input'),
+    subaddress: document.getElementById('subaddress-input'),
+    mapUrl: document.getElementById('mapurl-input'),
+
+    // Category Select and Table
+    categorySelect: document.getElementById('category-select'),
+    tableHeaders: document.getElementById('table-headers'),
+    tableBody: document.getElementById('items-table-body'),
+    addItemBtn: document.getElementById('add-item-btn'),
+    addCategoryBtn: document.getElementById('add-category-btn'),
+    deleteCategoryBtn: document.getElementById('delete-category-btn'),
+
+    // Bottom Bar Actions
+    saveSettingsBtn: document.getElementById('save-settings-btn'),
+    resetDefaultsBtn: document.getElementById('reset-defaults-btn'),
+
+    // Item Form Modal
+    itemModal: document.getElementById('editor-modal'),
+    modalTitle: document.getElementById('modal-form-title'),
+    modalForm: document.getElementById('item-editor-form'),
+    editItemId: document.getElementById('edit-item-id'),
+    itemName: document.getElementById('item-name-input'),
+    itemMediaType: document.getElementById('item-media-type'),
+    itemIcon: document.getElementById('item-icon-input'),
+    productPreview: document.getElementById('product-image-preview'),
+    productFile: document.getElementById('product-image-file'),
+    itemKcal: document.getElementById('item-kcal-input'),
+    itemProtein: document.getElementById('item-protein-input'),
+    itemPrice: document.getElementById('item-price-input'),
+    itemDesc: document.getElementById('item-desc-input'),
+    itemVersions: document.getElementById('item-versions-input'),
+    modalCloseBtn: document.getElementById('modal-close-btn'),
+    modalCancelBtn: document.getElementById('modal-cancel-btn'),
+
+    // Category Form Modal
+    catModal: document.getElementById('category-modal'),
+    catForm: document.getElementById('category-editor-form'),
+    catName: document.getElementById('cat-name-input'),
+    catSubtitle: document.getElementById('cat-subtitle-input'),
+    catPosition: document.getElementById('cat-position-input'),
+    catSelection: document.getElementById('cat-selection-input'),
+    catCloseBtn: document.getElementById('category-modal-close-btn'),
+    catCancelBtn: document.getElementById('category-modal-cancel-btn')
+};
+
+// Switch between navigation tabs
+function switchTab(tabId) {
+    const tabs = document.querySelectorAll('.tab-btn');
+    tabs.forEach(t => t.classList.remove('active'));
+    
+    const clickedTab = Array.from(tabs).find(t => t.getAttribute('onclick').includes(tabId));
+    if (clickedTab) clickedTab.classList.add('active');
+
+    const contents = document.querySelectorAll('.tab-content');
+    contents.forEach(c => c.classList.remove('active'));
+    
+    document.getElementById(tabId).classList.add('active');
+
+    if (tabId === 'tab-items') {
+        populateCategoryDropdown();
+        renderItemsTable();
+    }
+}
+
+// Populate the Category select options dynamically from MENU_DATA.categories
+function populateCategoryDropdown(selectedId = null) {
+    const activeId = selectedId || dom.categorySelect.value || 'fruits';
+    dom.categorySelect.innerHTML = MENU_DATA.categories.map(cat => {
+        let suffix = cat.isStep ? ' (Passo)' : ' (Extra)';
+        return `<option value="${cat.id}" ${cat.id === activeId ? 'selected' : ''}>${cat.name}${suffix}</option>`;
+    }).join('');
+}
+
+// Load general text uploader states
+function loadGeneralSettings() {
+    dom.heroTitle.value = SETTINGS.heroTitle;
+    dom.heroSubtitle.value = SETTINGS.heroSubtitle;
+    dom.heroPreview.style.backgroundImage = `url('${SETTINGS.heroImage}')`;
+
+    dom.midTitle.value = SETTINGS.midBannerTitle;
+    dom.midSubtitle.value = SETTINGS.midBannerSubtitle;
+    dom.midPreview.style.backgroundImage = `url('${SETTINGS.midBannerImage}')`;
+
+    dom.address.value = SETTINGS.address;
+    dom.subaddress.value = SETTINGS.subAddress;
+    dom.mapUrl.value = SETTINGS.mapUrl;
+}
+
+// Convert files to Base64 strings
+function setupUploaders() {
+    dom.heroFile.addEventListener('change', function(e) {
+        handleImageUpload(e.target.files[0], 'heroImage', dom.heroPreview);
+    });
+
+    dom.midFile.addEventListener('change', function(e) {
+        handleImageUpload(e.target.files[0], 'midBannerImage', dom.midPreview);
+    });
+
+    dom.productFile.addEventListener('change', function(e) {
+        if (e.target.files[0]) {
+            if (e.target.files[0].size > 1.5 * 1024 * 1024) {
+                alert('A imagem é muito grande! Escolha uma foto com tamanho menor que 1.5MB.');
+                return;
+            }
+            const reader = new FileReader();
+            reader.onload = function(evt) {
+                uploadedProductImageBase64 = evt.target.result;
+                dom.productPreview.style.backgroundImage = `url('${evt.target.result}')`;
+            };
+            reader.readAsDataURL(e.target.files[0]);
+        }
+    });
+}
+
+function handleImageUpload(file, stateKey, previewEl) {
+    if (!file) return;
+
+    if (file.size > 2.5 * 1024 * 1024) {
+        alert('A imagem é muito grande! Escolha um arquivo menor que 2.5MB.');
+        return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = function(evt) {
+        SETTINGS[stateKey] = evt.target.result;
+        previewEl.style.backgroundImage = `url('${evt.target.result}')`;
+    };
+    reader.readAsDataURL(file);
+}
+
+// Render Category Product list table
+function renderItemsTable() {
+    const catId = dom.categorySelect.value || 'fruits';
+    const category = MENU_DATA.categories.find(c => c.id === catId);
+    
+    dom.tableHeaders.innerHTML = '';
+    dom.tableBody.innerHTML = '';
+
+    if (!category) return;
+
+    // Headers set
+    let headers = ['Imagem / Ícone', 'Nome'];
+    const showPrice = category.id !== 'fruits';
+    const showMacros = ['fruits', 'milks', 'whey', 'toppings'].includes(category.id);
+    const showDesc = category.id === 'supplements' || category.id === 'milks';
+
+    if (showPrice) headers.push('Preço');
+    if (showMacros) headers.push('Kcal', 'Proteína');
+    if (showDesc) headers.push(category.id === 'milks' ? 'Versões / Desc' : 'Observação');
+    headers.push('Ações');
+
+    dom.tableHeaders.innerHTML = headers.map(h => `<th>${h}</th>`).join('');
+
+    const items = category.items || [];
+
+    if (items.length === 0) {
+        dom.tableBody.innerHTML = `<tr><td colspan="${headers.length}" style="text-align:center; color:var(--text-muted); padding: 30px 0;">Nenhum produto cadastrado nesta categoria.</td></tr>`;
+        return;
+    }
+
+    dom.tableBody.innerHTML = items.map(item => {
+        // Render either Real Photo thumbnail or Emoji icon
+        const mediaHtml = item.image 
+            ? `<img src="${item.image}" class="table-item-img" alt="${item.name}">`
+            : `<span style="font-size:1.6rem;">${item.icon || '🥤'}</span>`;
+
+        let cols = [
+            `<td>${mediaHtml}</td>`,
+            `<td class="item-name-cell">${item.name}</td>`
+        ];
+
+        if (showPrice) {
+            cols.push(`<td class="item-price">${formatCurrency(item.price || 0)}</td>`);
+        }
+        if (showMacros) {
+            cols.push(`<td>${item.kcal || 0} kcal</td>`);
+            cols.push(`<td>${item.protein || 0}g</td>`);
+        }
+        if (showDesc) {
+            if (category.id === 'milks') {
+                let vers = item.versions ? item.versions.join(', ') : 'Padrão';
+                cols.push(`<td><div class="item-badge">${item.description || '200ml'}</div><div style="font-size:0.75rem; color:var(--text-secondary); margin-top:2px;">Versões: ${vers}</div></td>`);
+            } else {
+                cols.push(`<td>${item.description || ''}</td>`);
+            }
+        }
+
+        // Action controls
+        const isDefaultWhey = category.id === 'whey' && item.id === 'whey_100';
+        const deleteBtn = isDefaultWhey
+            ? `<button class="action-btn" style="opacity:0.3; cursor:not-allowed;" title="Item padrão Whey não pode ser excluído"><ion-icon name="trash-outline"></ion-icon></button>`
+            : `<button class="action-btn delete-btn" onclick="deleteMenuItem('${item.id}')" title="Excluir"><ion-icon name="trash-outline"></ion-icon></button>`;
+
+        cols.push(`
+            <td>
+                <div class="action-buttons">
+                    <button class="action-btn edit-btn" onclick="openItemEditor('${item.id}')" title="Editar"><ion-icon name="create-outline"></ion-icon></button>
+                    ${deleteBtn}
+                </div>
+            </td>
+        `);
+
+        return `<tr>${cols.join('')}</tr>`;
+    }).join('');
+}
+
+function formatCurrency(value) {
+    return value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+}
+
+// Media type filter handler inside product form modal
+function toggleItemMediaFields() {
+    const val = dom.itemMediaType.value;
+    const iconWrapper = document.getElementById('icon-field-wrapper');
+    const photoWrapper = document.getElementById('photo-field-wrapper');
+
+    if (val === 'icon') {
+        iconWrapper.style.display = 'flex';
+        photoWrapper.style.display = 'none';
+        dom.itemIcon.required = true;
+    } else {
+        iconWrapper.style.display = 'none';
+        photoWrapper.style.display = 'flex';
+        dom.itemIcon.required = false;
+    }
+}
+
+// Modal Form Open Logic for Items
+window.openItemEditor = function(id = null) {
+    const catId = dom.categorySelect.value;
+    const category = MENU_DATA.categories.find(c => c.id === catId);
+    
+    dom.editItemId.value = id || '';
+    dom.modalForm.reset();
+    uploadedProductImageBase64 = '';
+    dom.productPreview.style.backgroundImage = 'none';
+
+    // Show/hide fields
+    const macrosWrapper = document.getElementById('macros-fields-wrapper');
+    const priceWrapper = document.getElementById('price-field-wrapper');
+    const descWrapper = document.getElementById('desc-field-wrapper');
+    const versionsWrapper = document.getElementById('versions-field-wrapper');
+
+    macrosWrapper.style.display = ['fruits', 'milks', 'whey', 'toppings'].includes(catId) ? 'flex' : 'none';
+    priceWrapper.style.display = catId !== 'fruits' ? 'flex' : 'none';
+    descWrapper.style.display = ['milks', 'supplements'].includes(catId) ? 'flex' : 'none';
+    versionsWrapper.style.display = catId === 'milks' ? 'flex' : 'none';
+
+    if (id && category) {
+        dom.modalTitle.innerText = 'Editar Item';
+        let item = category.items.find(i => i.id === id);
+
+        if (item) {
+            dom.itemName.value = item.name;
+            
+            // Set image uploader vs emoji uploader fields
+            if (item.image) {
+                dom.itemMediaType.value = 'image';
+                uploadedProductImageBase64 = item.image;
+                dom.productPreview.style.backgroundImage = `url('${item.image}')`;
+                dom.itemIcon.value = '';
+            } else {
+                dom.itemMediaType.value = 'icon';
+                dom.itemIcon.value = item.icon || '';
+            }
+            
+            dom.itemKcal.value = item.kcal || 0;
+            dom.itemProtein.value = item.protein || 0;
+            dom.itemPrice.value = item.price || 0.00;
+            dom.itemDesc.value = item.description || '';
+            
+            if (item.versions) {
+                dom.itemVersions.value = item.versions.join(', ');
+            } else {
+                dom.itemVersions.value = '';
+            }
+        }
+    } else {
+        dom.modalTitle.innerText = 'Novo Item';
+        dom.itemMediaType.value = 'icon';
+        dom.itemPrice.value = '0.00';
+        dom.itemKcal.value = '0';
+        dom.itemProtein.value = '0';
+    }
+
+    toggleItemMediaFields();
+    dom.itemModal.style.display = 'flex';
+};
+
+// Item Editor Modal Submit Save
+dom.modalForm.addEventListener('submit', function(e) {
+    e.preventDefault();
+    const catId = dom.categorySelect.value;
+    const category = MENU_DATA.categories.find(c => c.id === catId);
+    
+    if (!category) return;
+    
+    const id = dom.editItemId.value;
+    const name = dom.itemName.value.trim();
+    const mediaType = dom.itemMediaType.value;
+    
+    const icon = mediaType === 'icon' ? dom.itemIcon.value.trim() : '';
+    const image = mediaType === 'image' ? uploadedProductImageBase64 : '';
+
+    const kcal = parseFloat(dom.itemKcal.value) || 0;
+    const protein = parseFloat(dom.itemProtein.value) || 0;
+    const price = parseFloat(dom.itemPrice.value) || 0;
+    const description = dom.itemDesc.value.trim();
+    const rawVersions = dom.itemVersions.value.trim();
+
+    let versions = undefined;
+    if (catId === 'milks' && rawVersions) {
+        versions = rawVersions.split(',').map(v => v.trim()).filter(v => v.length > 0);
+    }
+
+    if (id) {
+        // EDIT MODE
+        const index = category.items.findIndex(i => i.id === id);
+        if (index !== -1) {
+            category.items[index] = {
+                ...category.items[index],
+                name, icon, image, kcal, protein, price, description, versions
+            };
+        }
+    } else {
+        // ADD NEW ITEM MODE
+        const newItem = {
+            id: 'item_' + Date.now(),
+            name, icon, image, kcal, protein, price, description, versions
+        };
+        category.items.push(newItem);
+    }
+
+    dom.itemModal.style.display = 'none';
+    renderItemsTable();
+});
+
+// Delete Menu Item
+window.deleteMenuItem = function(id) {
+    const catId = dom.categorySelect.value;
+    const category = MENU_DATA.categories.find(c => c.id === catId);
+    if (!category) return;
+
+    if (confirm('Tem certeza que deseja remover este item de forma permanente?')) {
+        category.items = category.items.filter(i => i.id !== id);
+        renderItemsTable();
+    }
+};
+
+// Setup dynamic category modal actions
+function setupCategoryActions() {
+    // Open category modal
+    dom.addCategoryBtn.addEventListener('click', () => {
+        dom.catForm.reset();
+        dom.catModal.style.display = 'flex';
+    });
+
+    // Close category modal
+    const closeCatModal = () => dom.catModal.style.display = 'none';
+    dom.catCloseBtn.addEventListener('click', closeCatModal);
+    dom.catCancelBtn.addEventListener('click', closeCatModal);
+    
+    // Save new category
+    dom.catForm.addEventListener('submit', function(e) {
+        e.preventDefault();
+        const name = dom.catName.value.trim();
+        const subtitle = dom.catSubtitle.value.trim();
+        const position = dom.catPosition.value;
+        const selection = dom.catSelection.value;
+        
+        const newCatId = 'cat_' + Date.now();
+        const newCategoryObj = {
+            id: newCatId,
+            name,
+            subtitle,
+            isStep: position === 'step',
+            selectionType: selection,
+            items: []
+        };
+
+        MENU_DATA.categories.push(newCategoryObj);
+        closeCatModal();
+        populateCategoryDropdown(newCatId);
+        renderItemsTable();
+    });
+
+    // Delete category action
+    dom.deleteCategoryBtn.addEventListener('click', function() {
+        const catId = dom.categorySelect.value;
+        
+        // Prevent deleting original core categories to keep calculations intact
+        const defaultIds = ['fruits', 'milks', 'whey', 'toppings', 'peanutButters', 'supplements'];
+        if (defaultIds.includes(catId)) {
+            alert('Atenção: Categorias padrão do sistema (como Frutas, Leites, Whey e Toppings) não podem ser excluídas para não quebrar a estrutura de passos do construtor de shakes.');
+            return;
+        }
+
+        const category = MENU_DATA.categories.find(c => c.id === catId);
+        if (category && confirm(`Tem certeza que deseja excluir permanentemente a categoria "${category.name}" e todos os seus produtos cadastrados?`)) {
+            MENU_DATA.categories = MENU_DATA.categories.filter(c => c.id !== catId);
+            populateCategoryDropdown('fruits');
+            renderItemsTable();
+        }
+    });
+}
+
+// Setup Event Listeners and Button Actions
+function setupDashboardActions() {
+    // Switch media type dropdown in modal editor
+    dom.itemMediaType.addEventListener('change', toggleItemMediaFields);
+
+    // Add Item click
+    dom.addItemBtn.addEventListener('click', () => openItemEditor());
+
+    // Item modal closes
+    dom.modalCloseBtn.addEventListener('click', closeModal);
+    dom.modalCancelBtn.addEventListener('click', closeModal);
+    window.addEventListener('click', (e) => {
+        if (e.target === dom.itemModal) closeModal();
+        if (e.target === dom.catModal) dom.catModal.style.display = 'none';
+    });
+
+    function closeModal() {
+        dom.itemModal.style.display = 'none';
+    }
+
+    // Save All Changes to storage
+    dom.saveSettingsBtn.addEventListener('click', function() {
+        SETTINGS.heroTitle = dom.heroTitle.value.trim();
+        SETTINGS.heroSubtitle = dom.heroSubtitle.value.trim();
+        
+        SETTINGS.midBannerTitle = dom.midTitle.value.trim();
+        SETTINGS.midBannerSubtitle = dom.midSubtitle.value.trim();
+
+        SETTINGS.address = dom.address.value.trim();
+        SETTINGS.subAddress = dom.subaddress.value.trim();
+        SETTINGS.mapUrl = dom.mapUrl.value.trim();
+
+        // Save states back to LocalStorage
+        localStorage.setItem('power_shake_menu_data', JSON.stringify(MENU_DATA));
+        localStorage.setItem('power_shake_settings', JSON.stringify(SETTINGS));
+
+        alert('Todas as alterações e customizações foram salvas com sucesso!');
+    });
+
+    // Reset Defaults Option
+    dom.resetDefaultsBtn.addEventListener('click', function() {
+        if (confirm('Atenção: Você tem certeza de que deseja restaurar as configurações originais do cardápio? Todas as alterações personalizadas, novas categorias, fotos e preços serão apagados.')) {
+            localStorage.removeItem('power_shake_menu_data');
+            localStorage.removeItem('power_shake_settings');
+            alert('Configurações originais restauradas com sucesso!');
+            window.location.reload();
+        }
+    });
+}
+
+// Initializer
+document.addEventListener('DOMContentLoaded', function() {
+    loadGeneralSettings();
+    setupUploaders();
+    populateCategoryDropdown();
+    setupCategoryActions();
+    setupDashboardActions();
+});

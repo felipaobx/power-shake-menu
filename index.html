@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Monte o shake perfeito para o seu treino e dieta na Power Shake. Escolha suas frutas, leites, whey e acompanhamentos favoritos!">
+    <title>Power Shake - Cardápio Interativo & Construtor de Shakes</title>
+    <link rel="stylesheet" href="style.css">
+    <!-- Ionicons for modern clean icons -->
+    <script type="module" src="https://unpkg.com/ionicons@7.1.0/dist/ionicons/ionicons.esm.js"></script>
+    <script nomodule src="https://unpkg.com/ionicons@7.1.0/dist/ionicons/ionicons.js"></script>
+</head>
+<body>
+
+    <div class="app-container">
+        <!-- Hero Banner Header -->
+        <header class="hero">
+            <div class="hero-content">
+                <span class="logo-badge">Power Shake</span>
+                <h1 id="hero-title">Monte o Shake Perfeito</h1>
+                <p id="hero-subtitle">Escolha a fruta, o leite, adicione whey e os toppings ideais para o seu treino e a sua dieta. Sabor, energia e resultado em cada copo.</p>
+            </div>
+        </header>
+
+        <!-- Main Workspace Grid -->
+        <main class="main-grid">
+                       <!-- Left Side: Interactive Steps -->
+            <div>
+                <!-- Shake Builder Steps (e.g. Fruit, Milk, Whey, Toppings) -->
+                <div class="builder-steps" id="builder-steps-container">
+                    <!-- Loaded dynamically from app.js -->
+                </div>
+
+                <!-- Mid-Banner Promotion -->
+                <div class="mid-banner">
+                    <h3 id="mid-banner-title">Experimente um novo estilo de vida</h3>
+                    <p id="mid-banner-subtitle">Venha conhecer a Power Shake! Nossa missão é trazer sabor incomparável alinhado com a sua rotina fitness.</p>
+                </div>
+
+                <!-- Extra / Adicionais Sections (e.g. Peanut Butter, Supplements, and Custom Extras) -->
+                <div class="builder-steps" id="extras-container">
+                    <!-- Loaded dynamically from app.js -->
+                </div>
+            </div>
+
+            <!-- Right Side: Sticky Checkout Sidebar -->
+            <aside class="summary-sidebar">
+                <div class="summary-card">
+                    <h3 class="summary-title">
+                        Resumo do Pedido
+                        <span id="clear-order-btn">Limpar Tudo</span>
+                    </h3>
+
+                    <!-- Selection list dynamically generated -->
+                    <div class="selection-summary" id="summary-items">
+                        <!-- Dynamically filled by app.js -->
+                    </div>
+                    
+                    <div class="empty-summary-msg" id="empty-summary-msg">
+                        Nenhum item selecionado. Comece escolhendo uma fruta base e um leite!
+                    </div>
+
+                    <!-- Macro nutrition counters -->
+                    <div class="macros-progress">
+                        <div class="macro-box">
+                            <span class="macro-val total-kcal-val">0</span>
+                            <span class="macro-label">Calorias (kcal)</span>
+                        </div>
+                        <div class="macro-box">
+                            <span class="macro-val total-protein-val">0g</span>
+                            <span class="macro-label">Proteínas</span>
+                        </div>
+                    </div>
+
+                    <!-- Pricing -->
+                    <div class="total-price-box">
+                        <span class="total-label">Total</span>
+                        <span class="total-val total-price-val">R$ 0,00</span>
+                    </div>
+                </div>
+            </aside>
+
+        </main>
+
+        <!-- Bottom Sheet Floating Bar for Mobile Viewports -->
+        <div class="floating-mobile-bar">
+            <div class="floating-mobile-info">
+                <span class="floating-mobile-price total-price-val">R$ 0,00</span>
+                <span class="floating-mobile-macros"><span class="total-kcal-val">0</span> kcal · <span class="total-protein-val">0g</span> prot</span>
+            </div>
+            <button class="floating-mobile-btn scroll-to-summary-btn">
+                <ion-icon name="list-outline"></ion-icon>
+                Ver Resumo
+            </button>
+        </div>
+
+        <!-- Footer -->
+        <footer>
+            <div class="footer-content">
+                <div class="footer-address">
+                    <p id="footer-address">📍 <strong>Endereço:</strong> Rua Zeferino Galvão, nº 508, 1º andar, sala 01</p>
+                    <p id="footer-subaddress">Em frente ao receptivo de lotação (Acima da Medic Center)</p>
+                </div>
+                <a id="footer-map-btn" href="https://maps.google.com/?q=Rua+Zeferino+Galvão,+508+Caruaru" target="_blank" rel="noopener noreferrer" class="footer-map-btn">
+                    <ion-icon name="map-outline"></ion-icon>
+                    Como Chegar (Google Maps)
+                </a>
+                <p class="footer-brand">POWER SHAKE &copy; 2026. desenvolvido por Cactus Dev, todos os direitos Reservados</p>
+            </div>
+        </footer>
+
+    </div>
+
+    <!-- Script linking -->
+    <script src="app.js"></script>
+</body>
+</html>
