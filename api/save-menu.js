@@ -18,6 +18,17 @@ module.exports = async (req, res) => {
         return;
     }
 
+    const { KV_REST_API_URL, KV_REST_API_TOKEN } = process.env;
+
+    // Check if KV is connected on Vercel
+    if (!KV_REST_API_URL || !KV_REST_API_TOKEN) {
+        res.status(500).json({ 
+            success: false, 
+            error: 'Banco de dados Vercel KV não conectado! Vá no painel da Vercel, clique na aba "Storage", crie um banco de dados "KV" e conecte-o a este projeto para habilitar o salvamento global.' 
+        });
+        return;
+    }
+
     try {
         const { menuData, settings, pin } = req.body || {};
         
@@ -36,16 +47,23 @@ module.exports = async (req, res) => {
             return;
         }
 
-        // Save menu_data and settings to the online KV database in parallel
+        // Save menu_data and settings to the Vercel KV database in parallel
+        // Send stringified values in the POST body to avoid URL size limit issues
         const [menuSaveRes, settingsSaveRes] = await Promise.all([
-            fetch('https://kvdb.io/CYaBnkx1ocHtp2QpHyHLUn/menu_data', {
+            fetch(`${KV_REST_API_URL}/set/menu_data`, {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: { 
+                    Authorization: `Bearer ${KV_REST_API_TOKEN}`,
+                    'Content-Type': 'application/json'
+                },
                 body: JSON.stringify(menuData)
             }),
-            fetch('https://kvdb.io/CYaBnkx1ocHtp2QpHyHLUn/settings', {
+            fetch(`${KV_REST_API_URL}/set/settings`, {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: { 
+                    Authorization: `Bearer ${KV_REST_API_TOKEN}`,
+                    'Content-Type': 'application/json'
+                },
                 body: JSON.stringify(settings)
             })
         ]);
@@ -53,7 +71,9 @@ module.exports = async (req, res) => {
         if (menuSaveRes.ok && settingsSaveRes.ok) {
             res.status(200).json({ success: true });
         } else {
-            throw new Error(`Failed to save database. Menu Status: ${menuSaveRes.status}, Settings Status: ${settingsSaveRes.status}`);
+            const menuErr = await menuSaveRes.text();
+            const settingsErr = await settingsSaveRes.text();
+            throw new Error(`Failed to save database. Menu: ${menuSaveRes.status} (${menuErr}), Settings: ${settingsSaveRes.status} (${settingsErr})`);
         }
 
     } catch (err) {
