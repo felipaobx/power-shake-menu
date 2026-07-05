@@ -535,9 +535,38 @@ function loadSettings() {
     }
 }
 
-// Run initializations
-document.addEventListener('DOMContentLoaded', function() {
+// Fetch global settings and menu data asynchronously from Vercel API
+async function loadMenuDataAndSettings() {
+    try {
+        const response = await fetch('/api/get-menu');
+        const data = await response.json();
+        
+        if (data && data.success) {
+            // Update local memory and cache if loaded successfully from database
+            if (data.menuData) {
+                MENU_DATA = data.menuData;
+                localStorage.setItem('power_shake_menu_data', JSON.stringify(data.menuData));
+            }
+            if (data.settings) {
+                SETTINGS = data.settings;
+                localStorage.setItem('power_shake_settings', JSON.stringify(data.settings));
+            }
+        }
+    } catch (e) {
+        console.warn('Backend database offline or failed. Loading from local cache.');
+    }
+    
+    // Refresh dynamic selection lists keys if categories modified
+    orderState.selections = {};
+    MENU_DATA.categories.forEach(cat => {
+        orderState.selections[cat.id] = cat.selectionType === 'single' ? null : [];
+    });
+
+    // Execute DOM rendering and settings binding
     loadSettings();
     renderMenuCategories();
     setupGlobalActions();
-});
+}
+
+// Run initializations
+document.addEventListener('DOMContentLoaded', loadMenuDataAndSettings);

@@ -591,8 +591,8 @@ function setupDashboardActions() {
         dom.itemModal.style.display = 'none';
     }
 
-    // Save All Changes to storage
-    dom.saveSettingsBtn.addEventListener('click', function() {
+    // Save All Changes to database securely using PIN
+    dom.saveSettingsBtn.addEventListener('click', async function() {
         SETTINGS.heroTitle = dom.heroTitle.value.trim();
         SETTINGS.heroSubtitle = dom.heroSubtitle.value.trim();
         
@@ -603,29 +603,115 @@ function setupDashboardActions() {
         SETTINGS.subAddress = dom.subaddress.value.trim();
         SETTINGS.mapUrl = dom.mapUrl.value.trim();
 
-        // Save states back to LocalStorage
-        localStorage.setItem('power_shake_menu_data', JSON.stringify(MENU_DATA));
-        localStorage.setItem('power_shake_settings', JSON.stringify(SETTINGS));
+        const pin = prompt("Digite o PIN do Administrador para salvar as alterações globalmente (Padrão: 1234):");
+        if (pin === null) return;
+        if (pin.trim() === '') {
+            alert('Você precisa informar o PIN do Administrador!');
+            return;
+        }
 
-        alert('Todas as alterações e customizações foram salvas com sucesso!');
+        dom.saveSettingsBtn.disabled = true;
+        dom.saveSettingsBtn.innerText = 'Salvando...';
+
+        try {
+            const res = await fetch('/api/save-menu', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    menuData: MENU_DATA,
+                    settings: SETTINGS,
+                    pin: pin.trim()
+                })
+            });
+            const data = await res.json();
+
+            if (res.ok && data.success) {
+                // Cache locally too
+                localStorage.setItem('power_shake_menu_data', JSON.stringify(MENU_DATA));
+                localStorage.setItem('power_shake_settings', JSON.stringify(SETTINGS));
+                alert('Todas as alterações e customizações foram salvas com sucesso no banco de dados e atualizadas para todos os clientes!');
+            } else {
+                alert(`Erro ao salvar: ${data.error || 'Erro desconhecido'}`);
+            }
+        } catch (e) {
+            console.error(e);
+            alert('Erro de conexão ao salvar no banco de dados. Verifique sua rede.');
+        } finally {
+            dom.saveSettingsBtn.disabled = false;
+            dom.saveSettingsBtn.innerText = 'Salvar Alterações';
+        }
     });
 
-    // Reset Defaults Option
-    dom.resetDefaultsBtn.addEventListener('click', function() {
-        if (confirm('Atenção: Você tem certeza de que deseja restaurar as configurações originais do cardápio? Todas as alterações personalizadas, novas categorias, fotos e preços serão apagados.')) {
-            localStorage.removeItem('power_shake_menu_data');
-            localStorage.removeItem('power_shake_settings');
-            alert('Configurações originais restauradas com sucesso!');
-            window.location.reload();
+    // Reset Defaults Option globally
+    dom.resetDefaultsBtn.addEventListener('click', async function() {
+        if (confirm('Atenção: Você tem certeza de que deseja restaurar as configurações originais do cardápio? Todas as alterações personalizadas, novas categorias, fotos e preços serão apagadas globalmente para todos os clientes.')) {
+            
+            const pin = prompt("Digite o PIN do Administrador para confirmar a restauração global:");
+            if (pin === null) return;
+            if (pin.trim() === '') {
+                alert('Você precisa informar o PIN do Administrador!');
+                return;
+            }
+
+            dom.resetDefaultsBtn.disabled = true;
+            dom.resetDefaultsBtn.innerText = 'Restaurando...';
+
+            try {
+                const res = await fetch('/api/save-menu', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        menuData: DEFAULT_MENU_DATA,
+                        settings: DEFAULT_SETTINGS,
+                        pin: pin.trim()
+                    })
+                });
+                const data = await res.json();
+
+                if (res.ok && data.success) {
+                    localStorage.removeItem('power_shake_menu_data');
+                    localStorage.removeItem('power_shake_settings');
+                    alert('Padrões restaurados com sucesso no banco de dados global!');
+                    window.location.reload();
+                } else {
+                    alert(`Erro ao restaurar: ${data.error || 'Erro desconhecido'}`);
+                }
+            } catch (e) {
+                console.error(e);
+                alert('Erro de conexão ao restaurar padrões. Tente novamente.');
+            } finally {
+                dom.resetDefaultsBtn.disabled = false;
+                dom.resetDefaultsBtn.innerText = 'Restaurar Padrões do Cardápio';
+            }
         }
     });
 }
 
-// Initializer
-document.addEventListener('DOMContentLoaded', function() {
+// Initializer: load menu database from Vercel API
+async function initDashboard() {
+    try {
+        const response = await fetch('/api/get-menu');
+        const data = await response.json();
+        if (data && data.success) {
+            if (data.menuData) {
+                MENU_DATA = data.menuData;
+                localStorage.setItem('power_shake_menu_data', JSON.stringify(data.menuData));
+            }
+            if (data.settings) {
+                SETTINGS = data.settings;
+                localStorage.setItem('power_shake_settings', JSON.stringify(data.settings));
+            }
+        }
+    } catch (e) {
+        console.warn('Não foi possível carregar os dados do backend. Usando cache local.');
+    }
+
     loadGeneralSettings();
     setupUploaders();
     populateCategoryDropdown();
     setupCategoryActions();
     setupDashboardActions();
-});
+}
+
+// Run initializations
+document.addEventListener('DOMContentLoaded', initDashboard);
