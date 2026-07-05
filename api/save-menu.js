@@ -38,12 +38,12 @@ module.exports = async (req, res) => {
 
         // Save menu_data and settings to the online KV database in parallel
         const [menuSaveRes, settingsSaveRes] = await Promise.all([
-            fetch('https://kvdb.io/felipaobx_power_shake_menu_db/menu_data', {
+            fetch('https://kvdb.io/CYaBnkx1ocHtp2QpHyHLUn/menu_data', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(menuData)
             }),
-            fetch('https://kvdb.io/felipaobx_power_shake_menu_db/settings', {
+            fetch('https://kvdb.io/CYaBnkx1ocHtp2QpHyHLUn/settings', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(settings)

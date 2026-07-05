@@ -16,8 +16,8 @@ module.exports = async (req, res) => {
     try {
         // Fetch menu_data and settings from the KV database
         const [menuRes, settingsRes] = await Promise.all([
-            fetch('https://kvdb.io/felipaobx_power_shake_menu_db/menu_data'),
-            fetch('https://kvdb.io/felipaobx_power_shake_menu_db/settings')
+            fetch('https://kvdb.io/CYaBnkx1ocHtp2QpHyHLUn/menu_data'),
+            fetch('https://kvdb.io/CYaBnkx1ocHtp2QpHyHLUn/settings')
         ]);
 
         let menuData = null;
