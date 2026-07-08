@@ -24,6 +24,7 @@
         <nav class="tabs-navigation">
             <button class="tab-btn active" onclick="switchTab('tab-general')">Textos e Banners</button>
             <button class="tab-btn" onclick="switchTab('tab-items')">Gerenciar Itens</button>
+            <button class="tab-btn" onclick="switchTab('tab-export')">Exportar PDF</button>
         </nav>
 
         <!-- Tab 1: General Settings Form -->
@@ -142,6 +143,33 @@
                 </table>
             </div>
 
+        </main>
+
+        <!-- Tab 3: Export PDF -->
+        <main id="tab-export" class="tab-content">
+            <section class="form-section export-section">
+                <h3 class="form-section-title">Gerar PDF do Cardápio</h3>
+                <p class="export-description">
+                    Gere e faça o download de um cardápio em PDF completo e atualizado com todos os itens, preços e informações nutricionais que estão atualmente no site.
+                </p>
+                
+                <div class="pdf-preview-box">
+                    <div class="pdf-preview-icon">
+                        <ion-icon name="document-text-outline"></ion-icon>
+                    </div>
+                    <div class="pdf-preview-info">
+                        <h4>Power_Shake_Cardapio.pdf</h4>
+                        <p>Formatado para impressão em A4 vertical</p>
+                    </div>
+                </div>
+
+                <div class="export-actions">
+                    <a href="/api/generate-pdf" download class="export-pdf-btn">
+                        <ion-icon name="download-outline"></ion-icon>
+                        Baixar PDF do Cardápio
+                    </a>
+                </div>
+            </section>
         </main>
 
         <!-- Bottom Actions Bar -->
