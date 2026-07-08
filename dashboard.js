@@ -8,13 +8,13 @@ const DEFAULT_MENU_DATA = {
             isStep: true,
             selectionType: 'single',
             items: [
-                { id: 'mamao', name: 'Mamão', kcal: 43, protein: 0.5, price: 0.0, icon: '🥭', image: '' },
-                { id: 'banana', name: 'Banana', kcal: 89, protein: 1.1, price: 0.0, icon: '🍌', image: '' },
-                { id: 'morango', name: 'Morango', kcal: 33, protein: 0.7, price: 0.0, icon: '🍓', image: '' },
-                { id: 'frutas_vermelhas', name: 'Frutas vermelhas', kcal: 45, protein: 0.5, price: 0.0, icon: '🍒', image: '' },
-                { id: 'maracuja', name: 'Maracujá', kcal: 80, protein: 1.8, price: 0.0, icon: '🍋', image: '' },
-                { id: 'goiaba', name: 'Goiaba', kcal: 68, protein: 2.6, price: 0.0, icon: '🍑', image: '' },
-                { id: 'abacate', name: 'Abacate', kcal: 160, protein: 2.0, price: 0.0, icon: '🥑', image: '' }
+                { id: 'mamao', name: 'Mamão', kcal: 43, protein: 0.5, price: 3.50, icon: '🥭', image: '' },
+                { id: 'banana', name: 'Banana', kcal: 89, protein: 1.1, price: 3.00, icon: '🍌', image: '' },
+                { id: 'morango', name: 'Morango', kcal: 33, protein: 0.7, price: 4.50, icon: '🍓', image: '' },
+                { id: 'frutas_vermelhas', name: 'Frutas vermelhas', kcal: 45, protein: 0.5, price: 6.00, icon: '🍒', image: '' },
+                { id: 'maracuja', name: 'Maracujá', kcal: 80, protein: 1.8, price: 4.50, icon: '🍋', image: '' },
+                { id: 'goiaba', name: 'Goiaba', kcal: 68, protein: 2.6, price: 4.00, icon: '🍑', image: '' },
+                { id: 'abacate', name: 'Abacate', kcal: 160, protein: 2.0, price: 5.00, icon: '🥑', image: '' }
             ]
         },
         {
@@ -140,6 +140,26 @@ const DEFAULT_SETTINGS = {
 let MENU_DATA = JSON.parse(localStorage.getItem('power_shake_menu_data'));
 let SETTINGS = JSON.parse(localStorage.getItem('power_shake_settings')) || DEFAULT_SETTINGS;
 
+function migrateFruitPrices(menuData) {
+    if (menuData && menuData.categories) {
+        const fruitsCat = menuData.categories.find(c => c.id === 'fruits');
+        if (fruitsCat && fruitsCat.items) {
+            const allZero = fruitsCat.items.every(item => !item.price || item.price === 0);
+            if (allZero) {
+                fruitsCat.items.forEach(item => {
+                    const defaultFruit = DEFAULT_MENU_DATA.categories
+                        .find(c => c.id === 'fruits')?.items
+                        .find(f => f.id === item.id);
+                    if (defaultFruit) {
+                        item.price = defaultFruit.price;
+                    }
+                });
+            }
+        }
+    }
+    return menuData;
+}
+
 // Migration Check: If old data structure doesn't support categories lists, reload
 if (MENU_DATA && !MENU_DATA.categories) {
     MENU_DATA = DEFAULT_MENU_DATA;
@@ -147,6 +167,8 @@ if (MENU_DATA && !MENU_DATA.categories) {
 } else if (!MENU_DATA) {
     MENU_DATA = DEFAULT_MENU_DATA;
     localStorage.setItem('power_shake_menu_data', JSON.stringify(DEFAULT_MENU_DATA));
+} else {
+    MENU_DATA = migrateFruitPrices(MENU_DATA);
 }
 
 // Temporary file uploader state
@@ -307,7 +329,7 @@ function renderItemsTable() {
 
     // Headers set
     let headers = ['Imagem / Ícone', 'Nome'];
-    const showPrice = category.id !== 'fruits';
+    const showPrice = true;
     const showMacros = ['fruits', 'milks', 'whey', 'toppings'].includes(category.id);
     const showDesc = category.id === 'supplements' || category.id === 'milks';
 
@@ -409,7 +431,7 @@ window.openItemEditor = function(id = null) {
     const versionsWrapper = document.getElementById('versions-field-wrapper');
 
     macrosWrapper.style.display = ['fruits', 'milks', 'whey', 'toppings'].includes(catId) ? 'flex' : 'none';
-    priceWrapper.style.display = catId !== 'fruits' ? 'flex' : 'none';
+    priceWrapper.style.display = 'flex';
     descWrapper.style.display = ['milks', 'supplements'].includes(catId) ? 'flex' : 'none';
     versionsWrapper.style.display = catId === 'milks' ? 'flex' : 'none';
 
@@ -694,8 +716,8 @@ async function initDashboard() {
         const data = await response.json();
         if (data && data.success) {
             if (data.menuData) {
-                MENU_DATA = data.menuData;
-                localStorage.setItem('power_shake_menu_data', JSON.stringify(data.menuData));
+                MENU_DATA = migrateFruitPrices(data.menuData);
+                localStorage.setItem('power_shake_menu_data', JSON.stringify(MENU_DATA));
             }
             if (data.settings) {
                 SETTINGS = data.settings;

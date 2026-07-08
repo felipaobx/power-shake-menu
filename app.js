@@ -8,13 +8,13 @@ const DEFAULT_MENU_DATA = {
             isStep: true,
             selectionType: 'single',
             items: [
-                { id: 'mamao', name: 'Mamão', kcal: 43, protein: 0.5, price: 0.0, icon: '🥭', image: '' },
-                { id: 'banana', name: 'Banana', kcal: 89, protein: 1.1, price: 0.0, icon: '🍌', image: '' },
-                { id: 'morango', name: 'Morango', kcal: 33, protein: 0.7, price: 0.0, icon: '🍓', image: '' },
-                { id: 'frutas_vermelhas', name: 'Frutas vermelhas', kcal: 45, protein: 0.5, price: 0.0, icon: '🍒', image: '' },
-                { id: 'maracuja', name: 'Maracujá', kcal: 80, protein: 1.8, price: 0.0, icon: '🍋', image: '' },
-                { id: 'goiaba', name: 'Goiaba', kcal: 68, protein: 2.6, price: 0.0, icon: '🍑', image: '' },
-                { id: 'abacate', name: 'Abacate', kcal: 160, protein: 2.0, price: 0.0, icon: '🥑', image: '' }
+                { id: 'mamao', name: 'Mamão', kcal: 43, protein: 0.5, price: 3.50, icon: '🥭', image: '' },
+                { id: 'banana', name: 'Banana', kcal: 89, protein: 1.1, price: 3.00, icon: '🍌', image: '' },
+                { id: 'morango', name: 'Morango', kcal: 33, protein: 0.7, price: 4.50, icon: '🍓', image: '' },
+                { id: 'frutas_vermelhas', name: 'Frutas vermelhas', kcal: 45, protein: 0.5, price: 6.00, icon: '🍒', image: '' },
+                { id: 'maracuja', name: 'Maracujá', kcal: 80, protein: 1.8, price: 4.50, icon: '🍋', image: '' },
+                { id: 'goiaba', name: 'Goiaba', kcal: 68, protein: 2.6, price: 4.00, icon: '🍑', image: '' },
+                { id: 'abacate', name: 'Abacate', kcal: 160, protein: 2.0, price: 5.00, icon: '🥑', image: '' }
             ]
         },
         {
@@ -141,6 +141,26 @@ const DEFAULT_SETTINGS = {
 let MENU_DATA = JSON.parse(localStorage.getItem('power_shake_menu_data'));
 let SETTINGS = JSON.parse(localStorage.getItem('power_shake_settings'));
 
+function migrateFruitPrices(menuData) {
+    if (menuData && menuData.categories) {
+        const fruitsCat = menuData.categories.find(c => c.id === 'fruits');
+        if (fruitsCat && fruitsCat.items) {
+            const allZero = fruitsCat.items.every(item => !item.price || item.price === 0);
+            if (allZero) {
+                fruitsCat.items.forEach(item => {
+                    const defaultFruit = DEFAULT_MENU_DATA.categories
+                        .find(c => c.id === 'fruits')?.items
+                        .find(f => f.id === item.id);
+                    if (defaultFruit) {
+                        item.price = defaultFruit.price;
+                    }
+                });
+            }
+        }
+    }
+    return menuData;
+}
+
 // Migration helper (converts old object schema to list schema if needed)
 if (MENU_DATA && !MENU_DATA.categories) {
     MENU_DATA = null; // Forces reset to category list schema
@@ -149,6 +169,8 @@ if (MENU_DATA && !MENU_DATA.categories) {
 if (!MENU_DATA) {
     MENU_DATA = DEFAULT_MENU_DATA;
     localStorage.setItem('power_shake_menu_data', JSON.stringify(DEFAULT_MENU_DATA));
+} else {
+    MENU_DATA = migrateFruitPrices(MENU_DATA);
 }
 if (!SETTINGS) {
     SETTINGS = DEFAULT_SETTINGS;
@@ -242,10 +264,6 @@ function renderMenuCategories() {
                             <h2 class="step-title">${category.name}</h2>
                             <span class="step-subtitle">${category.subtitle}</span>
                         </div>
-                        ${category.id === 'fruits' ? `
-                        <div class="alert-banner">
-                            <span style="font-weight: 700;">Dica:</span> A fruta base já está inclusa no preço base do seu shake!
-                        </div>` : ''}
                         <div class="cards-grid">
                             ${renderCards(category)}
                         </div>
@@ -322,9 +340,7 @@ function renderCards(category) {
             : `<span class="item-card-icon">${item.icon || '🥤'}</span>`;
 
         // Price tags: hide or show price
-        const priceHtml = category.id === 'fruits' 
-            ? '' 
-            : `<div class="item-card-price">${item.price > 0 ? formatCurrency(item.price) : 'Incluso'}</div>`;
+        const priceHtml = `<div class="item-card-price">${item.price > 0 ? formatCurrency(item.price) : 'Incluso'}</div>`;
 
         // Macros tag check
         const showMacros = ['fruits', 'milks', 'toppings'].includes(category.id);
@@ -544,8 +560,8 @@ async function loadMenuDataAndSettings() {
         if (data && data.success) {
             // Update local memory and cache if loaded successfully from database
             if (data.menuData) {
-                MENU_DATA = data.menuData;
-                localStorage.setItem('power_shake_menu_data', JSON.stringify(data.menuData));
+                MENU_DATA = migrateFruitPrices(data.menuData);
+                localStorage.setItem('power_shake_menu_data', JSON.stringify(MENU_DATA));
             }
             if (data.settings) {
                 SETTINGS = data.settings;
