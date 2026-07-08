@@ -200,7 +200,19 @@ const elements = {
     summaryItems: document.getElementById('summary-items'),
     emptySummary: document.getElementById('empty-summary-msg'),
     clearBtn: document.getElementById('clear-order-btn'),
-    scrollToSummaryBtn: document.querySelector('.scroll-to-summary-btn')
+    scrollToSummaryBtn: document.querySelector('.scroll-to-summary-btn'),
+    
+    // Checkout Receipt DOM
+    checkoutBtn: document.getElementById('checkout-btn'),
+    mainGrid: document.querySelector('.main-grid'),
+    receiptScreen: document.getElementById('receipt-screen'),
+    receiptScreenItems: document.getElementById('receipt-screen-items'),
+    receiptKcal: document.getElementById('receipt-kcal'),
+    receiptProtein: document.getElementById('receipt-protein'),
+    receiptTotalPrice: document.getElementById('receipt-total-price'),
+    receiptRedoBtn: document.getElementById('receipt-redo-btn'),
+    receiptWhatsappBtn: document.getElementById('receipt-whatsapp-btn'),
+    floatingMobileBar: document.querySelector('.floating-mobile-bar')
 };
 
 // Format currency
@@ -451,6 +463,28 @@ function setupGlobalActions() {
             }
         });
     }
+
+    // Finalize order click
+    if (elements.checkoutBtn) {
+        elements.checkoutBtn.addEventListener('click', finalizeOrder);
+    }
+
+    // Redo click on receipt screen
+    if (elements.receiptRedoBtn) {
+        elements.receiptRedoBtn.addEventListener('click', function() {
+            resetOrder();
+            elements.receiptScreen.style.display = 'none';
+            elements.mainGrid.style.display = 'grid';
+            if (elements.floatingMobileBar) {
+                elements.floatingMobileBar.style.display = '';
+            }
+        });
+    }
+
+    // Send WhatsApp click on receipt screen
+    if (elements.receiptWhatsappBtn) {
+        elements.receiptWhatsappBtn.addEventListener('click', sendOrderToWhatsApp);
+    }
 }
 
 // Calculate totals dynamically and updates DOM
@@ -605,6 +639,104 @@ async function loadMenuDataAndSettings() {
     loadSettings();
     renderMenuCategories();
     setupGlobalActions();
+}
+
+// Variable to store receipt state for WhatsApp sharing
+let lastOrderDetails = null;
+
+function finalizeOrder() {
+    const selectedFruits = orderState.selections['fruits'];
+    const selectedMilks = orderState.selections['milks'];
+    if (!selectedFruits || !selectedMilks) {
+        alert('Por favor, selecione pelo menos uma fruta base e um leite para finalizar seu shake!');
+        return;
+    }
+
+    // Build the list of chosen items (exactly as we calculate in updateTotals)
+    let kcal = 0;
+    let protein = 0;
+    let price = 0;
+    let receiptItems = [];
+
+    MENU_DATA.categories.forEach(category => {
+        const selection = orderState.selections[category.id];
+        if (!selection) return;
+
+        if (category.selectionType === 'single') {
+            kcal += selection.kcal || 0;
+            protein += selection.protein || 0;
+            price += selection.price || 0;
+            
+            let label = `${category.name.replace('Escolha o ', '').replace('Escolha a ', '')}: ${selection.name}`;
+            if (category.id === 'milks' && orderState.milkVersion !== 'regular') {
+                label += ` (${orderState.milkVersion})`;
+            }
+
+            receiptItems.push({
+                name: label,
+                price: selection.price
+            });
+        } else {
+            selection.forEach(item => {
+                kcal += item.kcal || 0;
+                protein += item.protein || 0;
+                price += item.price || 0;
+                receiptItems.push({
+                    name: `${category.name.replace('Adicione ', '').replace('Toppings & ', '')}: ${item.name}`,
+                    price: item.price
+                });
+            });
+        }
+    });
+
+    // Save details to global variable for WhatsApp
+    lastOrderDetails = {
+        items: receiptItems,
+        kcal: kcal,
+        protein: protein,
+        price: price
+    };
+
+    // Render screen
+    elements.receiptScreenItems.innerHTML = receiptItems.map(item => `
+        <div class="receipt-item-row">
+            <span class="receipt-item-name">${item.name}</span>
+            <span class="receipt-item-cost">${item.price > 0 ? formatCurrency(item.price) : 'Grátis'}</span>
+        </div>
+    `).join('');
+
+    elements.receiptKcal.innerText = kcal.toFixed(1);
+    elements.receiptProtein.innerText = protein.toFixed(1) + 'g';
+    elements.receiptTotalPrice.innerText = formatCurrency(price);
+
+    // Swap views
+    elements.mainGrid.style.display = 'none';
+    if (elements.floatingMobileBar) {
+        elements.floatingMobileBar.style.display = 'none';
+    }
+    elements.receiptScreen.style.display = 'flex';
+    
+    // Scroll to top so they see the receipt
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+function sendOrderToWhatsApp() {
+    if (!lastOrderDetails) return;
+
+    let text = `🥤 *Novo Pedido - Power Shake*\n\n`;
+    text += `*Ingredientes Escolhidos:*\n`;
+    lastOrderDetails.items.forEach(item => {
+        text += `- ${item.name} (${item.price > 0 ? formatCurrency(item.price) : 'Incluso'})\n`;
+    });
+    
+    text += `\n*Informações Nutricionais (Total):*\n`;
+    text += `🔥 Calorias: ${lastOrderDetails.kcal.toFixed(1)} kcal\n`;
+    text += `💪 Proteínas: ${lastOrderDetails.protein.toFixed(1)}g\n\n`;
+    text += `*Valor Total:* ${formatCurrency(lastOrderDetails.price)}\n\n`;
+    text += `_Pedido montado através do Cardápio Interativo_`;
+
+    const url = `https://api.whatsapp.com/send?text=${encodeURIComponent(text)}`;
+    window.open(url, '_blank');
 }
 
 // Run initializations

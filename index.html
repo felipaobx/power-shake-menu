@@ -79,9 +79,57 @@
                         <span class="total-label">Total</span>
                         <span class="total-val total-price-val">R$ 0,00</span>
                     </div>
+                    <button class="checkout-btn" id="checkout-btn">Finalizar Pedido</button>
                 </div>
             </aside>
 
+        </main>
+
+        <!-- Receipt Screen / Confirmado Page -->
+        <main class="receipt-screen-container" id="receipt-screen" style="display: none;">
+            <div class="receipt-card">
+                <div class="receipt-header">
+                    <ion-icon name="checkmark-circle" class="receipt-success-icon"></ion-icon>
+                    <h2>Pedido Finalizado!</h2>
+                    <p>Aqui está o resumo do seu shake personalizado.</p>
+                </div>
+                
+                <div class="receipt-body">
+                    <h4 class="receipt-section-title">Itens Escolhidos</h4>
+                    <div class="receipt-items-list" id="receipt-screen-items">
+                        <!-- Loaded dynamically -->
+                    </div>
+                    
+                    <div class="receipt-macros-box">
+                        <div class="receipt-macro-box">
+                            <span class="macro-icon">🔥</span>
+                            <span class="macro-val" id="receipt-kcal">0</span>
+                            <span class="macro-label">Calorias</span>
+                        </div>
+                        <div class="receipt-macro-box">
+                            <span class="macro-icon">💪</span>
+                            <span class="macro-val" id="receipt-protein">0g</span>
+                            <span class="macro-label">Proteínas</span>
+                        </div>
+                    </div>
+                    
+                    <div class="receipt-total-box">
+                        <span class="receipt-total-label">Total do Pedido</span>
+                        <span class="receipt-total-val" id="receipt-total-price">R$ 0,00</span>
+                    </div>
+                </div>
+                
+                <div class="receipt-actions">
+                    <button class="receipt-btn redo-btn" id="receipt-redo-btn">
+                        <ion-icon name="refresh-outline"></ion-icon>
+                        Montar Outro Shake
+                    </button>
+                    <button class="receipt-btn whatsapp-btn" id="receipt-whatsapp-btn">
+                        <ion-icon name="logo-whatsapp"></ion-icon>
+                        Enviar por WhatsApp
+                    </button>
+                </div>
+            </div>
         </main>
 
         <!-- Bottom Sheet Floating Bar for Mobile Viewports -->
