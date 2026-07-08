@@ -246,6 +246,18 @@ function renderMenuCategories() {
                     ? `<img src="${item.image}" class="item-card-image" alt="${item.name}">` 
                     : `<span class="whey-icon">${item.icon || '💪'}</span>`;
 
+                let wheyMacros = '';
+                const kcalVal = item.kcal || 0;
+                const proteinVal = item.protein || 0;
+                if (kcalVal > 0 && proteinVal > 0) {
+                    wheyMacros = `${kcalVal} kcal · ${proteinVal}g prot`;
+                } else if (kcalVal > 0) {
+                    wheyMacros = `${kcalVal} kcal`;
+                } else if (proteinVal > 0) {
+                    wheyMacros = `${proteinVal}g prot`;
+                }
+                const wheyMacrosHtml = wheyMacros ? `<span class="macros">${wheyMacros}</span>` : '';
+
                 sectionHtml = `
                     <section class="section-card" id="step-${category.id}">
                         <div class="step-header">
@@ -261,7 +273,7 @@ function renderMenuCategories() {
                             </div>
                             <div class="whey-price">
                                 <span class="price">${formatCurrency(item.price)}</span>
-                                <span class="macros">${item.kcal || 0} kcal · ${item.protein || 0}g prot</span>
+                                ${wheyMacrosHtml}
                             </div>
                         </div>
                     </section>
@@ -324,8 +336,9 @@ function renderMenuCategories() {
 }
 
 // Render product card grid
-function renderCards(category) {
-    return category.items.map(item => {
+function renderCards(category, visibleItems) {
+    const itemsToRender = visibleItems || category.items;
+    return itemsToRender.map(item => {
         const isSelected = category.selectionType === 'single'
             ? (orderState.selections[category.id] && orderState.selections[category.id].id === item.id)
             : (orderState.selections[category.id].some(i => i.id === item.id));
@@ -355,13 +368,20 @@ function renderCards(category) {
 
         // Macros tag check
         const showMacros = ['fruits', 'milks', 'toppings'].includes(category.id);
-        const macrosHtml = showMacros 
-            ? `
-            <div class="item-card-macros">
-                <span class="item-card-macro">${item.kcal || 0} kcal</span>
-                <span class="item-card-macro">${item.protein || 0}g P</span>
-            </div>`
-            : '';
+        let macrosHtml = '';
+        if (showMacros) {
+            const kcalVal = item.kcal || 0;
+            const proteinVal = item.protein || 0;
+            const kcalHtml = kcalVal > 0 ? `<span class="item-card-macro">${kcalVal} kcal</span>` : '';
+            const proteinHtml = proteinVal > 0 ? `<span class="item-card-macro">${proteinVal}g P</span>` : '';
+            if (kcalHtml || proteinHtml) {
+                macrosHtml = `
+                <div class="item-card-macros">
+                    ${kcalHtml}
+                    ${proteinHtml}
+                </div>`;
+            }
+        }
 
         const descHtml = item.description 
             ? `<div style="font-size:0.72rem; color:var(--text-secondary); margin-bottom:5px; line-height:1.2;">${item.description}</div>`

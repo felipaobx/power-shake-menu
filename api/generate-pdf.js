@@ -316,9 +316,18 @@ module.exports = async (req, res) => {
             }
 
             // Macros Info
-            let hasMacros = item.kcal > 0 || item.protein > 0;
-            if (hasMacros) {
-                let macrosText = `${item.kcal || 0} kcal · ${item.protein || 0}g P`;
+            const kcalVal = item.kcal || 0;
+            const proteinVal = item.protein || 0;
+            let macrosText = '';
+            if (kcalVal > 0 && proteinVal > 0) {
+                macrosText = `${kcalVal} kcal · ${proteinVal}g P`;
+            } else if (kcalVal > 0) {
+                macrosText = `${kcalVal} kcal`;
+            } else if (proteinVal > 0) {
+                macrosText = `${proteinVal}g P`;
+            }
+
+            if (macrosText) {
                 doc.fillColor('rgba(139, 252, 3, 0.75)')
                    .fontSize(7)
                    .font('Helvetica-Bold')
