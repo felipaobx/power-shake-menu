@@ -211,7 +211,6 @@ const elements = {
     receiptProtein: document.getElementById('receipt-protein'),
     receiptTotalPrice: document.getElementById('receipt-total-price'),
     receiptRedoBtn: document.getElementById('receipt-redo-btn'),
-    receiptWhatsappBtn: document.getElementById('receipt-whatsapp-btn'),
     floatingMobileBar: document.querySelector('.floating-mobile-bar')
 };
 
@@ -480,11 +479,6 @@ function setupGlobalActions() {
             }
         });
     }
-
-    // Send WhatsApp click on receipt screen
-    if (elements.receiptWhatsappBtn) {
-        elements.receiptWhatsappBtn.addEventListener('click', sendOrderToWhatsApp);
-    }
 }
 
 // Calculate totals dynamically and updates DOM
@@ -583,6 +577,7 @@ function resetOrder() {
     });
     orderState.milkVersion = 'regular';
     renderMenuCategories();
+    updateTotals();
 }
 
 // Load custom text/banner layouts
@@ -641,8 +636,6 @@ async function loadMenuDataAndSettings() {
     setupGlobalActions();
 }
 
-// Variable to store receipt state for WhatsApp sharing
-let lastOrderDetails = null;
 
 function finalizeOrder() {
     const selectedFruits = orderState.selections['fruits'];
@@ -689,13 +682,6 @@ function finalizeOrder() {
         }
     });
 
-    // Save details to global variable for WhatsApp
-    lastOrderDetails = {
-        items: receiptItems,
-        kcal: kcal,
-        protein: protein,
-        price: price
-    };
 
     // Render screen
     elements.receiptScreenItems.innerHTML = receiptItems.map(item => `
@@ -718,25 +704,6 @@ function finalizeOrder() {
     
     // Scroll to top so they see the receipt
     window.scrollTo({ top: 0, behavior: 'smooth' });
-}
-
-function sendOrderToWhatsApp() {
-    if (!lastOrderDetails) return;
-
-    let text = `🥤 *Novo Pedido - Power Shake*\n\n`;
-    text += `*Ingredientes Escolhidos:*\n`;
-    lastOrderDetails.items.forEach(item => {
-        text += `- ${item.name} (${item.price > 0 ? formatCurrency(item.price) : 'Incluso'})\n`;
-    });
-    
-    text += `\n*Informações Nutricionais (Total):*\n`;
-    text += `🔥 Calorias: ${lastOrderDetails.kcal.toFixed(1)} kcal\n`;
-    text += `💪 Proteínas: ${lastOrderDetails.protein.toFixed(1)}g\n\n`;
-    text += `*Valor Total:* ${formatCurrency(lastOrderDetails.price)}\n\n`;
-    text += `_Pedido montado através do Cardápio Interativo_`;
-
-    const url = `https://api.whatsapp.com/send?text=${encodeURIComponent(text)}`;
-    window.open(url, '_blank');
 }
 
 // Run initializations

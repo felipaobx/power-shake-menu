@@ -1008,12 +1008,12 @@ footer {
     background: var(--bg-card);
     backdrop-filter: blur(15px);
     -webkit-backdrop-filter: blur(15px);
-    border: 1px solid var(--border-card);
+    border: 1px solid rgba(139, 252, 3, 0.25);
     border-radius: var(--border-radius);
     padding: 35px;
     width: 100%;
     max-width: 550px;
-    box-shadow: var(--shadow-lg);
+    box-shadow: 0 15px 35px rgba(0, 0, 0, 0.4), 0 0 20px rgba(139, 252, 3, 0.08);
 }
 
 .receipt-header {
@@ -1066,10 +1066,18 @@ footer {
     justify-content: space-between;
     align-items: center;
     font-size: 0.95rem;
-    background: rgba(255, 255, 255, 0.015);
-    border: 1px solid rgba(255, 255, 255, 0.03);
+    background: rgba(255, 255, 255, 0.02);
+    border: 1px solid rgba(255, 255, 255, 0.04);
+    border-left: 3px solid var(--accent);
     border-radius: 8px;
-    padding: 10px 14px;
+    padding: 12px 16px;
+    transition: var(--transition);
+}
+
+.receipt-item-row:hover {
+    background: rgba(255, 255, 255, 0.04);
+    border-color: rgba(255, 255, 255, 0.08);
+    border-left-color: #fff;
 }
 
 .receipt-item-name {
@@ -1099,17 +1107,27 @@ footer {
     display: flex;
     flex-direction: column;
     align-items: center;
+    background: rgba(255, 255, 255, 0.02);
+    border: 1px solid rgba(255, 255, 255, 0.04);
+    padding: 12px;
+    border-radius: 10px;
+    transition: var(--transition);
+}
+
+.receipt-macro-box:hover {
+    background: rgba(255, 255, 255, 0.04);
+    border-color: rgba(139, 252, 3, 0.25);
 }
 
 .receipt-total-box {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    background: linear-gradient(135deg, rgba(139, 252, 3, 0.08), rgba(139, 252, 3, 0.01));
-    border: 1px solid rgba(139, 252, 3, 0.2);
-    padding: 16px 20px;
+    background: linear-gradient(135deg, rgba(139, 252, 3, 0.12), rgba(139, 252, 3, 0.02));
+    border: 1px solid rgba(139, 252, 3, 0.35);
+    padding: 18px 22px;
     border-radius: 12px;
-    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.15);
+    box-shadow: 0 4px 20px rgba(139, 252, 3, 0.15);
 }
 
 .receipt-total-label {
@@ -1150,25 +1168,15 @@ footer {
 }
 
 .receipt-btn.redo-btn {
-    background: rgba(255, 255, 255, 0.05);
-    color: var(--text-primary);
-    border: 1px solid rgba(255, 255, 255, 0.08);
-}
-
-.receipt-btn.redo-btn:hover {
-    background: rgba(255, 255, 255, 0.1);
-    border-color: rgba(255, 255, 255, 0.15);
-}
-
-.receipt-btn.whatsapp-btn {
     background: var(--accent);
     color: #000;
     box-shadow: var(--glow);
 }
 
-.receipt-btn.whatsapp-btn:hover {
+.receipt-btn.redo-btn:hover {
     background: #fff;
-    box-shadow: 0 0 25px rgba(255, 255, 255, 0.2);
+    color: #000;
+    box-shadow: 0 0 25px rgba(255, 255, 255, 0.25);
 }
 
 @keyframes fadeIn {
