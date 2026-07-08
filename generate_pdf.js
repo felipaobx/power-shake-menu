@@ -97,29 +97,29 @@ async function startPdfGeneration() {
     drawBackground();
 
     // Draw Header
-    doc.moveDown(1);
+    doc.moveDown(1.5);
     doc.fillColor('#8bfc03')
-       .fontSize(28)
+       .fontSize(26)
        .font('Helvetica-Bold')
-       .text('POWER SHAKE', { align: 'center' });
+       .text('POWER SHAKE', { align: 'center', characterSpacing: 1 });
 
-    doc.moveDown(0.2);
+    doc.moveDown(0.15);
 
     doc.fillColor('#ffffff')
-       .fontSize(10)
+       .fontSize(9)
        .font('Helvetica')
-       .text('CARDÁPIO OFICIAL INTERATIVO', { align: 'center', characterSpacing: 2 });
+       .text('CARDÁPIO OFICIAL E TABELA NUTRICIONAL', { align: 'center', characterSpacing: 2 });
 
     doc.moveDown(0.6);
 
     // Draw a neon green divider line
     doc.strokeColor('#8bfc03')
-       .lineWidth(2)
+       .lineWidth(1.5)
        .moveTo(40, doc.y)
        .lineTo(doc.page.width - 40, doc.y)
        .stroke();
 
-    doc.moveDown(1.5);
+    doc.moveDown(1.2);
 
     // Helper to check if page break is needed
     function checkPageBreak(neededHeight) {
@@ -130,18 +130,19 @@ async function startPdfGeneration() {
     }
 
     const cardWidth = 250;
-    const cardHeight = 135;
-    const gap = 15;
+    const cardHeight = 55;
+    const gapX = 15;
+    const gapY = 10;
     let col = 0;
     let rowY = doc.y;
 
     for (const category of dataToUse.categories) {
         const items = category.items || [];
-        if (items.length === 0) return;
+        if (items.length === 0) continue;
 
         // If currently in the middle of a row, complete the row before printing a new header
         if (col === 1) {
-            rowY += cardHeight + gap;
+            rowY += cardHeight + gapY;
             col = 0;
         }
 
@@ -152,16 +153,16 @@ async function startPdfGeneration() {
 
         // Section title
         doc.fillColor('#8bfc03')
-           .fontSize(14)
+           .fontSize(12)
            .font('Helvetica-Bold')
            .text(category.name.toUpperCase(), 50, doc.y);
         
         doc.fillColor('#9aa0a6')
-           .fontSize(8.5)
+           .fontSize(8)
            .font('Helvetica-Oblique')
-           .text(category.subtitle || '', 50, doc.y, { paragraphGap: 12 });
+           .text(category.subtitle || '', 50, doc.y, { paragraphGap: 10 });
 
-        doc.moveDown(0.2);
+        doc.moveDown(0.1);
         rowY = doc.y;
 
         for (const item of items) {
@@ -173,7 +174,7 @@ async function startPdfGeneration() {
                 }
             }
 
-            let cardX = col === 0 ? 50 : 50 + cardWidth + gap;
+            let cardX = col === 0 ? 50 : 50 + cardWidth + gapX;
             let cardY = rowY;
 
             // Fetch image buffer
@@ -184,76 +185,80 @@ async function startPdfGeneration() {
 
             // Draw Card background & Image (clipped)
             doc.save();
-            doc.roundedRect(cardX, cardY, cardWidth, cardHeight, 10).clip();
-            doc.rect(cardX, cardY, cardWidth, cardHeight).fill('#151722');
+            doc.roundedRect(cardX, cardY, cardWidth, cardHeight, 8).clip();
+            doc.rect(cardX, cardY, cardWidth, cardHeight).fill('#13141f');
+            
+            // Draw image inside a neat left square
+            const imgSize = 43;
+            const imgPadding = 6;
+            
+            doc.save();
+            doc.roundedRect(cardX + imgPadding, cardY + imgPadding, imgSize, imgSize, 6).clip();
             if (imageBuffer) {
                 try {
-                    doc.image(imageBuffer, cardX, cardY, {
-                        width: cardWidth,
-                        height: 65,
-                        fit: [cardWidth, 65],
+                    doc.image(imageBuffer, cardX + imgPadding, cardY + imgPadding, {
+                        width: imgSize,
+                        height: imgSize,
+                        fit: [imgSize, imgSize],
                         align: 'center',
                         valign: 'center'
                     });
                 } catch (err) {
                     console.error('Error drawing image inside PDF:', err);
-                    // Fallback to emoji
                     doc.fillColor('#8bfc03')
-                       .fontSize(22)
-                       .text(item.icon || '🥤', cardX, cardY + 22, { align: 'center', width: cardWidth });
+                       .fontSize(16)
+                       .text(item.icon || '🥤', cardX + imgPadding, cardY + imgPadding + 6, { align: 'center', width: imgSize });
                 }
             } else {
                 doc.fillColor('#8bfc03')
-                   .fontSize(22)
-                   .text(item.icon || '🥤', cardX, cardY + 22, { align: 'center', width: cardWidth });
+                   .fontSize(16)
+                   .text(item.icon || '🥤', cardX + imgPadding, cardY + imgPadding + 6, { align: 'center', width: imgSize });
             }
+            doc.restore();
             doc.restore();
 
             // Draw card border
-            doc.strokeColor('rgba(255,255,255,0.06)')
+            doc.strokeColor('rgba(255,255,255,0.03)')
                .lineWidth(1)
-               .roundedRect(cardX, cardY, cardWidth, cardHeight, 10)
+               .roundedRect(cardX, cardY, cardWidth, cardHeight, 8)
                .stroke();
 
-            // Draw image divider
-            doc.strokeColor('rgba(255, 255, 255, 0.05)')
-               .lineWidth(1)
-               .moveTo(cardX, cardY + 65)
-               .lineTo(cardX + cardWidth, cardY + 65)
-               .stroke();
-
-            // Card Text: Title
+            // Text coordinates
+            const textX = cardX + 58;
+            
+            // Item Name
             doc.fillColor('#ffffff')
                .fontSize(9.5)
                .font('Helvetica-Bold')
-               .text(item.name, cardX + 12, cardY + 74, { width: cardWidth - 24, height: 12, ellipsis: true });
+               .text(item.name, textX, cardY + 8, { width: 125, height: 11, ellipsis: true });
 
-            // Card Text: Description
-            let descText = item.description || '';
-            if (descText) {
-                doc.fillColor('#9aa0a6')
-                   .fontSize(7.5)
-                   .font('Helvetica')
-                   .text(descText, cardX + 12, cardY + 89, { width: cardWidth - 24, height: 18, ellipsis: true });
-            }
-
-            // Card Text: Price & Macros
+            // Item Price
             let priceText = item.price > 0 
                 ? item.price.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
                 : 'Incluso';
                 
             doc.fillColor('#8bfc03')
-               .fontSize(10)
+               .fontSize(9.5)
                .font('Helvetica-Bold')
-               .text(priceText, cardX + 12, cardY + 112);
+               .text(priceText, cardX + 185, cardY + 8, { align: 'right', width: 54 });
 
-            let hasMacros = item.kcal > 0 || item.protein > 0;
-            if (hasMacros) {
-                let macrosText = `${item.kcal || 0} kcal · ${item.protein || 0}g P`;
+            // Item Description
+            let descText = item.description || '';
+            if (descText) {
                 doc.fillColor('#9aa0a6')
                    .fontSize(7.5)
                    .font('Helvetica')
-                   .text(macrosText, cardX + 12, cardY + 114, { align: 'right', width: cardWidth - 24 });
+                   .text(descText, textX, cardY + 22, { width: 180, height: 18, ellipsis: true });
+            }
+
+            // Macros Info
+            let hasMacros = item.kcal > 0 || item.protein > 0;
+            if (hasMacros) {
+                let macrosText = `${item.kcal || 0} kcal · ${item.protein || 0}g P`;
+                doc.fillColor('rgba(139, 252, 3, 0.75)')
+                   .fontSize(7)
+                   .font('Helvetica-Bold')
+                   .text(macrosText, textX, cardY + 41);
             }
 
             // Toggle column pointer
@@ -261,15 +266,15 @@ async function startPdfGeneration() {
                 col = 1;
             } else {
                 col = 0;
-                rowY += cardHeight + gap; // advance to next row
+                rowY += cardHeight + gapY; // advance to next row
             }
         }
 
-        doc.moveDown(0.8);
+        doc.moveDown(0.5);
     }
 
     if (col === 1) {
-        rowY += cardHeight + gap;
+        rowY += cardHeight + gapY;
     }
 
     doc.y = rowY;
