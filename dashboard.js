@@ -380,9 +380,14 @@ function renderItemsTable() {
             ? `<button class="action-btn" style="opacity:0.3; cursor:not-allowed;" title="Item padrão Whey não pode ser excluído"><ion-icon name="trash-outline"></ion-icon></button>`
             : `<button class="action-btn delete-btn" onclick="deleteMenuItem('${item.id}')" title="Excluir"><ion-icon name="trash-outline"></ion-icon></button>`;
 
+        const upBtn = `<button class="action-btn move-btn" onclick="moveItemUp('${item.id}')" title="Mover para cima"><ion-icon name="arrow-up-outline"></ion-icon></button>`;
+        const downBtn = `<button class="action-btn move-btn" onclick="moveItemDown('${item.id}')" title="Mover para baixo"><ion-icon name="arrow-down-outline"></ion-icon></button>`;
+
         cols.push(`
             <td>
                 <div class="action-buttons">
+                    ${upBtn}
+                    ${downBtn}
                     <button class="action-btn edit-btn" onclick="openItemEditor('${item.id}')" title="Editar"><ion-icon name="create-outline"></ion-icon></button>
                     ${deleteBtn}
                 </div>
@@ -532,6 +537,38 @@ window.deleteMenuItem = function(id) {
 
     if (confirm('Tem certeza que deseja remover este item de forma permanente?')) {
         category.items = category.items.filter(i => i.id !== id);
+        renderItemsTable();
+    }
+};
+
+// Move Menu Item Up
+window.moveItemUp = function(id) {
+    const catId = dom.categorySelect.value;
+    const category = MENU_DATA.categories.find(c => c.id === catId);
+    if (!category) return;
+
+    const index = category.items.findIndex(i => i.id === id);
+    if (index > 0) {
+        // Swap items
+        const temp = category.items[index];
+        category.items[index] = category.items[index - 1];
+        category.items[index - 1] = temp;
+        renderItemsTable();
+    }
+};
+
+// Move Menu Item Down
+window.moveItemDown = function(id) {
+    const catId = dom.categorySelect.value;
+    const category = MENU_DATA.categories.find(c => c.id === catId);
+    if (!category) return;
+
+    const index = category.items.findIndex(i => i.id === id);
+    if (index !== -1 && index < category.items.length - 1) {
+        // Swap items
+        const temp = category.items[index];
+        category.items[index] = category.items[index + 1];
+        category.items[index + 1] = temp;
         renderItemsTable();
     }
 };

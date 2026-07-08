@@ -336,8 +336,8 @@ function renderCards(category) {
 
         // Photo vs Emoji render check
         const mediaHtml = item.image 
-            ? `<img src="${item.image}" class="item-card-image" alt="${item.name}">` 
-            : `<span class="item-card-icon">${item.icon || '🥤'}</span>`;
+            ? `<div class="item-card-media"><img src="${item.image}" class="item-card-image" alt="${item.name}"></div>` 
+            : `<div class="item-card-media"><span class="item-card-icon">${item.icon || '🥤'}</span></div>`;
 
         // Price tags: hide or show price
         const priceHtml = `<div class="item-card-price">${item.price > 0 ? formatCurrency(item.price) : 'Incluso'}</div>`;
@@ -476,6 +476,8 @@ function updateTotals() {
             }
 
             receiptItems.push({
+                categoryId: category.id,
+                itemId: selection.id,
                 name: label,
                 price: selection.price,
                 details: (selection.kcal > 0 || selection.protein > 0) ? `${selection.kcal || 0} kcal | ${selection.protein || 0}g Prot` : 'Extra'
@@ -487,6 +489,8 @@ function updateTotals() {
                 protein += item.protein || 0;
                 price += item.price || 0;
                 receiptItems.push({
+                    categoryId: category.id,
+                    itemId: item.id,
                     name: `${category.name.replace('Adicione ', '').replace('Toppings & ', '')}: ${item.name}`,
                     price: item.price,
                     details: (item.kcal > 0 || item.protein > 0) ? `${item.kcal || 0} kcal | ${item.protein || 0}g Prot` : 'Extra'
@@ -509,15 +513,34 @@ function updateTotals() {
         elements.summaryItems.style.display = 'flex';
         elements.summaryItems.innerHTML = receiptItems.map(item => `
             <div class="summary-item">
-                <div>
+                <div class="summary-item-left">
                     <span class="item-name">${item.name}</span>
                     <span class="item-details">${item.details}</span>
                 </div>
-                <span class="item-cost">${item.price > 0 ? formatCurrency(item.price) : 'Grátis'}</span>
+                <div class="summary-item-right">
+                    <span class="item-cost">${item.price > 0 ? formatCurrency(item.price) : 'Grátis'}</span>
+                    <button class="remove-item-btn" onclick="removeSummaryItem('${item.categoryId}', '${item.itemId}')" title="Remover item">
+                        <ion-icon name="close-circle-outline"></ion-icon>
+                    </button>
+                </div>
             </div>
         `).join('');
     }
 }
+
+// Remove item directly from the summary panel
+window.removeSummaryItem = function(catId, itemId) {
+    const category = MENU_DATA.categories.find(c => c.id === catId);
+    if (!category) return;
+
+    if (category.selectionType === 'single') {
+        orderState.selections[catId] = null;
+    } else {
+        orderState.selections[catId] = orderState.selections[catId].filter(i => i.id !== itemId);
+    }
+    
+    renderMenuCategories();
+};
 
 // Reset selections State
 function resetOrder() {

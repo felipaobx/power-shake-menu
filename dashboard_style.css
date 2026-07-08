@@ -372,6 +372,12 @@ textarea.form-control {
     border-color: var(--danger);
 }
 
+.action-btn.move-btn:hover {
+    background: rgba(255, 255, 255, 0.08);
+    color: #fff;
+    border-color: rgba(255, 255, 255, 0.2);
+}
+
 /* Dashboard Action Bar */
 .dashboard-actions-bar {
     display: flex;
