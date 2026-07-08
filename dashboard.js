@@ -193,6 +193,7 @@ const dom = {
 
     // Category Select and Table
     categorySelect: document.getElementById('category-select'),
+    categorySelectionType: document.getElementById('category-selection-type'),
     tableHeaders: document.getElementById('table-headers'),
     tableBody: document.getElementById('items-table-body'),
     addItemBtn: document.getElementById('add-item-btn'),
@@ -326,6 +327,11 @@ function renderItemsTable() {
     dom.tableBody.innerHTML = '';
 
     if (!category) return;
+    
+    // Set selection type select element
+    if (dom.categorySelectionType) {
+        dom.categorySelectionType.value = category.selectionType || 'single';
+    }
 
     // Headers set
     let headers = ['Imagem / Ícone', 'Nome'];
@@ -570,6 +576,15 @@ window.moveItemDown = function(id) {
         category.items[index] = category.items[index + 1];
         category.items[index + 1] = temp;
         renderItemsTable();
+    }
+};
+
+// Change Category Selection Mode (single/multi) on dropdown selection change
+window.changeCategorySelectionType = function() {
+    const catId = dom.categorySelect.value || 'fruits';
+    const category = MENU_DATA.categories.find(c => c.id === catId);
+    if (category && dom.categorySelectionType) {
+        category.selectionType = dom.categorySelectionType.value;
     }
 };
 

@@ -114,6 +114,13 @@
                             <!-- Populated dynamically by dashboard.js -->
                         </select>
                     </div>
+                    <div>
+                        <label style="font-size:0.85rem; color:var(--text-secondary); display:block; margin-bottom:5px;">Modo de Seleção</label>
+                        <select id="category-selection-type" class="category-select-control" onchange="changeCategorySelectionType()">
+                            <option value="single">Seleção Única (Escolhe 1)</option>
+                            <option value="multi">Seleção Múltipla (Escolhe vários)</option>
+                        </select>
+                    </div>
                     <button class="add-item-btn" id="add-category-btn" style="background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); color: var(--text-primary);">
                         <ion-icon name="folder-open-outline"></ion-icon>
                         Nova Categoria
