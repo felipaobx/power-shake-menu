@@ -1,4 +1,5 @@
 const fs = require('fs');
+const path = require('path');
 const PDFDocument = require('pdfkit');
 
 // Declare variables to prevent ReferenceErrors and hoisting issues in eval
@@ -22,7 +23,7 @@ global.localStorage = {
     setItem: (key, val) => {}
 };
 
-// Load app.js, converting block-scoped variables to var to allow hoisting and override
+// Load app.js, converting block-scoped variables to var to allow hoisting & override
 let appCode = fs.readFileSync('./app.js', 'utf8');
 appCode = appCode
     .replace(/const /g, 'var ')
@@ -32,145 +33,266 @@ eval(appCode);
 
 const dataToUse = DEFAULT_MENU_DATA;
 
-const doc = new PDFDocument({ margin: 40, size: 'A4' });
-const outputFilePath = './Power_Shake_Cardapio.pdf';
-const stream = fs.createWriteStream(outputFilePath);
-doc.pipe(stream);
-
-// Paint Background function
-function drawBackground() {
-    doc.save();
-    doc.rect(0, 0, doc.page.width, doc.page.height).fill('#0c0d14');
-    doc.restore();
-}
-
-// Paint background on subsequent pages automatically
-doc.on('pageAdded', () => {
-    drawBackground();
-});
-
-// Paint background on first page
-drawBackground();
-
-// Draw Header
-doc.moveDown(1);
-doc.fillColor('#8bfc03')
-   .fontSize(28)
-   .font('Helvetica-Bold')
-   .text('POWER SHAKE', { align: 'center' });
-
-doc.moveDown(0.2);
-
-doc.fillColor('#ffffff')
-   .fontSize(10)
-   .font('Helvetica')
-   .text('CARDÁPIO OFICIAL INTERATIVO', { align: 'center', characterSpacing: 2 });
-
-doc.moveDown(0.6);
-
-// Draw a neon green divider line
-doc.strokeColor('#8bfc03')
-   .lineWidth(2)
-   .moveTo(40, doc.y)
-   .lineTo(doc.page.width - 40, doc.y)
-   .stroke();
-
-doc.moveDown(1.5);
-
-// Helper to check if page break is needed
-function checkPageBreak(neededHeight) {
-    if (doc.y + neededHeight > doc.page.height - 70) {
-        doc.addPage();
-        doc.y = 50; // top padding on new pages
-    }
-}
-
-dataToUse.categories.forEach(category => {
-    const items = category.items || [];
-    if (items.length === 0) return;
-
-    // Category header height (roughly 45 points)
-    checkPageBreak(45);
-
-    // Section title
-    doc.fillColor('#8bfc03')
-       .fontSize(14)
-       .font('Helvetica-Bold')
-       .text(category.name.toUpperCase(), 50, doc.y);
+// Async function to load image to buffer
+async function getImageBuffer(imageUrl) {
+    if (!imageUrl) return null;
     
-    doc.fillColor('#9aa0a6')
-       .fontSize(8.5)
-       .font('Helvetica-Oblique')
-       .text(category.subtitle || '', 50, doc.y, { paragraphGap: 12 });
+    if (imageUrl.startsWith('data:image/')) {
+        try {
+            const base64Data = imageUrl.replace(/^data:image\/\w+;base64,/, "");
+            return Buffer.from(base64Data, 'base64');
+        } catch (e) {
+            console.error('Failed to parse base64 image:', e.message);
+            return null;
+        }
+    }
+    
+    if (imageUrl.startsWith('assets/') || imageUrl.startsWith('./assets/')) {
+        const localPath = path.join(process.cwd(), imageUrl.replace(/^\.\//, ''));
+        if (fs.existsSync(localPath)) {
+            try {
+                return fs.readFileSync(localPath);
+            } catch (e) {
+                console.error('Failed to read local image file:', localPath, e.message);
+            }
+        }
+    }
+
+    if (imageUrl.startsWith('http://') || imageUrl.startsWith('https://')) {
+        try {
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), 3000); // 3 seconds timeout
+            const res = await fetch(imageUrl, { signal: controller.signal });
+            clearTimeout(timeoutId);
+            if (res.ok) {
+                const arrayBuffer = await res.arrayBuffer();
+                return Buffer.from(arrayBuffer);
+            }
+        } catch (e) {
+            console.error('Failed to fetch remote image URL:', imageUrl, e.message);
+        }
+    }
+    return null;
+}
+
+async function startPdfGeneration() {
+    const doc = new PDFDocument({ margin: 40, size: 'A4' });
+    const outputFilePath = './Power_Shake_Cardapio.pdf';
+    const stream = fs.createWriteStream(outputFilePath);
+    doc.pipe(stream);
+
+    // Paint Background function
+    function drawBackground() {
+        doc.save();
+        doc.rect(0, 0, doc.page.width, doc.page.height).fill('#0c0d14');
+        doc.restore();
+    }
+
+    // Paint background on subsequent pages automatically
+    doc.on('pageAdded', () => {
+        drawBackground();
+    });
+
+    // Paint background on first page
+    drawBackground();
+
+    // Draw Header
+    doc.moveDown(1);
+    doc.fillColor('#8bfc03')
+       .fontSize(28)
+       .font('Helvetica-Bold')
+       .text('POWER SHAKE', { align: 'center' });
 
     doc.moveDown(0.2);
 
-    items.forEach(item => {
-        // Individual item block height (roughly 35 points)
-        checkPageBreak(35);
+    doc.fillColor('#ffffff')
+       .fontSize(10)
+       .font('Helvetica')
+       .text('CARDÁPIO OFICIAL INTERATIVO', { align: 'center', characterSpacing: 2 });
 
-        let currentY = doc.y;
+    doc.moveDown(0.6);
 
-        // Print item name
-        doc.fillColor('#ffffff')
-           .fontSize(10)
-           .font('Helvetica-Bold')
-           .text(item.name, 50, currentY);
+    // Draw a neon green divider line
+    doc.strokeColor('#8bfc03')
+       .lineWidth(2)
+       .moveTo(40, doc.y)
+       .lineTo(doc.page.width - 40, doc.y)
+       .stroke();
 
-        // Print macros & description
-        let hasMacros = item.kcal > 0 || item.protein > 0;
-        let detailsText = '';
-        if (hasMacros) {
-            detailsText = `${item.kcal || 0} kcal | ${item.protein || 0}g P`;
+    doc.moveDown(1.5);
+
+    // Helper to check if page break is needed
+    function checkPageBreak(neededHeight) {
+        if (doc.y + neededHeight > doc.page.height - 70) {
+            doc.addPage();
+            doc.y = 50; // top padding on new pages
         }
-        if (item.description) {
-            detailsText += detailsText ? ` (${item.description})` : item.description;
+    }
+
+    const cardWidth = 250;
+    const cardHeight = 135;
+    const gap = 15;
+    let col = 0;
+    let rowY = doc.y;
+
+    for (const category of dataToUse.categories) {
+        const items = category.items || [];
+        if (items.length === 0) return;
+
+        // If currently in the middle of a row, complete the row before printing a new header
+        if (col === 1) {
+            rowY += cardHeight + gap;
+            col = 0;
         }
+
+        doc.y = rowY;
         
-        if (detailsText) {
-            doc.fillColor('#9aa0a6')
-               .fontSize(7.5)
-               .font('Helvetica')
-               .text(detailsText, 50, doc.y);
+        // Category header height (roughly 45 points)
+        checkPageBreak(45);
+
+        // Section title
+        doc.fillColor('#8bfc03')
+           .fontSize(14)
+           .font('Helvetica-Bold')
+           .text(category.name.toUpperCase(), 50, doc.y);
+        
+        doc.fillColor('#9aa0a6')
+           .fontSize(8.5)
+           .font('Helvetica-Oblique')
+           .text(category.subtitle || '', 50, doc.y, { paragraphGap: 12 });
+
+        doc.moveDown(0.2);
+        rowY = doc.y;
+
+        for (const item of items) {
+            // Check if we need a page break for the next row of cards
+            if (col === 0) {
+                if (rowY + cardHeight > doc.page.height - 70) {
+                    doc.addPage();
+                    rowY = 50; // reset to top of page
+                }
+            }
+
+            let cardX = col === 0 ? 50 : 50 + cardWidth + gap;
+            let cardY = rowY;
+
+            // Fetch image buffer
+            let imageBuffer = null;
+            if (item.image) {
+                imageBuffer = await getImageBuffer(item.image);
+            }
+
+            // Draw Card background & Image (clipped)
+            doc.save();
+            doc.roundedRect(cardX, cardY, cardWidth, cardHeight, 10).clip();
+            doc.rect(cardX, cardY, cardWidth, cardHeight).fill('#151722');
+            if (imageBuffer) {
+                try {
+                    doc.image(imageBuffer, cardX, cardY, {
+                        width: cardWidth,
+                        height: 65,
+                        fit: [cardWidth, 65],
+                        align: 'center',
+                        valign: 'center'
+                    });
+                } catch (err) {
+                    console.error('Error drawing image inside PDF:', err);
+                    // Fallback to emoji
+                    doc.fillColor('#8bfc03')
+                       .fontSize(22)
+                       .text(item.icon || '🥤', cardX, cardY + 22, { align: 'center', width: cardWidth });
+                }
+            } else {
+                doc.fillColor('#8bfc03')
+                   .fontSize(22)
+                   .text(item.icon || '🥤', cardX, cardY + 22, { align: 'center', width: cardWidth });
+            }
+            doc.restore();
+
+            // Draw card border
+            doc.strokeColor('rgba(255,255,255,0.06)')
+               .lineWidth(1)
+               .roundedRect(cardX, cardY, cardWidth, cardHeight, 10)
+               .stroke();
+
+            // Draw image divider
+            doc.strokeColor('rgba(255, 255, 255, 0.05)')
+               .lineWidth(1)
+               .moveTo(cardX, cardY + 65)
+               .lineTo(cardX + cardWidth, cardY + 65)
+               .stroke();
+
+            // Card Text: Title
+            doc.fillColor('#ffffff')
+               .fontSize(9.5)
+               .font('Helvetica-Bold')
+               .text(item.name, cardX + 12, cardY + 74, { width: cardWidth - 24, height: 12, ellipsis: true });
+
+            // Card Text: Description
+            let descText = item.description || '';
+            if (descText) {
+                doc.fillColor('#9aa0a6')
+                   .fontSize(7.5)
+                   .font('Helvetica')
+                   .text(descText, cardX + 12, cardY + 89, { width: cardWidth - 24, height: 18, ellipsis: true });
+            }
+
+            // Card Text: Price & Macros
+            let priceText = item.price > 0 
+                ? item.price.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
+                : 'Incluso';
+                
+            doc.fillColor('#8bfc03')
+               .fontSize(10)
+               .font('Helvetica-Bold')
+               .text(priceText, cardX + 12, cardY + 112);
+
+            let hasMacros = item.kcal > 0 || item.protein > 0;
+            if (hasMacros) {
+                let macrosText = `${item.kcal || 0} kcal · ${item.protein || 0}g P`;
+                doc.fillColor('#9aa0a6')
+                   .fontSize(7.5)
+                   .font('Helvetica')
+                   .text(macrosText, cardX + 12, cardY + 114, { align: 'right', width: cardWidth - 24 });
+            }
+
+            // Toggle column pointer
+            if (col === 0) {
+                col = 1;
+            } else {
+                col = 0;
+                rowY += cardHeight + gap; // advance to next row
+            }
         }
 
-        // Print Price (aligned to the right margin)
-        let priceText = item.price > 0 
-            ? item.price.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
-            : 'Incluso';
-            
-        doc.fillColor('#8bfc03')
-           .fontSize(10)
-           .font('Helvetica-Bold')
-           .text(priceText, doc.page.width - 140, currentY, { align: 'right', width: 100 });
+        doc.moveDown(0.8);
+    }
 
-        doc.y = Math.max(doc.y, currentY + 28);
-        doc.moveDown(0.25);
-    });
+    if (col === 1) {
+        rowY += cardHeight + gap;
+    }
 
-    doc.moveDown(0.8);
-});
+    doc.y = rowY;
 
-// Footer Address
-checkPageBreak(65);
-doc.moveDown(1);
-doc.strokeColor('#8bfc03')
-   .lineWidth(1)
-   .moveTo(40, doc.y)
-   .lineTo(doc.page.width - 40, doc.y)
-   .stroke();
+    // Footer Address
+    checkPageBreak(65);
+    doc.moveDown(1);
+    doc.strokeColor('#8bfc03')
+       .lineWidth(1)
+       .moveTo(40, doc.y)
+       .lineTo(doc.page.width - 40, doc.y)
+       .stroke();
 
-doc.moveDown(1);
-doc.fillColor('#ffffff')
-   .fontSize(8.5)
-   .font('Helvetica')
-   .text('Rua Zeferino Galvão, nº 508, 1º andar, sala 01 - Caruaru / PE', { align: 'center' });
-doc.fillColor('#9aa0a6')
-   .fontSize(8)
-   .text('Em frente ao receptivo de lotação (Acima da Medic Center)', { align: 'center' });
+    doc.moveDown(1);
+    doc.fillColor('#ffffff')
+       .fontSize(8.5)
+       .font('Helvetica')
+       .text('Rua Zeferino Galvão, nº 508, 1º andar, sala 01 - Caruaru / PE', { align: 'center' });
+    doc.fillColor('#9aa0a6')
+       .fontSize(8)
+       .text('Em frente ao receptivo de lotação (Acima da Medic Center)', { align: 'center' });
 
-doc.end();
+    doc.end();
+}
 
-stream.on('finish', () => {
-    console.log('PDF Generated successfully!');
-});
+startPdfGeneration();
