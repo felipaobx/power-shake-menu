@@ -90,8 +90,8 @@
             <div class="receipt-card">
                 <div class="receipt-header">
                     <ion-icon name="checkmark-circle" class="receipt-success-icon"></ion-icon>
-                    <h2>Pedido Finalizado!</h2>
-                    <p>Aqui está o resumo do seu shake personalizado.</p>
+                    <h2 id="receipt-success-title">Pedido Finalizado!</h2>
+                    <p id="receipt-success-message">Aqui está o resumo do seu shake personalizado.</p>
                 </div>
                 
                 <div class="receipt-body">
@@ -155,6 +155,24 @@
             </div>
         </footer>
 
+    </div>
+
+    <!-- Modal de Identificação do Cliente -->
+    <div class="modal-overlay" id="name-modal" style="display: none;">
+        <div class="modal-content">
+            <button class="modal-close" id="name-modal-close-btn">&times;</button>
+            <h3 class="modal-title">Identifique seu Pedido</h3>
+            <p class="modal-text">Por favor, insira o seu nome para darmos início ao preparo do seu shake.</p>
+            <form id="name-modal-form" onsubmit="event.preventDefault()">
+                <div class="form-group" style="margin-bottom: 20px;">
+                    <input type="text" id="client-name-input" class="modal-input" placeholder="Digite seu nome..." required autocomplete="off">
+                </div>
+                <div class="modal-actions">
+                    <button type="button" class="modal-btn cancel-btn" id="name-modal-cancel-btn">Cancelar</button>
+                    <button type="submit" class="modal-btn confirm-btn" id="name-modal-confirm-btn">Confirmar Pedido</button>
+                </div>
+            </form>
+        </div>
     </div>
 
     <!-- Script linking -->

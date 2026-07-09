@@ -250,6 +250,13 @@ function switchTab(tabId) {
         populateCategoryDropdown();
         renderItemsTable();
     }
+
+    if (tabId === 'tab-orders') {
+        loadOrders();
+        startOrdersPolling();
+    } else {
+        stopOrdersPolling();
+    }
 }
 
 // Populate the Category select options dynamically from MENU_DATA.categories
@@ -785,7 +792,245 @@ async function initDashboard() {
     populateCategoryDropdown();
     setupCategoryActions();
     setupDashboardActions();
+    setupOrdersTab();
 }
+
+// ==========================================
+// RECEBIMENTO DE PEDIDOS - LÓGICA E DADOS
+// ==========================================
+
+let ordersPollingInterval = null;
+
+function setupOrdersTab() {
+    const refreshBtn = document.getElementById('refresh-orders-btn');
+    if (refreshBtn) {
+        refreshBtn.addEventListener('click', loadOrders);
+    }
+}
+
+function startOrdersPolling() {
+    stopOrdersPolling();
+    ordersPollingInterval = setInterval(loadOrders, 12000);
+}
+
+function stopOrdersPolling() {
+    if (ordersPollingInterval) {
+        clearInterval(ordersPollingInterval);
+        ordersPollingInterval = null;
+    }
+}
+
+async function loadOrders() {
+    const refreshIcon = document.getElementById('refresh-icon');
+    if (refreshIcon) {
+        refreshIcon.classList.add('spinning');
+    }
+
+    let orders = [];
+    
+    // 1. Try to load from API
+    try {
+        const response = await fetch('/api/get-orders');
+        const data = await response.json();
+        if (data.success && Array.isArray(data.orders)) {
+            orders = data.orders;
+        } else {
+            console.warn('API get-orders was unsuccessful. Falling back to local storage.');
+            orders = getLocalOrders();
+        }
+    } catch (e) {
+        console.warn('Failed to fetch orders from API, falling back to local storage:', e);
+        orders = getLocalOrders();
+    }
+
+    renderOrders(orders);
+
+    if (refreshIcon) {
+        setTimeout(() => {
+            refreshIcon.classList.remove('spinning');
+        }, 600);
+    }
+}
+
+function getLocalOrders() {
+    try {
+        return JSON.parse(localStorage.getItem('power_shake_orders') || '[]');
+    } catch (e) {
+        console.error('Failed to load orders from localStorage:', e);
+        return [];
+    }
+}
+
+function renderOrders(orders) {
+    const container = document.getElementById('orders-list-container');
+    if (!container) return;
+
+    if (!orders || orders.length === 0) {
+        container.innerHTML = `
+            <div class="empty-orders-state">
+                <ion-icon name="restaurant-outline" style="font-size: 3rem; color: var(--text-muted); margin-bottom: 15px;"></ion-icon>
+                <p>Nenhum pedido recebido ainda.</p>
+            </div>
+        `;
+        return;
+    }
+
+    container.innerHTML = orders.map(order => {
+        const dateFormatted = formatOrderDate(order.createdAt);
+        const statusLabel = {
+            pending: 'Pendente',
+            completed: 'Concluído',
+            cancelled: 'Cancelado'
+        }[order.status] || order.status;
+
+        const itemsHtml = order.items.map(item => `
+            <div class="order-item-row">
+                <span class="order-item-name">${item.name}</span>
+                <span class="order-item-price">${item.price > 0 ? formatCurrency(item.price) : 'Grátis'}</span>
+            </div>
+        `).join('');
+
+        const kcalVal = parseFloat(order.totalKcal || 0).toFixed(1);
+        const proteinVal = parseFloat(order.totalProtein || 0).toFixed(1);
+
+        // Action buttons based on current status
+        let actionsHtml = '';
+        if (order.status === 'pending') {
+            actionsHtml = `
+                <button class="order-btn order-btn-complete" onclick="updateOrderStatus('${order.id}', 'completed')">
+                    <ion-icon name="checkmark-outline"></ion-icon> Concluir
+                </button>
+                <button class="order-btn order-btn-cancel" onclick="updateOrderStatus('${order.id}', 'cancelled')">
+                    <ion-icon name="close-outline"></ion-icon> Cancelar
+                </button>
+            `;
+        } else {
+            actionsHtml = `
+                <button class="order-btn order-btn-complete" style="opacity: 0.7;" onclick="updateOrderStatus('${order.id}', 'pending')">
+                    <ion-icon name="arrow-undo-outline"></ion-icon> Reabrir
+                </button>
+            `;
+        }
+
+        return `
+            <div class="order-card ${order.status}">
+                <div class="order-card-header">
+                    <span class="order-id">#${order.id}</span>
+                    <span class="order-date">${dateFormatted}</span>
+                </div>
+                <div class="order-client-name">${order.clientName}</div>
+                
+                <div class="order-items-list">
+                    ${itemsHtml}
+                </div>
+
+                <div class="order-footer-details">
+                    <div class="order-macros-summary">
+                        <span class="order-macro-pill">🔥 ${kcalVal} kcal</span>
+                        <span class="order-macro-pill">💪 ${proteinVal}g prot</span>
+                    </div>
+                    <div class="order-total-price">${formatCurrency(order.totalPrice || 0)}</div>
+                </div>
+
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; border-bottom: 1px solid rgba(255,255,255,0.03); padding-bottom: 8px;">
+                    <span style="font-size:0.8rem; color:var(--text-secondary);">Status:</span>
+                    <span class="badge badge-${order.status}">${statusLabel}</span>
+                </div>
+
+                <div class="order-actions">
+                    ${actionsHtml}
+                    <button class="order-btn order-btn-delete" title="Excluir do Histórico" onclick="deleteOrder('${order.id}')">
+                        <ion-icon name="trash-outline"></ion-icon>
+                    </button>
+                </div>
+            </div>
+        `;
+    }).join('');
+}
+
+function formatOrderDate(dateString) {
+    if (!dateString) return '';
+    try {
+        const date = new Date(dateString);
+        const now = new Date();
+        const diffMs = now - date;
+        const diffMins = Math.floor(diffMs / 60000);
+
+        if (diffMins < 1) return 'Agora mesmo';
+        if (diffMins < 60) return `Há ${diffMins} min`;
+
+        if (date.toDateString() === now.toDateString()) {
+            return `Hoje, ${date.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}`;
+        }
+        
+        return date.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' }) + ' ' + date.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+    } catch (e) {
+        return dateString;
+    }
+}
+
+function formatCurrency(value) {
+    return value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+}
+
+async function updateOrderStatus(orderId, newStatus) {
+    // 1. Update backend
+    try {
+        await fetch('/api/update-order-status', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ orderId, status: newStatus })
+        });
+    } catch (e) {
+        console.warn('Failed to update order status on backend:', e);
+    }
+
+    // 2. Update local storage
+    try {
+        let localOrders = getLocalOrders();
+        localOrders = localOrders.map(o => {
+            if (o.id === orderId) {
+                return { ...o, status: newStatus };
+            }
+            return o;
+        });
+        localStorage.setItem('power_shake_orders', JSON.stringify(localOrders));
+    } catch (e) {
+        console.error(e);
+    }
+
+    loadOrders();
+}
+
+async function deleteOrder(orderId) {
+    if (!confirm('Deseja excluir permanentemente este pedido do histórico?')) return;
+
+    // 1. Update backend
+    try {
+        await fetch('/api/update-order-status', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ orderId, status: 'deleted' })
+        });
+    } catch (e) {
+        console.warn('Failed to delete order from backend:', e);
+    }
+
+    // 2. Update local storage
+    try {
+        let localOrders = getLocalOrders();
+        localOrders = localOrders.filter(o => o.id !== orderId);
+        localStorage.setItem('power_shake_orders', JSON.stringify(localOrders));
+    } catch (e) {
+        console.error(e);
+    }
+
+    loadOrders();
+}
+
+// Bind to window for HTML inline onclick
+window.updateOrderStatus = updateOrderStatus;
+window.deleteOrder = deleteOrder;
 
 // Run initializations
 document.addEventListener('DOMContentLoaded', initDashboard);

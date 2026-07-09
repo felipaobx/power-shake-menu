@@ -211,7 +211,16 @@ const elements = {
     receiptProtein: document.getElementById('receipt-protein'),
     receiptTotalPrice: document.getElementById('receipt-total-price'),
     receiptRedoBtn: document.getElementById('receipt-redo-btn'),
-    floatingMobileBar: document.querySelector('.floating-mobile-bar')
+    floatingMobileBar: document.querySelector('.floating-mobile-bar'),
+    
+    // Name Modal DOM
+    nameModal: document.getElementById('name-modal'),
+    nameForm: document.getElementById('name-modal-form'),
+    clientNameInput: document.getElementById('client-name-input'),
+    nameModalCloseBtn: document.getElementById('name-modal-close-btn'),
+    nameModalCancelBtn: document.getElementById('name-modal-cancel-btn'),
+    receiptSuccessTitle: document.getElementById('receipt-success-title'),
+    receiptSuccessMessage: document.getElementById('receipt-success-message')
 };
 
 // Format currency
@@ -488,6 +497,33 @@ function setupGlobalActions() {
         elements.checkoutBtn.addEventListener('click', finalizeOrder);
     }
 
+    // Name Modal events
+    if (elements.nameModalCloseBtn) {
+        elements.nameModalCloseBtn.addEventListener('click', function () {
+            elements.nameModal.style.display = 'none';
+        });
+    }
+    if (elements.nameModalCancelBtn) {
+        elements.nameModalCancelBtn.addEventListener('click', function () {
+            elements.nameModal.style.display = 'none';
+        });
+    }
+    window.addEventListener('click', function (e) {
+        if (e.target === elements.nameModal) {
+            elements.nameModal.style.display = 'none';
+        }
+    });
+    if (elements.nameForm) {
+        elements.nameForm.addEventListener('submit', function (e) {
+            e.preventDefault();
+            const name = elements.clientNameInput.value.trim();
+            if (name) {
+                elements.nameModal.style.display = 'none';
+                submitOrder(name);
+            }
+        });
+    }
+
     // Redo click on receipt screen
     if (elements.receiptRedoBtn) {
         elements.receiptRedoBtn.addEventListener('click', function() {
@@ -660,11 +696,24 @@ async function loadMenuDataAndSettings() {
 function finalizeOrder() {
     const selectedFruits = orderState.selections['fruits'];
     const selectedMilks = orderState.selections['milks'];
-    if (!selectedFruits || !selectedMilks) {
+    
+    const hasFruits = Array.isArray(selectedFruits) ? selectedFruits.length > 0 : !!selectedFruits;
+    const hasMilks = Array.isArray(selectedMilks) ? selectedMilks.length > 0 : !!selectedMilks;
+    
+    if (!hasFruits || !hasMilks) {
         alert('Por favor, selecione pelo menos uma fruta base e um leite para finalizar seu shake!');
         return;
     }
 
+    // Open name modal
+    if (elements.nameModal) {
+        elements.clientNameInput.value = '';
+        elements.nameModal.style.display = 'flex';
+        elements.clientNameInput.focus();
+    }
+}
+
+function submitOrder(clientName) {
     // Build the list of chosen items (exactly as we calculate in updateTotals)
     let kcal = 0;
     let protein = 0;
@@ -702,6 +751,41 @@ function finalizeOrder() {
         }
     });
 
+    const orderId = 'PS-' + Math.floor(100000 + Math.random() * 900000);
+    const orderData = {
+        id: orderId,
+        clientName: clientName,
+        items: receiptItems,
+        totalKcal: kcal,
+        totalProtein: protein,
+        totalPrice: price,
+        status: 'pending',
+        createdAt: new Date().toISOString()
+    };
+
+    // 1. Save to backend API (fails silently/logged if backend offline)
+    fetch('/api/save-order', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(orderData)
+    }).then(res => res.json())
+      .then(data => {
+          if (!data.success) {
+              console.warn('API save-order returned false:', data.error);
+          }
+      })
+      .catch(err => console.error('Error saving order to backend:', err));
+
+    // 2. Save to LocalStorage as secondary store/fallback
+    try {
+        let localOrders = JSON.parse(localStorage.getItem('power_shake_orders') || '[]');
+        localOrders.unshift(orderData);
+        localStorage.setItem('power_shake_orders', JSON.stringify(localOrders));
+    } catch (e) {
+        console.error('Failed to save order to localStorage:', e);
+    }
 
     // Render screen
     elements.receiptScreenItems.innerHTML = receiptItems.map(item => `
@@ -714,6 +798,14 @@ function finalizeOrder() {
     elements.receiptKcal.innerText = kcal.toFixed(1);
     elements.receiptProtein.innerText = protein.toFixed(1) + 'g';
     elements.receiptTotalPrice.innerText = formatCurrency(price);
+
+    // Personalize Success message with Customer Name
+    if (elements.receiptSuccessTitle) {
+        elements.receiptSuccessTitle.innerText = `Obrigado, ${clientName}!`;
+    }
+    if (elements.receiptSuccessMessage) {
+        elements.receiptSuccessMessage.innerHTML = `Seu shake personalizado está sendo preparado na cozinha.<br><strong style="color:var(--accent); font-size:1.1rem;">Código do Pedido: #${orderId}</strong>`;
+    }
 
     // Swap views
     elements.mainGrid.style.display = 'none';
