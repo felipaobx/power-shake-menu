@@ -1269,3 +1269,30 @@ footer {
     border-color: var(--accent);
     box-shadow: 0 0 10px rgba(139, 252, 3, 0.15);
 }
+
+/* Mobile responsive fixes for modal layout */
+@media (max-width: 576px) {
+    .modal-content {
+        padding: 20px 15px;
+        border-radius: 12px;
+        max-height: 85vh;
+        overflow-y: auto;
+    }
+    .modal-title {
+        font-size: 1.3rem;
+        margin-bottom: 10px;
+    }
+    .modal-text {
+        font-size: 0.85rem;
+        margin-bottom: 15px;
+    }
+    .modal-actions {
+        flex-direction: column;
+        gap: 8px;
+    }
+    .modal-btn {
+        width: 100%;
+        text-align: center;
+        padding: 12px;
+    }
+}
