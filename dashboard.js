@@ -180,6 +180,7 @@ MENU_DATA.categories.forEach(cat => {
 
 // Temporary file uploader state
 let uploadedProductImageBase64 = '';
+let uploadedCategoryImageBase64 = '';
 
 // DOM selectors
 const dom = {
@@ -233,11 +234,17 @@ const dom = {
     // Category Form Modal
     catModal: document.getElementById('category-modal'),
     catForm: document.getElementById('category-editor-form'),
+    editCategoryBtn: document.getElementById('edit-category-btn'),
+    editCategoryId: document.getElementById('edit-category-id'),
     catName: document.getElementById('cat-name-input'),
     catSubtitle: document.getElementById('cat-subtitle-input'),
     catPosition: document.getElementById('cat-position-input'),
     catSelection: document.getElementById('cat-selection-input'),
     catRequired: document.getElementById('cat-required-input'),
+    catMediaType: document.getElementById('cat-media-type'),
+    catIcon: document.getElementById('cat-icon-input'),
+    catImageFile: document.getElementById('cat-image-file'),
+    catImagePreview: document.getElementById('cat-image-preview'),
     catCloseBtn: document.getElementById('category-modal-close-btn'),
     catCancelBtn: document.getElementById('category-modal-cancel-btn')
 };
@@ -395,16 +402,16 @@ function renderItemsTable(resetSearch = false) {
             : `<span style="font-size:1.6rem;">${item.icon || '🥤'}</span>`;
 
         let cols = [
-            `<td>${mediaHtml}</td>`,
-            `<td class="item-name-cell">${item.name}</td>`
+            `<td onclick="openItemEditor('${item.id}')" style="cursor: pointer;" title="Clique para editar mídia">${mediaHtml}</td>`,
+            `<td class="item-name-cell" onclick="startInlineEdit(this, '${category.id}', '${item.id}', 'name')" style="cursor: pointer;" title="Clique para editar">${item.name}</td>`
         ];
 
         if (showPrice) {
-            cols.push(`<td class="item-price">${formatCurrency(item.price || 0)}</td>`);
+            cols.push(`<td class="item-price" onclick="startInlineEdit(this, '${category.id}', '${item.id}', 'price')" style="cursor: pointer;" title="Clique para editar">${formatCurrency(item.price || 0)}</td>`);
         }
         if (showMacros) {
-            cols.push(`<td>${item.kcal || 0} kcal</td>`);
-            cols.push(`<td>${item.protein || 0}g</td>`);
+            cols.push(`<td onclick="startInlineEdit(this, '${category.id}', '${item.id}', 'kcal')" style="cursor: pointer;" title="Clique para editar">${item.kcal || 0} kcal</td>`);
+            cols.push(`<td onclick="startInlineEdit(this, '${category.id}', '${item.id}', 'protein')" style="cursor: pointer;" title="Clique para editar">${item.protein || 0}g</td>`);
         }
         if (showDesc) {
             if (category.id === 'milks') {
@@ -429,7 +436,7 @@ function renderItemsTable(resetSearch = false) {
                 <div class="action-buttons">
                     ${upBtn}
                     ${downBtn}
-                    <button class="action-btn edit-btn" onclick="openItemEditor('${item.id}')" title="Editar"><ion-icon name="create-outline"></ion-icon></button>
+                    <button class="action-btn edit-btn" onclick="openItemEditor('${item.id}')" title="Editar completo"><ion-icon name="create-outline"></ion-icon></button>
                     ${deleteBtn}
                 </div>
             </td>
@@ -442,6 +449,79 @@ function renderItemsTable(resetSearch = false) {
 function formatCurrency(value) {
     return value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
 }
+
+window.startInlineEdit = function(element, categoryId, itemId, field) {
+    // Avoid double edit triggering
+    if (element.querySelector('input')) return;
+
+    const category = MENU_DATA.categories.find(c => c.id === categoryId);
+    if (!category) return;
+    const item = category.items.find(i => i.id === itemId);
+    if (!item) return;
+
+    // Get current raw value
+    let currentVal;
+    if (field === 'price') currentVal = item.price || 0;
+    else if (field === 'kcal') currentVal = item.kcal || 0;
+    else if (field === 'protein') currentVal = item.protein || 0;
+    else currentVal = item.name || '';
+
+    const input = document.createElement('input');
+    input.type = ['price', 'kcal', 'protein'].includes(field) ? 'number' : 'text';
+    if (field === 'price') {
+        input.step = '0.01';
+    } else if (field === 'protein') {
+        input.step = 'any';
+    }
+    input.className = 'dashboard-inline-input';
+    input.value = currentVal;
+
+    element.innerHTML = '';
+    element.appendChild(input);
+    input.focus();
+    input.select();
+
+    const saveChanges = () => {
+        let newVal = input.value.trim();
+        if (field === 'price') {
+            newVal = parseFloat(newVal) || 0;
+            item.price = newVal;
+            element.innerHTML = formatCurrency(newVal);
+        } else if (field === 'kcal') {
+            newVal = parseInt(newVal) || 0;
+            item.kcal = newVal;
+            element.innerHTML = newVal + ' kcal';
+        } else if (field === 'protein') {
+            newVal = parseFloat(newVal) || 0;
+            item.protein = newVal;
+            element.innerHTML = newVal + 'g';
+        } else {
+            if (!newVal) newVal = item.name;
+            item.name = newVal;
+            element.innerHTML = newVal;
+        }
+        localStorage.setItem('power_shake_menu_data', JSON.stringify(MENU_DATA));
+    };
+
+    input.addEventListener('blur', saveChanges);
+    input.addEventListener('keydown', function(e) {
+        if (e.key === 'Enter') {
+            input.blur();
+        } else if (e.key === 'Escape') {
+            // Restore original formatting
+            input.removeEventListener('blur', saveChanges);
+            if (field === 'price') {
+                element.innerHTML = formatCurrency(item.price || 0);
+            } else if (field === 'kcal') {
+                element.innerHTML = (item.kcal || 0) + ' kcal';
+            } else if (field === 'protein') {
+                element.innerHTML = (item.protein || 0) + 'g';
+            } else {
+                element.innerHTML = item.name || '';
+            }
+        }
+    });
+};
 
 // Media type filter handler inside product form modal
 function toggleItemMediaFields() {
@@ -633,10 +713,91 @@ window.changeCategoryRequiredStatus = function() {
 };
 
 // Setup dynamic category modal actions
+// Toggle category media fields based on selection
+window.toggleCategoryMediaFields = function() {
+    if (!dom.catMediaType) return;
+    const val = dom.catMediaType.value;
+    const iconWrapper = document.getElementById('cat-icon-wrapper');
+    const imageWrapper = document.getElementById('cat-image-wrapper');
+    
+    if (val === 'icon') {
+        if (iconWrapper) iconWrapper.style.display = 'block';
+        if (imageWrapper) imageWrapper.style.display = 'none';
+        if (dom.catIcon) dom.catIcon.required = true;
+    } else {
+        if (iconWrapper) iconWrapper.style.display = 'none';
+        if (imageWrapper) imageWrapper.style.display = 'block';
+        if (dom.catIcon) dom.catIcon.required = false;
+    }
+};
+
 function setupCategoryActions() {
-    // Open category modal
+    // Media uploader reader for Category
+    if (dom.catImageFile) {
+        dom.catImageFile.addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = function(evt) {
+                    uploadedCategoryImageBase64 = evt.target.result;
+                    if (dom.catImagePreview) {
+                        dom.catImagePreview.style.backgroundImage = `url('${evt.target.result}')`;
+                        dom.catImagePreview.innerText = '';
+                    }
+                };
+                reader.readAsDataURL(file);
+            }
+        });
+    }
+
+    // Open category modal for creating new category
     dom.addCategoryBtn.addEventListener('click', () => {
         dom.catForm.reset();
+        dom.editCategoryId.value = '';
+        document.getElementById('category-modal-form-title').innerText = 'Nova Categoria';
+        uploadedCategoryImageBase64 = '';
+        if (dom.catImagePreview) {
+            dom.catImagePreview.style.backgroundImage = 'none';
+            dom.catImagePreview.innerText = 'Sem Foto';
+        }
+        toggleCategoryMediaFields();
+        dom.catModal.style.display = 'flex';
+    });
+
+    // Open category modal for editing existing category
+    dom.editCategoryBtn.addEventListener('click', () => {
+        const catId = dom.categorySelect.value;
+        const category = MENU_DATA.categories.find(c => c.id === catId);
+        if (!category) return;
+        
+        dom.catForm.reset();
+        dom.editCategoryId.value = catId;
+        document.getElementById('category-modal-form-title').innerText = 'Editar Categoria: ' + category.name;
+        dom.catName.value = category.name;
+        dom.catSubtitle.value = category.subtitle;
+        dom.catPosition.value = category.isStep ? 'step' : 'extra';
+        dom.catSelection.value = category.selectionType || 'multi';
+        dom.catRequired.value = category.required ? 'true' : 'false';
+        
+        if (category.image) {
+            dom.catMediaType.value = 'image';
+            uploadedCategoryImageBase64 = category.image;
+            if (dom.catImagePreview) {
+                dom.catImagePreview.style.backgroundImage = `url('${category.image}')`;
+                dom.catImagePreview.innerText = '';
+            }
+            dom.catIcon.value = '';
+        } else {
+            dom.catMediaType.value = 'icon';
+            dom.catIcon.value = category.icon || '';
+            uploadedCategoryImageBase64 = '';
+            if (dom.catImagePreview) {
+                dom.catImagePreview.style.backgroundImage = 'none';
+                dom.catImagePreview.innerText = 'Sem Foto';
+            }
+        }
+        
+        toggleCategoryMediaFields();
         dom.catModal.style.display = 'flex';
     });
 
@@ -645,29 +806,56 @@ function setupCategoryActions() {
     dom.catCloseBtn.addEventListener('click', closeCatModal);
     dom.catCancelBtn.addEventListener('click', closeCatModal);
     
-    // Save new category
+    // Save category (Create or Edit)
     dom.catForm.addEventListener('submit', function(e) {
         e.preventDefault();
+        const id = dom.editCategoryId.value;
         const name = dom.catName.value.trim();
         const subtitle = dom.catSubtitle.value.trim();
         const position = dom.catPosition.value;
         const selection = dom.catSelection.value;
+        const required = dom.catRequired.value === 'true';
+        const mediaType = dom.catMediaType.value;
         
-        const newCatId = 'cat_' + Date.now();
-        const newCategoryObj = {
-            id: newCatId,
-            name,
-            subtitle,
-            isStep: position === 'step',
-            selectionType: selection,
-            required: dom.catRequired.value === 'true',
-            items: []
-        };
+        const icon = mediaType === 'icon' ? dom.catIcon.value.trim() : '';
+        const image = mediaType === 'image' ? uploadedCategoryImageBase64 : '';
 
-        MENU_DATA.categories.push(newCategoryObj);
-        closeCatModal();
-        populateCategoryDropdown(newCatId);
-        renderItemsTable();
+        if (id) {
+            // EDIT CATEGORY
+            const category = MENU_DATA.categories.find(c => c.id === id);
+            if (category) {
+                category.name = name;
+                category.subtitle = subtitle;
+                category.isStep = position === 'step';
+                category.selectionType = selection;
+                category.required = required;
+                category.icon = icon;
+                category.image = image;
+            }
+            closeCatModal();
+            populateCategoryDropdown(id);
+            renderItemsTable();
+        } else {
+            // CREATE CATEGORY
+            const newCatId = 'cat_' + Date.now();
+            const newCategoryObj = {
+                id: newCatId,
+                name,
+                subtitle,
+                isStep: position === 'step',
+                selectionType: selection,
+                required,
+                icon,
+                image,
+                items: []
+            };
+
+            MENU_DATA.categories.push(newCategoryObj);
+            closeCatModal();
+            populateCategoryDropdown(newCatId);
+            renderItemsTable();
+        }
+        localStorage.setItem('power_shake_menu_data', JSON.stringify(MENU_DATA));
     });
 
     // Delete category action

@@ -295,12 +295,20 @@ function renderMenuCategories() {
 
             const summary = getCategorySelectionSummary(category);
             const isFilled = summary !== 'Pendente';
-            const icon = getCategoryIcon(category.id);
+            
+            // Choose image or icon
+            let mediaHtml = '';
+            if (category.image) {
+                mediaHtml = `<img src="${category.image}" class="category-card-img" alt="${category.name}">`;
+            } else {
+                const icon = category.icon || getCategoryIcon(category.id);
+                mediaHtml = `<div class="category-card-icon">${icon}</div>`;
+            }
 
             const cardHtml = `
                 <div class="category-card ${isFilled ? 'filled' : ''}" data-category-id="${category.id}">
                     <div class="category-card-check">✓</div>
-                    <div class="category-card-icon">${icon}</div>
+                    ${mediaHtml}
                     <div class="category-card-title">${category.name.replace('Escolha a ', '').replace('Escolha o ', '').replace('Adicione ', '')}</div>
                     <div class="category-card-status">${summary}</div>
                 </div>

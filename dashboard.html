@@ -140,6 +140,10 @@
                             <ion-icon name="folder-open-outline"></ion-icon>
                             Nova Categoria
                         </button>
+                        <button class="add-item-btn" id="edit-category-btn" style="background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.08); color: var(--text-primary); margin: 0;" title="Editar Categoria Atual">
+                            <ion-icon name="create-outline"></ion-icon>
+                            Editar Categoria
+                        </button>
                         <button class="add-item-btn" id="delete-category-btn" style="background: rgba(255, 77, 79, 0.12); border: 1px solid rgba(255, 77, 79, 0.2); color: var(--danger); margin: 0;" title="Excluir Categoria Atual">
                             <ion-icon name="trash-outline"></ion-icon>
                             Excluir Categoria
@@ -316,6 +320,7 @@
             <button class="modal-close" id="category-modal-close-btn">&times;</button>
             <h3 class="modal-title" id="category-modal-form-title">Nova Categoria</h3>
             <form id="category-editor-form" onsubmit="event.preventDefault()">
+                <input type="hidden" id="edit-category-id" value="">
                 <div class="form-group">
                     <label for="cat-name-input">Nome da Categoria</label>
                     <input type="text" id="cat-name-input" class="form-control" required placeholder="Ex: Sobremesas">
@@ -347,9 +352,31 @@
                         <option value="true">Obrigatório para Finalizar</option>
                     </select>
                 </div>
+                <div class="grid-2">
+                    <div class="form-group">
+                        <label for="cat-media-type">Tipo de Ícone/Imagem</label>
+                        <select id="cat-media-type" class="form-control" onchange="toggleCategoryMediaFields()">
+                            <option value="icon">Ícone / Emoji</option>
+                            <option value="image">Imagem Personalizada</option>
+                        </select>
+                    </div>
+                    <div class="form-group" id="cat-icon-wrapper">
+                        <label for="cat-icon-input">Ícone (Emoji)</label>
+                        <input type="text" id="cat-icon-input" class="form-control" placeholder="Ex: 🍓">
+                    </div>
+                </div>
+                <div class="form-group" id="cat-image-wrapper" style="display: none;">
+                    <label>Imagem da Categoria</label>
+                    <div style="display: flex; gap: 15px; align-items: center;">
+                        <div class="image-preview-box" id="cat-image-preview" style="width: 80px; height: 80px; border-radius: 12px; border: 1px dashed rgba(255,255,255,0.15); background-size: cover; background-position: center; display: flex; align-items: center; justify-content: center; color: var(--text-muted); font-size: 0.8rem; flex-shrink: 0;">Sem Foto</div>
+                        <div style="flex: 1;">
+                            <input type="file" id="cat-image-file" class="form-control" accept="image/*">
+                        </div>
+                    </div>
+                </div>
                 <div class="modal-actions">
                     <button type="button" class="modal-btn cancel-btn" id="category-modal-cancel-btn">Cancelar</button>
-                    <button type="submit" class="modal-btn confirm-btn" id="category-modal-confirm-btn">Criar Categoria</button>
+                    <button type="submit" class="modal-btn confirm-btn" id="category-modal-confirm-btn">Salvar</button>
                 </div>
             </form>
         </div>

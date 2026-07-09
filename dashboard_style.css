@@ -1109,3 +1109,19 @@ textarea.form-control {
         min-height: 35px;
     }
 }
+}
+
+/* Inline Editing Style */
+.dashboard-inline-input {
+    background: rgba(0, 0, 0, 0.45);
+    border: 1px solid var(--accent);
+    color: var(--text-primary);
+    padding: 6px 8px;
+    border-radius: 4px;
+    font-size: 0.9rem;
+    font-family: 'Outfit', sans-serif;
+    width: 100%;
+    box-sizing: border-box;
+    outline: none;
+    box-shadow: 0 0 8px rgba(139, 252, 3, 0.25);
+}
