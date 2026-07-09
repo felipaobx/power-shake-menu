@@ -740,6 +740,9 @@ h1, h2, h3, h4, h5, h6 {
     .app-container {
         padding-bottom: 100px; /* Space for float bar */
     }
+    .selection-view-footer {
+        bottom: 85px; /* Sits above the floating checkout bar when sticky */
+    }
 }
 
 @media (max-width: 767px) {
@@ -1586,18 +1589,22 @@ footer {
     }
     
     .selection-view-footer {
-        flex-direction: column-reverse;
-        gap: 10px;
+        flex-direction: row;
+        gap: 12px;
         margin-top: 25px;
-        padding: 15px;
-        border-radius: 16px;
-        bottom: 10px;
+        padding: 12px 16px;
+        border-radius: 20px;
+        bottom: 85px; /* Sits perfectly above the bottom floating bar on mobile */
+        box-shadow: 0 -8px 25px rgba(0, 0, 0, 0.4), 0 8px 25px rgba(0, 0, 0, 0.4);
     }
     
     .nav-step-btn {
-        width: 100%;
+        flex: 1;
+        width: auto;
         justify-content: center;
-        padding: 14px;
+        padding: 12px 8px;
+        font-size: 0.85rem;
+        gap: 6px;
     }
 }
 
