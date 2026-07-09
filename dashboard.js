@@ -228,6 +228,7 @@ const dom = {
     itemPrice: document.getElementById('item-price-input'),
     itemDesc: document.getElementById('item-desc-input'),
     itemVersions: document.getElementById('item-versions-input'),
+    itemAvailableCheckbox: document.getElementById('item-available-checkbox'),
     modalCloseBtn: document.getElementById('modal-close-btn'),
     modalCancelBtn: document.getElementById('modal-cancel-btn'),
 
@@ -374,6 +375,7 @@ function renderItemsTable(resetSearch = false) {
     if (showPrice) headers.push('Preço');
     if (showMacros) headers.push('Kcal', 'Proteína');
     if (showDesc) headers.push(category.id === 'milks' ? 'Versões / Desc' : 'Observação');
+    headers.push('Disponível');
     headers.push('Ações');
 
     dom.tableHeaders.innerHTML = headers.map(h => `<th>${h}</th>`).join('');
@@ -421,6 +423,16 @@ function renderItemsTable(resetSearch = false) {
                 cols.push(`<td>${item.description || ''}</td>`);
             }
         }
+
+        // Availability checkbox column
+        const isOutOfStock = !!item.outOfStock;
+        cols.push(`
+            <td>
+                <label class="availability-switch" style="display: inline-flex; align-items: center; justify-content: center; cursor: pointer; width: 100%;">
+                    <input type="checkbox" ${!isOutOfStock ? 'checked' : ''} onchange="toggleItemAvailability('${category.id}', '${item.id}', this)" style="accent-color: var(--accent); width: 18px; height: 18px; cursor: pointer;">
+                </label>
+            </td>
+        `);
 
         // Action controls
         const isDefaultWhey = category.id === 'whey' && item.id === 'whey_100';
@@ -562,6 +574,19 @@ window.startInlineEdit = function(element, categoryId, itemId, field) {
     });
 };
 
+window.toggleItemAvailability = function(categoryId, itemId, checkbox) {
+    const category = MENU_DATA.categories.find(c => c.id === categoryId);
+    if (!category) return;
+    const item = category.items.find(i => i.id === itemId);
+    if (!item) return;
+
+    item.outOfStock = !checkbox.checked;
+    localStorage.setItem('power_shake_menu_data', JSON.stringify(MENU_DATA));
+    
+    const statusText = checkbox.checked ? 'disponível' : 'indisponível (oculto no menu)';
+    showToast(`O produto "${item.name}" foi marcado como ${statusText}.`, 'success');
+};
+
 // Media type filter handler inside product form modal
 function toggleItemMediaFields() {
     const val = dom.itemMediaType.value;
@@ -623,6 +648,10 @@ window.openItemEditor = function(id = null) {
             dom.itemPrice.value = item.price || 0.00;
             dom.itemDesc.value = item.description || '';
             
+            if (dom.itemAvailableCheckbox) {
+                dom.itemAvailableCheckbox.checked = !item.outOfStock;
+            }
+            
             if (item.versions) {
                 dom.itemVersions.value = item.versions.join(', ');
             } else {
@@ -635,6 +664,9 @@ window.openItemEditor = function(id = null) {
         dom.itemPrice.value = '0.00';
         dom.itemKcal.value = '0';
         dom.itemProtein.value = '0';
+        if (dom.itemAvailableCheckbox) {
+            dom.itemAvailableCheckbox.checked = true;
+        }
     }
 
     toggleItemMediaFields();
@@ -667,23 +699,26 @@ dom.modalForm.addEventListener('submit', function(e) {
         versions = rawVersions.split(',').map(v => v.trim()).filter(v => v.length > 0);
     }
 
+    const outOfStock = dom.itemAvailableCheckbox ? !dom.itemAvailableCheckbox.checked : false;
+
     if (id) {
         // EDIT MODE
         const index = category.items.findIndex(i => i.id === id);
         if (index !== -1) {
             category.items[index] = {
                 ...category.items[index],
-                name, icon, image, kcal, protein, price, description, versions
+                name, icon, image, kcal, protein, price, description, versions, outOfStock
             };
         }
     } else {
         // ADD NEW ITEM MODE
         const newItem = {
             id: 'item_' + Date.now(),
-            name, icon, image, kcal, protein, price, description, versions
+            name, icon, image, kcal, protein, price, description, versions, outOfStock
         };
         category.items.push(newItem);
     }
+    localStorage.setItem('power_shake_menu_data', JSON.stringify(MENU_DATA));
 
     dom.itemModal.style.display = 'none';
     renderItemsTable();

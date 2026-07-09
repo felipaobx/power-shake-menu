@@ -381,10 +381,12 @@ function renderMenuCategories() {
         if (elements.selectionCategoryTitle) elements.selectionCategoryTitle.innerText = category.name;
         if (elements.selectionCategorySubtitle) elements.selectionCategorySubtitle.innerText = category.subtitle;
 
-        // Render items inside step
-        if (category.id === 'whey' && category.items.length === 1) {
+        // Render items inside step (filtering outOfStock items)
+        const availableItems = (category.items || []).filter(i => !i.outOfStock);
+
+        if (category.id === 'whey' && availableItems.length === 1) {
             // Whey single layout
-            const item = category.items[0];
+            const item = availableItems[0];
             const isSelected = orderState.selections[category.id] !== null;
             
             const mediaHtml = item.image 
@@ -437,7 +439,13 @@ function renderMenuCategories() {
             }
         } else {
             // General step card grid
-            if (elements.selectionItemsGrid) elements.selectionItemsGrid.innerHTML = renderCards(category);
+            if (elements.selectionItemsGrid) {
+                if (availableItems.length === 0) {
+                    elements.selectionItemsGrid.innerHTML = `<div style="grid-column:1/-1; text-align:center; color:var(--text-secondary); padding:40px 0; font-family:'Outfit',sans-serif;">Nenhum produto disponível nesta categoria no momento.</div>`;
+                } else {
+                    elements.selectionItemsGrid.innerHTML = renderCards(category, availableItems);
+                }
+            }
         }
 
         // Configure step navigation footer buttons
@@ -472,7 +480,7 @@ function renderMenuCategories() {
 
 // Render product card grid
 function renderCards(category, visibleItems) {
-    const itemsToRender = visibleItems || category.items;
+    const itemsToRender = (visibleItems || category.items || []).filter(item => !item.outOfStock);
     return itemsToRender.map(item => {
         const isSelected = category.selectionType === 'single'
             ? (orderState.selections[category.id] && orderState.selections[category.id].id === item.id)
