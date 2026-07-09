@@ -171,6 +171,13 @@ if (MENU_DATA && !MENU_DATA.categories) {
     MENU_DATA = migrateFruitPrices(MENU_DATA);
 }
 
+// Migration Check: Ensure all categories have a required status property
+MENU_DATA.categories.forEach(cat => {
+    if (cat.required === undefined) {
+        cat.required = ['fruits', 'milks'].includes(cat.id);
+    }
+});
+
 // Temporary file uploader state
 let uploadedProductImageBase64 = '';
 
@@ -194,6 +201,7 @@ const dom = {
     // Category Select and Table
     categorySelect: document.getElementById('category-select'),
     categorySelectionType: document.getElementById('category-selection-type'),
+    categoryRequiredToggle: document.getElementById('category-required-toggle'),
     tableHeaders: document.getElementById('table-headers'),
     tableBody: document.getElementById('items-table-body'),
     addItemBtn: document.getElementById('add-item-btn'),
@@ -229,6 +237,7 @@ const dom = {
     catSubtitle: document.getElementById('cat-subtitle-input'),
     catPosition: document.getElementById('cat-position-input'),
     catSelection: document.getElementById('cat-selection-input'),
+    catRequired: document.getElementById('cat-required-input'),
     catCloseBtn: document.getElementById('category-modal-close-btn'),
     catCancelBtn: document.getElementById('category-modal-cancel-btn')
 };
@@ -326,7 +335,11 @@ function handleImageUpload(file, stateKey, previewEl) {
 }
 
 // Render Category Product list table
-function renderItemsTable() {
+function renderItemsTable(resetSearch = false) {
+    if (resetSearch) {
+        const searchInput = document.getElementById('item-search-input');
+        if (searchInput) searchInput.value = '';
+    }
     const catId = dom.categorySelect.value || 'fruits';
     const category = MENU_DATA.categories.find(c => c.id === catId);
     
@@ -338,6 +351,11 @@ function renderItemsTable() {
     // Set selection type select element
     if (dom.categorySelectionType) {
         dom.categorySelectionType.value = category.selectionType || 'single';
+    }
+    
+    // Set required toggle checkbox value
+    if (dom.categoryRequiredToggle) {
+        dom.categoryRequiredToggle.checked = !!category.required;
     }
 
     // Headers set
@@ -353,10 +371,20 @@ function renderItemsTable() {
 
     dom.tableHeaders.innerHTML = headers.map(h => `<th>${h}</th>`).join('');
 
-    const items = category.items || [];
+    let items = category.items || [];
+    
+    // Search/filter items
+    const searchInput = document.getElementById('item-search-input');
+    const searchVal = searchInput ? searchInput.value.toLowerCase().trim() : '';
+    if (searchVal) {
+        items = items.filter(item => item.name.toLowerCase().includes(searchVal));
+    }
 
     if (items.length === 0) {
-        dom.tableBody.innerHTML = `<tr><td colspan="${headers.length}" style="text-align:center; color:var(--text-muted); padding: 30px 0;">Nenhum produto cadastrado nesta categoria.</td></tr>`;
+        const message = searchVal 
+            ? 'Nenhum produto corresponde à sua busca nesta categoria.'
+            : 'Nenhum produto cadastrado nesta categoria.';
+        dom.tableBody.innerHTML = `<tr><td colspan="${headers.length}" style="text-align:center; color:var(--text-muted); padding: 30px 0;">${message}</td></tr>`;
         return;
     }
 
@@ -595,6 +623,15 @@ window.changeCategorySelectionType = function() {
     }
 };
 
+// Change Category Required Status (true/false) on toggle switch change
+window.changeCategoryRequiredStatus = function() {
+    const catId = dom.categorySelect.value || 'fruits';
+    const category = MENU_DATA.categories.find(c => c.id === catId);
+    if (category && dom.categoryRequiredToggle) {
+        category.required = dom.categoryRequiredToggle.checked;
+    }
+};
+
 // Setup dynamic category modal actions
 function setupCategoryActions() {
     // Open category modal
@@ -623,6 +660,7 @@ function setupCategoryActions() {
             subtitle,
             isStep: position === 'step',
             selectionType: selection,
+            required: dom.catRequired.value === 'true',
             items: []
         };
 

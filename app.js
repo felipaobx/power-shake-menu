@@ -172,6 +172,13 @@ if (!MENU_DATA) {
 } else {
     MENU_DATA = migrateFruitPrices(MENU_DATA);
 }
+
+// Migration: Ensure all categories have a required field (fruits and milks true by default)
+MENU_DATA.categories.forEach(cat => {
+    if (cat.required === undefined) {
+        cat.required = ['fruits', 'milks'].includes(cat.id);
+    }
+});
 if (!SETTINGS) {
     SETTINGS = DEFAULT_SETTINGS;
     localStorage.setItem('power_shake_settings', JSON.stringify(DEFAULT_SETTINGS));
@@ -403,7 +410,12 @@ function renderMenuCategories() {
             if (catIndex === MENU_DATA.categories.length - 1) {
                 elements.nextStepBtn.innerHTML = `Concluir <ion-icon name="checkmark-outline"></ion-icon>`;
             } else {
-                elements.nextStepBtn.innerHTML = `Avançar <ion-icon name="chevron-forward-outline"></ion-icon>`;
+                const isRequired = category.required;
+                if (isRequired) {
+                    elements.nextStepBtn.innerHTML = `Avançar <ion-icon name="chevron-forward-outline"></ion-icon>`;
+                } else {
+                    elements.nextStepBtn.innerHTML = `Avançar / Pular <ion-icon name="chevron-forward-outline"></ion-icon>`;
+                }
             }
         }
 
@@ -804,14 +816,22 @@ async function loadMenuDataAndSettings() {
 
 
 function finalizeOrder() {
-    const selectedFruits = orderState.selections['fruits'];
-    const selectedMilks = orderState.selections['milks'];
+    // Check all required categories dynamically
+    const missingRequired = [];
+    MENU_DATA.categories.forEach(category => {
+        if (category.required) {
+            const selection = orderState.selections[category.id];
+            const hasSelection = Array.isArray(selection) ? selection.length > 0 : !!selection;
+            if (!hasSelection) {
+                // Get clean category name
+                const cleanName = category.name.replace('Escolha a ', '').replace('Escolha o ', '').replace('Adicione ', '');
+                missingRequired.push(cleanName);
+            }
+        }
+    });
     
-    const hasFruits = Array.isArray(selectedFruits) ? selectedFruits.length > 0 : !!selectedFruits;
-    const hasMilks = Array.isArray(selectedMilks) ? selectedMilks.length > 0 : !!selectedMilks;
-    
-    if (!hasFruits || !hasMilks) {
-        alert('Por favor, selecione pelo menos uma fruta base e um leite para finalizar seu shake!');
+    if (missingRequired.length > 0) {
+        alert(`Por favor, selecione os itens obrigatórios: ${missingRequired.join(', ')} para finalizar seu shake!`);
         return;
     }
 
