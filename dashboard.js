@@ -861,6 +861,30 @@ function getLocalOrders() {
     }
 }
 
+function getCategoryInfo(categoryId, defaultCategoryName = '') {
+    const maps = {
+        fruits: { label: 'Fruta', emoji: '🍌', colorClass: 'category-fruits' },
+        milks: { label: 'Leite', emoji: '🥛', colorClass: 'category-milks' },
+        whey: { label: 'Whey', emoji: '💪', colorClass: 'category-whey' },
+        toppings: { label: 'Topping', emoji: '🍫', colorClass: 'category-toppings' },
+        peanutButters: { label: 'Pasta', emoji: '🥜', colorClass: 'category-peanutButters' },
+        supplements: { label: 'Suplemento', emoji: '⚡', colorClass: 'category-supplements' }
+    };
+    
+    if (maps[categoryId]) return maps[categoryId];
+    
+    let cleanLabel = (defaultCategoryName || '')
+        .replace('Escolha o ', '')
+        .replace('Escolha a ', '')
+        .replace('Adicione ', '')
+        .replace('Toppings & ', '');
+    return {
+        label: cleanLabel || 'Item',
+        emoji: '✨',
+        colorClass: 'category-default'
+    };
+}
+
 function renderOrders(orders) {
     const container = document.getElementById('orders-list-container');
     if (!container) return;
@@ -883,12 +907,50 @@ function renderOrders(orders) {
             cancelled: 'Cancelado'
         }[order.status] || order.status;
 
-        const itemsHtml = order.items.map(item => `
-            <div class="order-item-row">
-                <span class="order-item-name">${item.name}</span>
-                <span class="order-item-price">${item.price > 0 ? formatCurrency(item.price) : 'Grátis'}</span>
-            </div>
-        `).join('');
+        const itemsHtml = order.items.map(item => {
+            if (item.categoryId && item.itemName) {
+                const info = getCategoryInfo(item.categoryId, item.categoryName);
+                return `
+                    <div class="order-item-badge-row">
+                        <span class="order-category-tag ${info.colorClass}">${info.emoji} ${info.label}</span>
+                        <span class="order-item-details-text"><strong>${item.itemName}</strong> ${item.itemDetails || ''}</span>
+                    </div>
+                `;
+            } else {
+                let guessedCat = 'default';
+                let rawText = item.name || '';
+                let label = 'Item';
+                let emoji = '✨';
+                let colorClass = 'category-default';
+
+                if (rawText.toLowerCase().includes('fruta')) {
+                    guessedCat = 'fruits';
+                } else if (rawText.toLowerCase().includes('leite')) {
+                    guessedCat = 'milks';
+                } else if (rawText.toLowerCase().includes('whey')) {
+                    guessedCat = 'whey';
+                } else if (rawText.toLowerCase().includes('topping') || rawText.toLowerCase().includes('acompanhamento')) {
+                    guessedCat = 'toppings';
+                } else if (rawText.toLowerCase().includes('pasta') || rawText.toLowerCase().includes('peanut')) {
+                    guessedCat = 'peanutButters';
+                }
+
+                if (guessedCat !== 'default') {
+                    const info = getCategoryInfo(guessedCat);
+                    label = info.label;
+                    emoji = info.emoji;
+                    colorClass = info.colorClass;
+                }
+
+                const cleanText = rawText.split(':').pop().trim();
+                return `
+                    <div class="order-item-badge-row">
+                        <span class="order-category-tag ${colorClass}">${emoji} ${label}</span>
+                        <span class="order-item-details-text"><strong>${cleanText || rawText}</strong></span>
+                    </div>
+                `;
+            }
+        }).join('');
 
         const kcalVal = parseFloat(order.totalKcal || 0).toFixed(1);
         const proteinVal = parseFloat(order.totalProtein || 0).toFixed(1);

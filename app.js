@@ -730,12 +730,18 @@ function submitOrder(clientName) {
             price += selection.price || 0;
             
             let label = `${category.name.replace('Escolha o ', '').replace('Escolha a ', '')}: ${selection.name}`;
+            let details = '';
             if (category.id === 'milks' && orderState.milkVersion !== 'regular') {
                 label += ` (${orderState.milkVersion})`;
+                details = `(${orderState.milkVersion})`;
             }
 
             receiptItems.push({
                 name: label,
+                categoryName: category.name,
+                categoryId: category.id,
+                itemName: selection.name,
+                itemDetails: details,
                 price: selection.price
             });
         } else {
@@ -745,6 +751,10 @@ function submitOrder(clientName) {
                 price += item.price || 0;
                 receiptItems.push({
                     name: `${category.name.replace('Adicione ', '').replace('Toppings & ', '')}: ${item.name}`,
+                    categoryName: category.name,
+                    categoryId: category.id,
+                    itemName: item.name,
+                    itemDetails: '',
                     price: item.price
                 });
             });
