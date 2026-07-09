@@ -604,6 +604,18 @@ function setupGlobalActions() {
     if (elements.nextStepBtn) {
         elements.nextStepBtn.addEventListener('click', function() {
             const index = MENU_DATA.categories.findIndex(c => c.id === activeCategoryId);
+            const category = MENU_DATA.categories[index];
+            
+            // Check if current category is required and has no selection
+            if (category && category.required) {
+                const selection = orderState.selections[category.id];
+                const hasSelection = Array.isArray(selection) ? selection.length > 0 : !!selection;
+                if (!hasSelection) {
+                    alert('Selecione pelo menos um item!');
+                    return;
+                }
+            }
+
             if (index < MENU_DATA.categories.length - 1) {
                 activeCategoryId = MENU_DATA.categories[index + 1].id;
                 renderMenuCategories();
