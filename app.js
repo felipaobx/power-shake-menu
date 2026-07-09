@@ -285,6 +285,33 @@ function showToast(message, type = 'info') {
     }, 3500);
 }
 
+// Update wizard next step button label dynamically (Avançar vs Pular)
+function updateNextStepButtonLabel() {
+    if (!elements.nextStepBtn || isDashboardMode) return;
+    
+    const category = MENU_DATA.categories.find(c => c.id === activeCategoryId);
+    if (!category) return;
+    
+    const catIndex = MENU_DATA.categories.findIndex(c => c.id === activeCategoryId);
+    const isLast = catIndex === MENU_DATA.categories.length - 1;
+    const selection = orderState.selections[category.id];
+    const hasSelection = Array.isArray(selection) ? selection.length > 0 : !!selection;
+    
+    if (isLast) {
+        if (category.required || hasSelection) {
+            elements.nextStepBtn.innerHTML = `Concluir <ion-icon name="checkmark-outline"></ion-icon>`;
+        } else {
+            elements.nextStepBtn.innerHTML = `Pular <ion-icon name="checkmark-outline"></ion-icon>`;
+        }
+    } else {
+        if (category.required || hasSelection) {
+            elements.nextStepBtn.innerHTML = `Avançar <ion-icon name="chevron-forward-outline"></ion-icon>`;
+        } else {
+            elements.nextStepBtn.innerHTML = `Pular <ion-icon name="chevron-forward-outline"></ion-icon>`;
+        }
+    }
+}
+
 function getCategoryIcon(categoryId) {
     const maps = {
         fruits: '🍌',
@@ -461,18 +488,7 @@ function renderMenuCategories() {
         }
 
         // Next button label & behavior
-        if (elements.nextStepBtn) {
-            if (catIndex === MENU_DATA.categories.length - 1) {
-                elements.nextStepBtn.innerHTML = `Concluir <ion-icon name="checkmark-outline"></ion-icon>`;
-            } else {
-                const isRequired = category.required;
-                if (isRequired) {
-                    elements.nextStepBtn.innerHTML = `Avançar <ion-icon name="chevron-forward-outline"></ion-icon>`;
-                } else {
-                    elements.nextStepBtn.innerHTML = `Avançar / Pular <ion-icon name="chevron-forward-outline"></ion-icon>`;
-                }
-            }
-        }
+        updateNextStepButtonLabel();
 
         setupEventListeners();
     }
@@ -797,6 +813,7 @@ function updateTotals() {
             </div>
         `).join('');
     }
+    updateNextStepButtonLabel();
 }
 
 // Remove item directly from the summary panel
