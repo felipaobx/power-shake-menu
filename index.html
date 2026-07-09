@@ -26,20 +26,46 @@
         <main class="main-grid">
                        <!-- Left Side: Interactive Steps -->
             <div>
-                <!-- Shake Builder Steps (e.g. Fruit, Milk, Whey, Toppings) -->
-                <div class="builder-steps" id="builder-steps-container">
+                <!-- Category Dashboard (Home Screen with big icons) -->
+                <div class="category-dashboard" id="category-dashboard">
                     <!-- Loaded dynamically from app.js -->
                 </div>
 
-                <!-- Mid-Banner Promotion -->
-                <div class="mid-banner">
+                <!-- Category Selection View (Step Selection Screen) -->
+                <div class="category-selection-view" id="category-selection-view" style="display: none;">
+                    <div class="selection-view-header">
+                        <button class="back-to-dashboard-btn" id="back-to-dashboard-btn">
+                            <ion-icon name="arrow-back-outline"></ion-icon>
+                            Voltar ao Início
+                        </button>
+                        <div class="selection-view-title-group">
+                            <h2 id="selection-category-title">Escolha a Fruta</h2>
+                            <p id="selection-category-subtitle">Base do Shake (100g)</p>
+                        </div>
+                    </div>
+                    
+                    <!-- Grid of options loaded dynamically -->
+                    <div class="cards-grid" id="selection-items-grid">
+                        <!-- Loaded dynamically -->
+                    </div>
+
+                    <!-- Step navigation footer -->
+                    <div class="selection-view-footer">
+                        <button class="nav-step-btn prev-step-btn" id="prev-step-btn">
+                            <ion-icon name="chevron-back-outline"></ion-icon>
+                            Voltar
+                        </button>
+                        <button class="nav-step-btn next-step-btn" id="next-step-btn">
+                            Avançar
+                            <ion-icon name="chevron-forward-outline"></ion-icon>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Mid-Banner Promotion (placed under dashboard) -->
+                <div class="mid-banner" id="promo-mid-banner">
                     <h3 id="mid-banner-title">Experimente um novo estilo de vida</h3>
                     <p id="mid-banner-subtitle">Venha conhecer a Power Shake! Nossa missão é trazer sabor incomparável alinhado com a sua rotina fitness.</p>
-                </div>
-
-                <!-- Extra / Adicionais Sections (e.g. Peanut Butter, Supplements, and Custom Extras) -->
-                <div class="builder-steps" id="extras-container">
-                    <!-- Loaded dynamically from app.js -->
                 </div>
             </div>
 

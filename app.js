@@ -188,10 +188,21 @@ MENU_DATA.categories.forEach(cat => {
     orderState.selections[cat.id] = cat.selectionType === 'single' ? null : [];
 });
 
+// Navigation Wizard State
+let isDashboardMode = true;
+let activeCategoryId = 'fruits';
+
 // DOM Elements
 const elements = {
-    builderContainer: document.getElementById('builder-steps-container'),
-    extrasContainer: document.getElementById('extras-container'),
+    categoryDashboard: document.getElementById('category-dashboard'),
+    categorySelectionView: document.getElementById('category-selection-view'),
+    backToDashboardBtn: document.getElementById('back-to-dashboard-btn'),
+    selectionCategoryTitle: document.getElementById('selection-category-title'),
+    selectionCategorySubtitle: document.getElementById('selection-category-subtitle'),
+    selectionItemsGrid: document.getElementById('selection-items-grid'),
+    prevStepBtn: document.getElementById('prev-step-btn'),
+    nextStepBtn: document.getElementById('next-step-btn'),
+    promoBanner: document.getElementById('promo-mid-banner'),
     
     // Totals DOM
     totalKcal: document.querySelectorAll('.total-kcal-val'),
@@ -228,120 +239,176 @@ function formatCurrency(value) {
     return value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
 }
 
+function getCategoryIcon(categoryId) {
+    const maps = {
+        fruits: '🍌',
+        milks: '🥛',
+        whey: '💪',
+        toppings: '🍫',
+        peanutButters: '🥜',
+        supplements: '⚡'
+    };
+    return maps[categoryId] || '✨';
+}
+
+function getCategorySelectionSummary(category) {
+    const selection = orderState.selections[category.id];
+    if (!selection) return 'Pendente';
+    
+    if (category.selectionType === 'single') {
+        let label = selection.name;
+        if (category.id === 'milks' && orderState.milkVersion !== 'regular') {
+            label += ` (${orderState.milkVersion})`;
+        }
+        return label;
+    } else {
+        if (Array.isArray(selection) && selection.length > 0) {
+            return selection.map(i => i.name).join(', ');
+        }
+        return 'Pendente';
+    }
+}
+
 // Render dynamic sections from categories list
 function renderMenuCategories() {
-    elements.builderContainer.innerHTML = '';
-    elements.extrasContainer.innerHTML = '';
+    // Clear DOM containers
+    if (elements.categoryDashboard) elements.categoryDashboard.innerHTML = '';
+    if (elements.selectionItemsGrid) elements.selectionItemsGrid.innerHTML = '';
 
-    let stepCounter = 1;
-
-    MENU_DATA.categories.forEach(category => {
-        // Skip rendering if category has no items
-        if (!category.items || category.items.length === 0) return;
-
-        let sectionHtml = '';
-
-        if (category.isStep) {
-            // STEP SECTIONS (1, 2, 3...)
-            const stepNum = stepCounter++;
-            
-            // Check if Whey has a special single-toggle card layout
-            if (category.id === 'whey' && category.items.length === 1) {
-                const item = category.items[0];
-                const isSelected = orderState.selections[category.id] !== null;
-                
-                // Photo vs Emoji icon check
-                const mediaHtml = item.image 
-                    ? `<img src="${item.image}" class="item-card-image" alt="${item.name}">` 
-                    : `<span class="whey-icon">${item.icon || '💪'}</span>`;
-
-                let wheyMacros = '';
-                const kcalVal = item.kcal || 0;
-                const proteinVal = item.protein || 0;
-                if (kcalVal > 0 && proteinVal > 0) {
-                    wheyMacros = `${kcalVal} kcal · ${proteinVal}g prot`;
-                } else if (kcalVal > 0) {
-                    wheyMacros = `${kcalVal} kcal`;
-                } else if (proteinVal > 0) {
-                    wheyMacros = `${proteinVal}g prot`;
-                }
-                const wheyMacrosHtml = wheyMacros ? `<span class="macros">${wheyMacros}</span>` : '';
-
-                sectionHtml = `
-                    <section class="section-card" id="step-${category.id}">
-                        <div class="step-header">
-                            <span class="step-number">${stepNum}</span>
-                            <h2 class="step-title">${category.name}</h2>
-                            <span class="step-subtitle">${category.subtitle}</span>
-                        </div>
-                        <div class="whey-toggle-card ${isSelected ? 'selected' : ''}" id="whey-card" data-category="${category.id}" data-id="${item.id}">
-                            ${mediaHtml}
-                            <div class="whey-info">
-                                <h4>${item.name}</h4>
-                                <p>${item.description || ''}</p>
-                            </div>
-                            <div class="whey-price">
-                                <span class="price">${formatCurrency(item.price)}</span>
-                                ${wheyMacrosHtml}
-                            </div>
-                        </div>
-                    </section>
-                `;
-            } else {
-                // GENERAL STEP GRID
-                sectionHtml = `
-                    <section class="section-card" id="step-${category.id}">
-                        <div class="step-header">
-                            <span class="step-number">${stepNum}</span>
-                            <h2 class="step-title">${category.name}</h2>
-                            <span class="step-subtitle">${category.subtitle}</span>
-                        </div>
-                        <div class="cards-grid">
-                            ${renderCards(category)}
-                        </div>
-                    </section>
-                `;
-            }
-            elements.builderContainer.insertAdjacentHTML('beforeend', sectionHtml);
-        } else {
-            // EXTRAS SECTIONS (Peanut, Supplements, and Custom additions)
-            sectionHtml = `
-                <section class="section-card" id="extra-${category.id}">
-                    <div class="step-header">
-                        <span class="step-number">+</span>
-                        <h2 class="step-title">${category.name}</h2>
-                        <span class="step-subtitle">${category.subtitle}</span>
-                    </div>
-                    <div class="cards-grid">
-                        ${renderCards(category)}
-                    </div>
-                </section>
-            `;
-            elements.extrasContainer.insertAdjacentHTML('beforeend', sectionHtml);
+    if (isDashboardMode) {
+        // Render Category Dashboard (Main Screen)
+        if (elements.categorySelectionView) elements.categorySelectionView.style.display = 'none';
+        if (elements.categoryDashboard) elements.categoryDashboard.style.display = 'grid';
+        if (elements.promoBanner) {
+            elements.promoBanner.style.display = 'block';
         }
-    });
 
-    // Re-bind click handler on the Whey toggle card
-    const wheyCard = document.getElementById('whey-card');
-    if (wheyCard) {
-        wheyCard.addEventListener('click', function() {
-            const catId = this.dataset.category;
-            const itemId = this.dataset.id;
-            const category = MENU_DATA.categories.find(c => c.id === catId);
-            const item = category.items.find(i => i.id === itemId);
-            
-            if (orderState.selections[catId]) {
-                orderState.selections[catId] = null;
-                this.classList.remove('selected');
-            } else {
-                orderState.selections[catId] = item;
-                this.classList.add('selected');
-            }
-            updateTotals();
+        MENU_DATA.categories.forEach(category => {
+            if (!category.items || category.items.length === 0) return;
+
+            const summary = getCategorySelectionSummary(category);
+            const isFilled = summary !== 'Pendente';
+            const icon = getCategoryIcon(category.id);
+
+            const cardHtml = `
+                <div class="category-card ${isFilled ? 'filled' : ''}" data-category-id="${category.id}">
+                    <div class="category-card-check">✓</div>
+                    <div class="category-card-icon">${icon}</div>
+                    <div class="category-card-title">${category.name.replace('Escolha a ', '').replace('Escolha o ', '').replace('Adicione ', '')}</div>
+                    <div class="category-card-status">${summary}</div>
+                </div>
+            `;
+            if (elements.categoryDashboard) elements.categoryDashboard.insertAdjacentHTML('beforeend', cardHtml);
         });
-    }
 
-    setupEventListeners();
+        // Add event listeners to category cards
+        document.querySelectorAll('.category-card').forEach(card => {
+            card.addEventListener('click', function() {
+                const catId = this.dataset.categoryId;
+                isDashboardMode = false;
+                activeCategoryId = catId;
+                renderMenuCategories();
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+            });
+        });
+
+    } else {
+        // Render Active Step (Wizard Screen)
+        if (elements.categoryDashboard) elements.categoryDashboard.style.display = 'none';
+        if (elements.promoBanner) {
+            elements.promoBanner.style.display = 'none';
+        }
+        if (elements.categorySelectionView) elements.categorySelectionView.style.display = 'block';
+
+        const category = MENU_DATA.categories.find(c => c.id === activeCategoryId);
+        if (!category) return;
+
+        // Render header title & subtitle
+        if (elements.selectionCategoryTitle) elements.selectionCategoryTitle.innerText = category.name;
+        if (elements.selectionCategorySubtitle) elements.selectionCategorySubtitle.innerText = category.subtitle;
+
+        // Render items inside step
+        if (category.id === 'whey' && category.items.length === 1) {
+            // Whey single layout
+            const item = category.items[0];
+            const isSelected = orderState.selections[category.id] !== null;
+            
+            const mediaHtml = item.image 
+                ? `<img src="${item.image}" class="item-card-image" alt="${item.name}">` 
+                : `<span class="whey-icon">${item.icon || '💪'}</span>`;
+
+            let wheyMacros = '';
+            const kcalVal = item.kcal || 0;
+            const proteinVal = item.protein || 0;
+            if (kcalVal > 0 && proteinVal > 0) {
+                wheyMacros = `${kcalVal} kcal · ${proteinVal}g prot`;
+            } else if (kcalVal > 0) {
+                wheyMacros = `${kcalVal} kcal`;
+            } else if (proteinVal > 0) {
+                wheyMacros = `${proteinVal}g prot`;
+            }
+            const wheyMacrosHtml = wheyMacros ? `<span class="macros">${wheyMacros}</span>` : '';
+
+            const wheyHtml = `
+                <div class="whey-toggle-card ${isSelected ? 'selected' : ''}" id="whey-card" data-category="${category.id}" data-id="${item.id}" style="grid-column: 1 / -1;">
+                    ${mediaHtml}
+                    <div class="whey-info">
+                        <h4>${item.name}</h4>
+                        <p>${item.description || ''}</p>
+                    </div>
+                    <div class="whey-price">
+                        <span class="price">${formatCurrency(item.price)}</span>
+                        ${wheyMacrosHtml}
+                    </div>
+                </div>
+            `;
+            if (elements.selectionItemsGrid) elements.selectionItemsGrid.innerHTML = wheyHtml;
+
+            const wheyCard = document.getElementById('whey-card');
+            if (wheyCard) {
+                wheyCard.addEventListener('click', function() {
+                    const catId = this.dataset.category;
+                    const itemId = this.dataset.id;
+                    const item = category.items.find(i => i.id === itemId);
+                    
+                    if (orderState.selections[catId]) {
+                        orderState.selections[catId] = null;
+                        this.classList.remove('selected');
+                    } else {
+                        orderState.selections[catId] = item;
+                        this.classList.add('selected');
+                    }
+                    updateTotals();
+                });
+            }
+        } else {
+            // General step card grid
+            if (elements.selectionItemsGrid) elements.selectionItemsGrid.innerHTML = renderCards(category);
+        }
+
+        // Configure step navigation footer buttons
+        const catIndex = MENU_DATA.categories.findIndex(c => c.id === activeCategoryId);
+        
+        // Prev button label & behavior
+        if (elements.prevStepBtn) {
+            if (catIndex === 0) {
+                elements.prevStepBtn.innerHTML = `<ion-icon name="arrow-back-outline"></ion-icon> Início`;
+            } else {
+                elements.prevStepBtn.innerHTML = `<ion-icon name="chevron-back-outline"></ion-icon> Voltar`;
+            }
+        }
+
+        // Next button label & behavior
+        if (elements.nextStepBtn) {
+            if (catIndex === MENU_DATA.categories.length - 1) {
+                elements.nextStepBtn.innerHTML = `Concluir <ion-icon name="checkmark-outline"></ion-icon>`;
+            } else {
+                elements.nextStepBtn.innerHTML = `Avançar <ion-icon name="chevron-forward-outline"></ion-icon>`;
+            }
+        }
+
+        setupEventListeners();
+    }
 }
 
 // Render product card grid
@@ -492,6 +559,47 @@ function setupGlobalActions() {
         });
     }
 
+    // Wizard navigation button events
+    if (elements.backToDashboardBtn) {
+        elements.backToDashboardBtn.addEventListener('click', function() {
+            isDashboardMode = true;
+            renderMenuCategories();
+        });
+    }
+
+    if (elements.prevStepBtn) {
+        elements.prevStepBtn.addEventListener('click', function() {
+            const index = MENU_DATA.categories.findIndex(c => c.id === activeCategoryId);
+            if (index > 0) {
+                activeCategoryId = MENU_DATA.categories[index - 1].id;
+                renderMenuCategories();
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+            } else {
+                isDashboardMode = true;
+                renderMenuCategories();
+            }
+        });
+    }
+
+    if (elements.nextStepBtn) {
+        elements.nextStepBtn.addEventListener('click', function() {
+            const index = MENU_DATA.categories.findIndex(c => c.id === activeCategoryId);
+            if (index < MENU_DATA.categories.length - 1) {
+                activeCategoryId = MENU_DATA.categories[index + 1].id;
+                renderMenuCategories();
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+            } else {
+                isDashboardMode = true;
+                renderMenuCategories();
+                // Scroll to checkout sidebar so they see totals and checkout button
+                const summaryCard = document.querySelector('.summary-card');
+                if (summaryCard) {
+                    summaryCard.scrollIntoView({ behavior: 'smooth' });
+                }
+            }
+        });
+    }
+
     // Finalize order click
     if (elements.checkoutBtn) {
         elements.checkoutBtn.addEventListener('click', finalizeOrder);
@@ -632,6 +740,8 @@ function resetOrder() {
         orderState.selections[cat.id] = cat.selectionType === 'single' ? null : [];
     });
     orderState.milkVersion = 'regular';
+    isDashboardMode = true;
+    activeCategoryId = 'fruits';
     renderMenuCategories();
     updateTotals();
 }
