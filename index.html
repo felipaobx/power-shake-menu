@@ -6,6 +6,22 @@
     <meta name="description" content="Monte o shake perfeito para o seu treino e dieta na Power Shake. Escolha suas frutas, leites, whey e acompanhamentos favoritos!">
     <title>Power Shake - Cardápio Interativo & Construtor de Shakes</title>
     <link rel="stylesheet" href="style.css">
+    <script>
+        // Prevenir piscada (flicker) das imagens padrão no carregamento
+        try {
+            const cachedSettings = JSON.parse(localStorage.getItem('power_shake_settings'));
+            if (cachedSettings) {
+                if (cachedSettings.heroImage) {
+                    document.documentElement.style.setProperty('--hero-bg-url', `url('${cachedSettings.heroImage}')`);
+                }
+                if (cachedSettings.midBannerImage) {
+                    document.documentElement.style.setProperty('--mid-banner-bg-url', `url('${cachedSettings.midBannerImage}')`);
+                }
+            }
+        } catch (e) {
+            console.error('Erro ao pré-carregar configurações de imagem:', e);
+        }
+    </script>
     <!-- Ionicons for modern clean icons -->
     <script type="module" src="https://unpkg.com/ionicons@7.1.0/dist/ionicons/ionicons.esm.js"></script>
     <script nomodule src="https://unpkg.com/ionicons@7.1.0/dist/ionicons/ionicons.js"></script>
