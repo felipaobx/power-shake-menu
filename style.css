@@ -1589,3 +1589,108 @@ footer {
         padding: 14px;
     }
 }
+
+/* ==========================================================
+   TOAST CUSTOM NOTIFICATIONS STYLE
+   ========================================================== */
+
+.toast-container {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    z-index: 10000;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    pointer-events: none;
+    max-width: calc(100vw - 40px);
+}
+
+.toast-card {
+    background: rgba(22, 25, 35, 0.95);
+    border: 1px solid var(--accent);
+    color: #fff;
+    padding: 14px 20px;
+    border-radius: 12px;
+    font-family: 'Outfit', sans-serif;
+    font-size: 0.95rem;
+    font-weight: 600;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    min-width: 280px;
+    max-width: 400px;
+    pointer-events: auto;
+    backdrop-filter: blur(8px);
+    border-left-width: 5px;
+    animation: toastSlideIn 0.3s cubic-bezier(0.25, 0.8, 0.25, 1) forwards;
+    transition: all 0.3s ease;
+}
+
+.toast-card.success {
+    border-color: #52c41a;
+    box-shadow: 0 8px 25px rgba(82, 196, 26, 0.15);
+}
+
+.toast-card.error {
+    border-color: var(--danger);
+    box-shadow: 0 8px 25px rgba(255, 77, 79, 0.15);
+}
+
+.toast-card.warning {
+    border-color: #faad14;
+    box-shadow: 0 8px 25px rgba(250, 173, 20, 0.15);
+}
+
+.toast-card.info {
+    border-color: var(--accent);
+    box-shadow: 0 8px 25px rgba(139, 252, 3, 0.15);
+}
+
+.toast-icon {
+    font-size: 1.3rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+
+.toast-card.success .toast-icon { color: #52c41a; }
+.toast-card.error .toast-icon { color: var(--danger); }
+.toast-card.warning .toast-icon { color: #faad14; }
+.toast-card.info .toast-icon { color: var(--accent); }
+
+@keyframes toastSlideIn {
+    from {
+        opacity: 0;
+        transform: translateX(100%) translateY(-10px) scale(0.9);
+    }
+    to {
+        opacity: 1;
+        transform: translateX(0) translateY(0) scale(1);
+    }
+}
+
+@keyframes toastFadeOut {
+    to {
+        opacity: 0;
+        transform: translateY(-20px) scale(0.9);
+    }
+}
+
+@media (max-width: 576px) {
+    .toast-container {
+        top: auto;
+        bottom: 20px;
+        right: 10px;
+        left: 10px;
+        max-width: calc(100vw - 20px);
+    }
+    
+    .toast-card {
+        min-width: auto;
+        width: 100%;
+        box-sizing: border-box;
+    }
+}

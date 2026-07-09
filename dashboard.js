@@ -312,7 +312,7 @@ function setupUploaders() {
     dom.productFile.addEventListener('change', function(e) {
         if (e.target.files[0]) {
             if (e.target.files[0].size > 1.5 * 1024 * 1024) {
-                alert('A imagem é muito grande! Escolha uma foto com tamanho menor que 1.5MB.');
+                showToast('A imagem é muito grande! Escolha uma foto com tamanho menor que 1.5MB.', 'warning');
                 return;
             }
             const reader = new FileReader();
@@ -329,7 +329,7 @@ function handleImageUpload(file, stateKey, previewEl) {
     if (!file) return;
 
     if (file.size > 2.5 * 1024 * 1024) {
-        alert('A imagem é muito grande! Escolha um arquivo menor que 2.5MB.');
+        showToast('A imagem é muito grande! Escolha um arquivo menor que 2.5MB.', 'warning');
         return;
     }
 
@@ -448,6 +448,45 @@ function renderItemsTable(resetSearch = false) {
 
 function formatCurrency(value) {
     return value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+}
+
+// Custom Toast notification helper
+function showToast(message, type = 'info') {
+    let container = document.getElementById('toast-container');
+    if (!container) {
+        container = document.createElement('div');
+        container.id = 'toast-container';
+        container.className = 'toast-container';
+        document.body.appendChild(container);
+    }
+    
+    const card = document.createElement('div');
+    card.className = `toast-card ${type}`;
+    
+    let iconName = 'information-circle-outline';
+    if (type === 'success') iconName = 'checkmark-circle-outline';
+    else if (type === 'error') iconName = 'alert-circle-outline';
+    else if (type === 'warning') iconName = 'warning-outline';
+    
+    card.innerHTML = `
+        <div class="toast-icon">
+            <ion-icon name="${iconName}"></ion-icon>
+        </div>
+        <div class="toast-content">${message}</div>
+    `;
+    
+    container.appendChild(card);
+    
+    // Automatically remove after 3.5 seconds
+    setTimeout(() => {
+        card.style.animation = 'toastFadeOut 0.3s ease forwards';
+        card.addEventListener('animationend', () => {
+            card.remove();
+            if (container.children.length === 0) {
+                container.remove();
+            }
+        });
+    }, 3500);
 }
 
 window.startInlineEdit = function(element, categoryId, itemId, field) {
@@ -865,7 +904,7 @@ function setupCategoryActions() {
         // Prevent deleting original core categories to keep calculations intact
         const defaultIds = ['fruits', 'milks', 'whey', 'toppings', 'peanutButters', 'supplements'];
         if (defaultIds.includes(catId)) {
-            alert('Atenção: Categorias padrão do sistema (como Frutas, Leites, Whey e Toppings) não podem ser excluídas para não quebrar a estrutura de passos do construtor de shakes.');
+            showToast('Categorias padrão do sistema não podem ser excluídas para não quebrar o construtor.', 'warning');
             return;
         }
 
@@ -913,7 +952,7 @@ function setupDashboardActions() {
         const pin = prompt("Digite o PIN do Administrador para salvar as alterações globalmente (Padrão: 1234):");
         if (pin === null) return;
         if (pin.trim() === '') {
-            alert('Você precisa informar o PIN do Administrador!');
+            showToast('Você precisa informar o PIN do Administrador!', 'warning');
             return;
         }
 
@@ -936,13 +975,13 @@ function setupDashboardActions() {
                 // Cache locally too
                 localStorage.setItem('power_shake_menu_data', JSON.stringify(MENU_DATA));
                 localStorage.setItem('power_shake_settings', JSON.stringify(SETTINGS));
-                alert('Todas as alterações e customizações foram salvas com sucesso no banco de dados e atualizadas para todos os clientes!');
+                showToast('Todas as alterações foram salvas com sucesso globalmente!', 'success');
             } else {
-                alert(`Erro ao salvar: ${data.error || 'Erro desconhecido'}`);
+                showToast(`Erro ao salvar: ${data.error || 'Erro desconhecido'}`, 'error');
             }
         } catch (e) {
             console.error(e);
-            alert('Erro de conexão ao salvar no banco de dados. Verifique sua rede.');
+            showToast('Erro de conexão ao salvar no banco de dados. Verifique sua rede.', 'error');
         } finally {
             dom.saveSettingsBtn.disabled = false;
             dom.saveSettingsBtn.innerText = 'Salvar Alterações';
@@ -956,7 +995,7 @@ function setupDashboardActions() {
             const pin = prompt("Digite o PIN do Administrador para confirmar a restauração global:");
             if (pin === null) return;
             if (pin.trim() === '') {
-                alert('Você precisa informar o PIN do Administrador!');
+                showToast('Você precisa informar o PIN do Administrador!', 'warning');
                 return;
             }
 
@@ -978,14 +1017,14 @@ function setupDashboardActions() {
                 if (res.ok && data.success) {
                     localStorage.removeItem('power_shake_menu_data');
                     localStorage.removeItem('power_shake_settings');
-                    alert('Padrões restaurados com sucesso no banco de dados global!');
-                    window.location.reload();
+                    showToast('Padrões restaurados com sucesso globalmente!', 'success');
+                    setTimeout(() => window.location.reload(), 1500);
                 } else {
-                    alert(`Erro ao restaurar: ${data.error || 'Erro desconhecido'}`);
+                    showToast(`Erro ao restaurar: ${data.error || 'Erro desconhecido'}`, 'error');
                 }
             } catch (e) {
                 console.error(e);
-                alert('Erro de conexão ao restaurar padrões. Tente novamente.');
+                showToast('Erro de conexão ao restaurar padrões. Tente novamente.', 'error');
             } finally {
                 dom.resetDefaultsBtn.disabled = false;
                 dom.resetDefaultsBtn.innerText = 'Restaurar Padrões do Cardápio';

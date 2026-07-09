@@ -246,6 +246,45 @@ function formatCurrency(value) {
     return value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
 }
 
+// Custom Toast notification helper
+function showToast(message, type = 'info') {
+    let container = document.getElementById('toast-container');
+    if (!container) {
+        container = document.createElement('div');
+        container.id = 'toast-container';
+        container.className = 'toast-container';
+        document.body.appendChild(container);
+    }
+    
+    const card = document.createElement('div');
+    card.className = `toast-card ${type}`;
+    
+    let iconName = 'information-circle-outline';
+    if (type === 'success') iconName = 'checkmark-circle-outline';
+    else if (type === 'error') iconName = 'alert-circle-outline';
+    else if (type === 'warning') iconName = 'warning-outline';
+    
+    card.innerHTML = `
+        <div class="toast-icon">
+            <ion-icon name="${iconName}"></ion-icon>
+        </div>
+        <div class="toast-content">${message}</div>
+    `;
+    
+    container.appendChild(card);
+    
+    // Automatically remove after 3.5 seconds
+    setTimeout(() => {
+        card.style.animation = 'toastFadeOut 0.3s ease forwards';
+        card.addEventListener('animationend', () => {
+            card.remove();
+            if (container.children.length === 0) {
+                container.remove();
+            }
+        });
+    }, 3500);
+}
+
 function getCategoryIcon(categoryId) {
     const maps = {
         fruits: '🍌',
@@ -611,7 +650,7 @@ function setupGlobalActions() {
                 const selection = orderState.selections[category.id];
                 const hasSelection = Array.isArray(selection) ? selection.length > 0 : !!selection;
                 if (!hasSelection) {
-                    alert('Selecione pelo menos um item!');
+                    showToast('Selecione pelo menos um item!', 'warning');
                     return;
                 }
             }
@@ -851,7 +890,7 @@ function finalizeOrder() {
     });
     
     if (missingRequired.length > 0) {
-        alert(`Por favor, selecione os itens obrigatórios: ${missingRequired.join(', ')} para finalizar seu shake!`);
+        showToast(`Por favor, selecione os itens obrigatórios: ${missingRequired.join(', ')} para finalizar seu shake!`, 'warning');
         return;
     }
 
