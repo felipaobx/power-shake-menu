@@ -1275,10 +1275,10 @@ function renderOrders(orders) {
             if (item.categoryId && item.itemName) {
                 const info = getCategoryInfo(item.categoryId, item.categoryName);
                 return `
-                    <div class="order-item-badge-row" onclick="toggleOrderItemCheck(this)">
-                        <div class="order-item-checkbox"></div>
-                        <span class="order-category-tag ${info.colorClass}">${info.emoji} ${info.label}</span>
-                        <span class="order-item-details-text"><strong>${item.itemName}</strong> ${item.itemDetails || ''}</span>
+                    <div class="timeline-step" onclick="toggleTimelineStep(this)">
+                        <div class="step-marker"></div>
+                        <span class="step-category-badge ${info.colorClass}">${info.emoji} ${info.label}</span>
+                        <span class="step-details-text"><strong>${item.itemName}</strong> ${item.itemDetails || ''}</span>
                     </div>
                 `;
             } else {
@@ -1309,10 +1309,10 @@ function renderOrders(orders) {
 
                 const cleanText = rawText.split(':').pop().trim();
                 return `
-                    <div class="order-item-badge-row" onclick="toggleOrderItemCheck(this)">
-                        <div class="order-item-checkbox"></div>
-                        <span class="order-category-tag ${colorClass}">${emoji} ${label}</span>
-                        <span class="order-item-details-text"><strong>${cleanText || rawText}</strong></span>
+                    <div class="timeline-step" onclick="toggleTimelineStep(this)">
+                        <div class="step-marker"></div>
+                        <span class="step-category-badge ${colorClass}">${emoji} ${label}</span>
+                        <span class="step-details-text"><strong>${cleanText || rawText}</strong></span>
                     </div>
                 `;
             }
@@ -1344,11 +1344,14 @@ function renderOrders(orders) {
             <div class="order-card ${order.status}">
                 <div class="order-card-header">
                     <span class="order-id">#${order.id}</span>
+                    <span class="order-badge-status ${order.status}">${statusLabel}</span>
+                </div>
+                <div style="display: flex; justify-content: space-between; align-items: baseline; margin-top: 4px; margin-bottom: 14px;">
+                    <div class="order-client-name" style="margin-bottom: 0;">${order.clientName}</div>
                     <span class="order-date">${dateFormatted}</span>
                 </div>
-                <div class="order-client-name">${order.clientName}</div>
                 
-                <div class="order-items-list">
+                <div class="order-timeline">
                     ${itemsHtml}
                 </div>
 
@@ -1358,11 +1361,6 @@ function renderOrders(orders) {
                         <span class="order-macro-pill">💪 ${proteinVal}g prot</span>
                     </div>
                     <div class="order-total-price">${formatCurrency(order.totalPrice || 0)}</div>
-                </div>
-
-                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; border-bottom: 1px solid rgba(255,255,255,0.03); padding-bottom: 8px;">
-                    <span style="font-size:0.8rem; color:var(--text-secondary);">Status:</span>
-                    <span class="badge badge-${order.status}">${statusLabel}</span>
                 </div>
 
                 <div class="order-actions">
@@ -1456,12 +1454,12 @@ async function deleteOrder(orderId) {
     loadOrders();
 }
 
-function toggleOrderItemCheck(rowElement) {
-    rowElement.classList.toggle('item-checked');
+function toggleTimelineStep(rowElement) {
+    rowElement.classList.toggle('step-completed');
 }
 
 // Bind to window for HTML inline onclick
-window.toggleOrderItemCheck = toggleOrderItemCheck;
+window.toggleTimelineStep = toggleTimelineStep;
 window.updateOrderStatus = updateOrderStatus;
 window.deleteOrder = deleteOrder;
 

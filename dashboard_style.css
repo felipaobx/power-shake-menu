@@ -674,93 +674,100 @@ textarea.form-control {
     letter-spacing: -0.01em;
 }
 
-.order-items-list {
-    background: rgba(0, 0, 0, 0.35);
-    border-radius: 12px;
-    padding: 8px;
-    margin-bottom: 15px;
+.order-badge-status {
+    padding: 4px 10px;
+    border-radius: 20px;
+    font-size: 0.72rem;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    display: inline-block;
+}
+
+.order-badge-status.pending {
+    background: rgba(252, 139, 3, 0.12);
+    color: #fc8b03;
+    border: 1px solid rgba(252, 139, 3, 0.25);
+}
+
+.order-badge-status.completed {
+    background: rgba(82, 196, 26, 0.12);
+    color: var(--success);
+    border: 1px solid rgba(82, 196, 26, 0.25);
+}
+
+.order-badge-status.cancelled {
+    background: rgba(255, 77, 79, 0.12);
+    color: var(--danger);
+    border: 1px solid rgba(255, 77, 79, 0.25);
+}
+
+.order-timeline {
+    position: relative;
+    padding-left: 20px;
+    margin: 15px 0;
     display: flex;
     flex-direction: column;
-    max-height: 400px;
-    overflow-y: auto;
-    border: 1px solid rgba(255, 255, 255, 0.04);
+    gap: 14px;
 }
 
-.order-items-list::-webkit-scrollbar {
-    width: 6px;
-}
-.order-items-list::-webkit-scrollbar-track {
-    background: rgba(0, 0, 0, 0.1);
-    border-radius: 4px;
-}
-.order-items-list::-webkit-scrollbar-thumb {
-    background: rgba(255, 255, 255, 0.12);
-    border-radius: 4px;
-}
-.order-items-list::-webkit-scrollbar-thumb:hover {
-    background: rgba(255, 255, 255, 0.25);
+.order-timeline::before {
+    content: '';
+    position: absolute;
+    left: 8px; /* centered on step-marker width of 18px */
+    top: 10px;
+    bottom: 10px;
+    width: 2px;
+    background: rgba(255, 255, 255, 0.08);
 }
 
-.order-item-badge-row {
+.timeline-step {
     display: flex;
     align-items: center;
-    justify-content: flex-start;
-    padding: 10px 12px;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+    position: relative;
     cursor: pointer;
-    transition: all 0.2s ease;
     user-select: none;
-    border-radius: 6px;
-}
-.order-item-badge-row:last-child {
-    border-bottom: none;
-}
-.order-item-badge-row:hover {
-    background: rgba(255, 255, 255, 0.02);
+    transition: all 0.2s ease;
+    padding: 2px 0;
 }
 
-.order-item-checkbox {
-    width: 16px;
-    height: 16px;
-    border-radius: 4px;
+.step-marker {
+    position: absolute;
+    left: -20px;
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    background: #12141c;
     border: 2px solid var(--text-muted);
-    margin-right: 12px;
     display: flex;
     align-items: center;
     justify-content: center;
-    flex-shrink: 0;
-    transition: all 0.2s ease;
-    background: rgba(0, 0, 0, 0.25);
+    transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+    z-index: 2;
 }
 
-/* Checked state styling */
-.order-item-badge-row.item-checked .order-item-checkbox {
+/* Completion state */
+.timeline-step.step-completed .step-marker {
     background: var(--accent);
     border-color: var(--accent);
+    box-shadow: 0 0 10px rgba(139, 252, 3, 0.4);
 }
-.order-item-badge-row.item-checked .order-item-checkbox::after {
+
+.timeline-step.step-completed .step-marker::after {
     content: '✓';
     color: #000;
     font-size: 0.65rem;
     font-weight: 900;
 }
-.order-item-badge-row.item-checked .order-item-details-text {
-    text-decoration: line-through;
-    color: var(--text-muted);
-    opacity: 0.6;
-}
-.order-item-badge-row.item-checked .order-category-tag {
-    opacity: 0.5;
-    filter: grayscale(80%);
-}
 
-.order-category-tag {
+.step-category-badge {
     padding: 4px 10px;
     border-radius: 6px;
     font-size: 0.72rem;
     font-weight: 800;
     text-transform: uppercase;
     margin-right: 12px;
+    margin-left: 10px;
     display: inline-flex;
     align-items: center;
     gap: 4px;
@@ -768,13 +775,26 @@ textarea.form-control {
     min-width: 95px;
     justify-content: center;
     letter-spacing: 0.05em;
+    transition: all 0.2s ease;
 }
 
-.order-item-details-text {
+.step-details-text {
     font-size: 1.05rem;
     font-weight: 600;
     color: #fff;
     word-break: break-word;
+    transition: all 0.2s ease;
+}
+
+.timeline-step.step-completed .step-details-text {
+    text-decoration: line-through;
+    color: var(--text-muted);
+    opacity: 0.5;
+}
+
+.timeline-step.step-completed .step-category-badge {
+    opacity: 0.4;
+    filter: grayscale(80%);
 }
 
 /* Category Colors */
