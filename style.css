@@ -206,9 +206,11 @@ h1, h2, h3, h4, h5, h6 {
 
 /* Interactive Card Base */
 .item-card {
-    background: rgba(255, 255, 255, 0.02);
-    border: 1px solid var(--border-card);
-    border-radius: 12px;
+    background: linear-gradient(135deg, rgba(255, 255, 255, 0.02) 0%, rgba(255, 255, 255, 0.005) 100%);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border: 1px solid rgba(255, 255, 255, 0.06);
+    border-radius: 16px;
     padding: 16px;
     text-align: center;
     cursor: pointer;
@@ -218,18 +220,24 @@ h1, h2, h3, h4, h5, h6 {
     flex-direction: column;
     justify-content: space-between;
     height: 100%;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
 }
 
 .item-card:hover {
-    background: var(--bg-card-hover);
-    transform: translateY(-4px);
+    background: linear-gradient(135deg, rgba(255, 255, 255, 0.05) 0%, rgba(255, 255, 255, 0.01) 100%);
+    transform: translateY(-6px);
     border-color: rgba(255, 255, 255, 0.15);
+    box-shadow: 0 12px 30px rgba(0, 0, 0, 0.4), 0 0 20px rgba(255, 255, 255, 0.02);
+}
+
+.item-card:active {
+    transform: translateY(-3px) scale(0.97);
 }
 
 .item-card.selected {
-    background: rgba(139, 252, 3, 0.05);
+    background: linear-gradient(135deg, rgba(139, 252, 3, 0.06) 0%, rgba(139, 252, 3, 0.015) 100%);
     border-color: var(--border-active);
-    box-shadow: var(--glow);
+    box-shadow: var(--glow), inset 0 0 15px rgba(139, 252, 3, 0.05);
 }
 
 .item-card-icon {
@@ -285,11 +293,11 @@ h1, h2, h3, h4, h5, h6 {
     right: 0;
     top: 50%;
     transform: translateY(-50%);
-    width: 18px;
-    height: 18px;
+    width: 20px;
+    height: 20px;
     border-radius: 50%;
-    border: 1px solid var(--text-muted);
-    background: transparent;
+    border: 2px solid var(--text-muted);
+    background: rgba(0, 0, 0, 0.25);
     display: flex;
     align-items: center;
     justify-content: center;
@@ -299,6 +307,8 @@ h1, h2, h3, h4, h5, h6 {
 .item-card.selected .card-checkbox {
     background: var(--accent);
     border-color: var(--accent);
+    transform: translateY(-50%) scale(1.1);
+    box-shadow: 0 0 8px rgba(139, 252, 3, 0.45);
 }
 
 .item-card.selected .card-checkbox::after {
@@ -326,12 +336,12 @@ h1, h2, h3, h4, h5, h6 {
 
 .segmented-selector {
     display: flex;
-    background: rgba(255, 255, 255, 0.03);
-    border-radius: 8px;
-    padding: 3px;
-    gap: 4px;
+    background: rgba(0, 0, 0, 0.25);
+    border-radius: 10px;
+    padding: 4px;
+    gap: 6px;
     width: 100%;
-    border: 1px solid rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.03);
     box-sizing: border-box;
 }
 
@@ -354,10 +364,10 @@ h1, h2, h3, h4, h5, h6 {
     display: block;
     padding: 8px 4px;
     font-size: 0.78rem;
-    font-weight: 600;
+    font-weight: 700;
     color: var(--text-secondary);
-    border-radius: 6px;
-    transition: all 0.2s ease;
+    border-radius: 8px;
+    transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
     text-align: center;
 }
 
@@ -369,13 +379,15 @@ h1, h2, h3, h4, h5, h6 {
 .segmented-option input[type="radio"]:checked + .segmented-option-label {
     background: var(--accent);
     color: #000;
-    box-shadow: 0 2px 8px rgba(139, 252, 3, 0.25);
+    box-shadow: 0 3px 10px rgba(139, 252, 3, 0.35);
 }
 
 /* Whey Component Card */
 .whey-toggle-card {
-    background: rgba(139, 252, 3, 0.02);
-    border: 1px solid var(--border-card);
+    background: linear-gradient(135deg, rgba(255, 255, 255, 0.02) 0%, rgba(255, 255, 255, 0.005) 100%);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border: 1px solid rgba(255, 255, 255, 0.06);
     border-radius: var(--border-radius);
     padding: 20px;
     display: flex;
@@ -383,17 +395,24 @@ h1, h2, h3, h4, h5, h6 {
     gap: 20px;
     cursor: pointer;
     transition: var(--transition);
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
 }
 
 .whey-toggle-card:hover {
-    background: rgba(139, 252, 3, 0.05);
-    border-color: rgba(139, 252, 3, 0.3);
+    background: linear-gradient(135deg, rgba(255, 255, 255, 0.05) 0%, rgba(255, 255, 255, 0.01) 100%);
+    transform: translateY(-4px);
+    border-color: rgba(255, 255, 255, 0.15);
+    box-shadow: 0 12px 30px rgba(0, 0, 0, 0.4), 0 0 20px rgba(255, 255, 255, 0.02);
+}
+
+.whey-toggle-card:active {
+    transform: translateY(-2px) scale(0.98);
 }
 
 .whey-toggle-card.selected {
+    background: linear-gradient(135deg, rgba(139, 252, 3, 0.06) 0%, rgba(139, 252, 3, 0.015) 100%);
     border-color: var(--accent);
-    background: rgba(139, 252, 3, 0.08);
-    box-shadow: var(--glow);
+    box-shadow: var(--glow), inset 0 0 15px rgba(139, 252, 3, 0.05);
 }
 
 .whey-icon {
