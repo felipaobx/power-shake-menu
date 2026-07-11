@@ -450,14 +450,16 @@ function renderMenuCategories() {
                         <p>${item.description || ''}</p>
                         ${isSelected ? `
                             <div class="sub-options-container" onclick="event.stopPropagation()" style="display: flex; margin-top: 10px; border-top: 1px dashed rgba(255, 255, 255, 0.1); padding-top: 8px;">
-                                <label class="sub-option-label" style="margin-right: 15px; cursor: pointer; display: flex; align-items: center; gap: 4px;">
-                                    <input type="radio" name="whey-single-scoops" value="1" ${scoops === 1 ? 'checked' : ''}>
-                                    <span>1 Scoop (${item.price > 0 ? formatCurrency(item.price) : 'Incluso'})</span>
-                                </label>
-                                <label class="sub-option-label" style="cursor: pointer; display: flex; align-items: center; gap: 4px;">
-                                    <input type="radio" name="whey-single-scoops" value="2" ${scoops === 2 ? 'checked' : ''}>
-                                    <span>2 Scoops (${(item.price2 > 0) ? formatCurrency(item.price2) : formatCurrency(item.price * 2)})</span>
-                                </label>
+                                <div class="segmented-selector">
+                                    <label class="segmented-option">
+                                        <input type="radio" name="whey-single-scoops" value="1" ${scoops === 1 ? 'checked' : ''}>
+                                        <span class="segmented-option-label">1 Scoop (${item.price > 0 ? formatCurrency(item.price) : 'Incluso'})</span>
+                                    </label>
+                                    <label class="segmented-option">
+                                        <input type="radio" name="whey-single-scoops" value="2" ${scoops === 2 ? 'checked' : ''}>
+                                        <span class="segmented-option-label">2 Scoops (${(item.price2 > 0) ? formatCurrency(item.price2) : formatCurrency(item.price * 2)})</span>
+                                    </label>
+                                </div>
                             </div>
                         ` : ''}
                     </div>
@@ -528,26 +530,30 @@ function renderCards(category, visibleItems) {
         if (category.id === 'milks' && item.versions && isSelected) {
             subOptionsHtml = `
                 <div class="sub-options-container" onclick="event.stopPropagation()">
-                    ${item.versions.map(version => `
-                        <label class="sub-option-label">
-                            <input type="radio" name="version-${item.id}" value="${version}" ${version === orderState.milkVersion ? 'checked' : ''}>
-                            <span>${version === 'regular' ? 'Padrão' : version}</span>
-                        </label>
-                    `).join('')}
+                    <div class="segmented-selector">
+                        ${item.versions.map(version => `
+                            <label class="segmented-option">
+                                <input type="radio" name="version-${item.id}" value="${version}" ${version === orderState.milkVersion ? 'checked' : ''}>
+                                <span class="segmented-option-label">${version === 'regular' ? 'Padrão' : version}</span>
+                            </label>
+                        `).join('')}
+                    </div>
                 </div>
             `;
         } else if (category.id === 'whey' && isSelected) {
             const scoops = orderState.wheyScoops || 1;
             subOptionsHtml = `
                 <div class="sub-options-container" onclick="event.stopPropagation()">
-                    <label class="sub-option-label" style="cursor: pointer; display: flex; align-items: center; gap: 4px;">
-                        <input type="radio" name="scoops-${item.id}" value="1" ${scoops === 1 ? 'checked' : ''}>
-                        <span>1 Scoop (${item.price > 0 ? formatCurrency(item.price) : 'Incluso'})</span>
-                    </label>
-                    <label class="sub-option-label" style="cursor: pointer; display: flex; align-items: center; gap: 4px;">
-                        <input type="radio" name="scoops-${item.id}" value="2" ${scoops === 2 ? 'checked' : ''}>
-                        <span>2 Scoops (${item.price2 > 0 ? formatCurrency(item.price2) : formatCurrency(item.price * 2)})</span>
-                    </label>
+                    <div class="segmented-selector">
+                        <label class="segmented-option">
+                            <input type="radio" name="scoops-${item.id}" value="1" ${scoops === 1 ? 'checked' : ''}>
+                            <span class="segmented-option-label">1 Scoop (${item.price > 0 ? formatCurrency(item.price) : 'Incluso'})</span>
+                        </label>
+                        <label class="segmented-option">
+                            <input type="radio" name="scoops-${item.id}" value="2" ${scoops === 2 ? 'checked' : ''}>
+                            <span class="segmented-option-label">2 Scoops (${item.price2 > 0 ? formatCurrency(item.price2) : formatCurrency(item.price * 2)})</span>
+                        </label>
+                    </div>
                 </div>
             `;
         }
