@@ -1275,7 +1275,8 @@ function renderOrders(orders) {
             if (item.categoryId && item.itemName) {
                 const info = getCategoryInfo(item.categoryId, item.categoryName);
                 return `
-                    <div class="order-item-badge-row">
+                    <div class="order-item-badge-row" onclick="toggleOrderItemCheck(this)">
+                        <div class="order-item-checkbox"></div>
                         <span class="order-category-tag ${info.colorClass}">${info.emoji} ${info.label}</span>
                         <span class="order-item-details-text"><strong>${item.itemName}</strong> ${item.itemDetails || ''}</span>
                     </div>
@@ -1308,7 +1309,8 @@ function renderOrders(orders) {
 
                 const cleanText = rawText.split(':').pop().trim();
                 return `
-                    <div class="order-item-badge-row">
+                    <div class="order-item-badge-row" onclick="toggleOrderItemCheck(this)">
+                        <div class="order-item-checkbox"></div>
                         <span class="order-category-tag ${colorClass}">${emoji} ${label}</span>
                         <span class="order-item-details-text"><strong>${cleanText || rawText}</strong></span>
                     </div>
@@ -1454,7 +1456,12 @@ async function deleteOrder(orderId) {
     loadOrders();
 }
 
+function toggleOrderItemCheck(rowElement) {
+    rowElement.classList.toggle('item-checked');
+}
+
 // Bind to window for HTML inline onclick
+window.toggleOrderItemCheck = toggleOrderItemCheck;
 window.updateOrderStatus = updateOrderStatus;
 window.deleteOrder = deleteOrder;
 
