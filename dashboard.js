@@ -312,18 +312,58 @@ function setupUploaders() {
 
     dom.productFile.addEventListener('change', function(e) {
         if (e.target.files[0]) {
-            if (e.target.files[0].size > 1.5 * 1024 * 1024) {
-                showToast('A imagem é muito grande! Escolha uma foto com tamanho menor que 1.5MB.', 'warning');
+            if (e.target.files[0].size > 5 * 1024 * 1024) {
+                showToast('A imagem é muito grande! Escolha uma foto com tamanho menor que 5MB.', 'warning');
                 return;
             }
-            const reader = new FileReader();
-            reader.onload = function(evt) {
-                uploadedProductImageBase64 = evt.target.result;
-                dom.productPreview.style.backgroundImage = `url('${evt.target.result}')`;
-            };
-            reader.readAsDataURL(e.target.files[0]);
+            resizeProductImage(e.target.files[0], function(resizedBase64) {
+                uploadedProductImageBase64 = resizedBase64;
+                dom.productPreview.style.backgroundImage = `url('${resizedBase64}')`;
+            });
         }
     });
+}
+
+// Helper to resize product image to 600x600 pixels (center crop aspect ratio)
+function resizeProductImage(file, callback) {
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = function(evt) {
+        const img = new Image();
+        img.onload = function() {
+            const canvas = document.createElement('canvas');
+            canvas.width = 600;
+            canvas.height = 600;
+            const ctx = canvas.getContext('2d');
+
+            const w = img.width;
+            const h = img.height;
+            let sx = 0, sy = 0, sw = w, sh = h;
+
+            if (w > h) {
+                sw = h;
+                sx = (w - h) / 2;
+            } else {
+                sh = w;
+                sy = (h - w) / 2;
+            }
+
+            ctx.drawImage(img, sx, sy, sw, sh, 0, 0, 600, 600);
+
+            const type = file.type === 'image/png' ? 'image/png' : 'image/jpeg';
+            const quality = type === 'image/jpeg' ? 0.85 : undefined;
+            const resizedBase64 = canvas.toDataURL(type, quality);
+            callback(resizedBase64);
+        };
+        img.onerror = function() {
+            showToast('Erro ao processar imagem. Tente outro arquivo.', 'danger');
+        };
+        img.src = evt.target.result;
+    };
+    reader.onerror = function() {
+        showToast('Erro ao ler arquivo.', 'danger');
+    };
+    reader.readAsDataURL(file);
 }
 
 function handleImageUpload(file, stateKey, previewEl) {
