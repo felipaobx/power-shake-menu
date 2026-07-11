@@ -324,7 +324,7 @@ function setupUploaders() {
     });
 }
 
-// Helper to resize product image to 600x600 pixels (center crop aspect ratio)
+// Helper to resize product image to 500x500 pixels (center crop aspect ratio)
 function resizeProductImage(file, callback) {
     if (!file) return;
     const reader = new FileReader();
@@ -332,8 +332,8 @@ function resizeProductImage(file, callback) {
         const img = new Image();
         img.onload = function() {
             const canvas = document.createElement('canvas');
-            canvas.width = 600;
-            canvas.height = 600;
+            canvas.width = 500;
+            canvas.height = 500;
             const ctx = canvas.getContext('2d');
 
             const w = img.width;
@@ -348,7 +348,7 @@ function resizeProductImage(file, callback) {
                 sy = (h - w) / 2;
             }
 
-            ctx.drawImage(img, sx, sy, sw, sh, 0, 0, 600, 600);
+            ctx.drawImage(img, sx, sy, sw, sh, 0, 0, 500, 500);
 
             const type = file.type === 'image/png' ? 'image/png' : 'image/jpeg';
             const quality = type === 'image/jpeg' ? 0.85 : undefined;

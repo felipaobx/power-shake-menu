@@ -242,7 +242,6 @@ h1, h2, h3, h4, h5, h6 {
 .item-card-title {
     font-weight: 700;
     font-size: 1.05rem;
-    margin-bottom: 8px;
     color: var(--text-primary);
     padding-right: 22px; /* Prevent overlap with check icon */
 }
@@ -272,10 +271,20 @@ h1, h2, h3, h4, h5, h6 {
     border-radius: 4px;
 }
 
+.item-card-title-container {
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    margin-bottom: 8px;
+}
+
 .card-checkbox {
     position: absolute;
-    top: 138px;
-    right: 16px;
+    right: 0;
+    top: 50%;
+    transform: translateY(-50%);
     width: 18px;
     height: 18px;
     border-radius: 50%;
@@ -769,7 +778,8 @@ h1, h2, h3, h4, h5, h6 {
         padding: 12px;
     }
     .item-card-media {
-        height: 80px;
+        height: auto;
+        aspect-ratio: 1 / 1;
         margin-bottom: 8px;
     }
     .item-card-media .item-card-icon {
@@ -779,10 +789,7 @@ h1, h2, h3, h4, h5, h6 {
         font-size: 0.95rem;
         padding-right: 20px;
     }
-    .card-checkbox {
-        top: 100px;
-        right: 12px;
-    }
+
     .item-card-price {
         font-size: 1rem;
     }
@@ -952,8 +959,8 @@ footer {
 /* Product card media banner */
 .item-card-media {
     width: 100%;
-    height: 110px;
-    border-radius: 8px;
+    aspect-ratio: 1 / 1;
+    border-radius: 12px;
     overflow: hidden;
     margin-bottom: 12px;
     display: flex;
@@ -969,7 +976,7 @@ footer {
     height: 100%;
     object-fit: cover;
     border: none;
-    border-radius: 0;
+    border-radius: 12px;
     margin: 0;
     display: block;
     transition: var(--transition);

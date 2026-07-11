@@ -548,10 +548,12 @@ function renderCards(category, visibleItems) {
 
         return `
             <div class="item-card ${isSelected ? 'selected' : ''}" data-category="${category.id}" data-id="${item.id}">
-                <div class="card-checkbox"></div>
                 <div>
                     ${mediaHtml}
-                    <div class="item-card-title">${item.name}</div>
+                    <div class="item-card-title-container">
+                        <div class="item-card-title">${item.name}</div>
+                        <div class="card-checkbox"></div>
+                    </div>
                     ${descHtml}
                 </div>
                 <div>
