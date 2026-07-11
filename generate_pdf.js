@@ -233,14 +233,22 @@ async function startPdfGeneration() {
                .text(item.name, textX, cardY + 8, { width: 125, height: 11, ellipsis: true });
 
             // Item Price
-            let priceText = item.price > 0 
-                ? item.price.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
-                : 'Incluso';
+            let priceText = '';
+            if (category.id === 'whey') {
+                const price1 = (item.price || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+                const price2Val = item.price2 || (item.price * 2);
+                const price2 = price2Val.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+                priceText = `${price1} / ${price2}`;
+            } else {
+                priceText = item.price > 0 
+                    ? item.price.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
+                    : 'Incluso';
+            }
                 
             doc.fillColor('#8bfc03')
-               .fontSize(9.5)
+               .fontSize(7.5) // slightly smaller font for longer whey price text
                .font('Helvetica-Bold')
-               .text(priceText, cardX + 185, cardY + 8, { align: 'right', width: 54 });
+               .text(priceText, cardX + 175, cardY + 8, { align: 'right', width: 64 });
 
             // Item Description
             let descText = item.description || '';

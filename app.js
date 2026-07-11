@@ -70,6 +70,7 @@ const DEFAULT_MENU_DATA = {
                     kcal: 115, 
                     protein: 20.0, 
                     price: 15.90, 
+                    price2: 25.90,
                     icon: '💪', 
                     description: 'Mais performance, recuperação muscular acelerada e ganho de massa.',
                     image: ''
@@ -187,7 +188,8 @@ if (!SETTINGS) {
 // Application Selection State
 let orderState = {
     selections: {}, // Map of categoryId -> selectedItem (single) OR array of selectedItems (multi)
-    milkVersion: 'regular' // Keep Niho/Molico version check
+    milkVersion: 'regular', // Keep Niho/Molico version check
+    wheyScoops: 1 // Default to 1 scoop
 };
 
 // Initialize selection structures in orderState
@@ -420,15 +422,23 @@ function renderMenuCategories() {
                 ? `<img src="${item.image}" class="item-card-image" alt="${item.name}">` 
                 : `<span class="whey-icon">${item.icon || '💪'}</span>`;
 
+            const scoops = orderState.wheyScoops || 1;
+            const currentWheyPrice = (isSelected && scoops === 2 && item.price2 !== undefined && item.price2 > 0) ? item.price2 : (item.price * scoops);
+            
+            let currentKcal = item.kcal || 0;
+            let currentProtein = item.protein || 0;
+            if (isSelected && scoops === 2) {
+                currentKcal *= 2;
+                currentProtein *= 2;
+            }
+            
             let wheyMacros = '';
-            const kcalVal = item.kcal || 0;
-            const proteinVal = item.protein || 0;
-            if (kcalVal > 0 && proteinVal > 0) {
-                wheyMacros = `${kcalVal} kcal · ${proteinVal}g prot`;
-            } else if (kcalVal > 0) {
-                wheyMacros = `${kcalVal} kcal`;
-            } else if (proteinVal > 0) {
-                wheyMacros = `${proteinVal}g prot`;
+            if (currentKcal > 0 && currentProtein > 0) {
+                wheyMacros = `${currentKcal} kcal · ${currentProtein}g prot`;
+            } else if (currentKcal > 0) {
+                wheyMacros = `${currentKcal} kcal`;
+            } else if (currentProtein > 0) {
+                wheyMacros = `${currentProtein}g prot`;
             }
             const wheyMacrosHtml = wheyMacros ? `<span class="macros">${wheyMacros}</span>` : '';
 
@@ -438,9 +448,21 @@ function renderMenuCategories() {
                     <div class="whey-info">
                         <h4>${item.name}</h4>
                         <p>${item.description || ''}</p>
+                        ${isSelected ? `
+                            <div class="sub-options-container" onclick="event.stopPropagation()" style="display: flex; margin-top: 10px; border-top: 1px dashed rgba(255, 255, 255, 0.1); padding-top: 8px;">
+                                <label class="sub-option-label" style="margin-right: 15px; cursor: pointer; display: flex; align-items: center; gap: 4px;">
+                                    <input type="radio" name="whey-single-scoops" value="1" ${scoops === 1 ? 'checked' : ''}>
+                                    <span>1 Scoop (${item.price > 0 ? formatCurrency(item.price) : 'Incluso'})</span>
+                                </label>
+                                <label class="sub-option-label" style="cursor: pointer; display: flex; align-items: center; gap: 4px;">
+                                    <input type="radio" name="whey-single-scoops" value="2" ${scoops === 2 ? 'checked' : ''}>
+                                    <span>2 Scoops (${(item.price2 > 0) ? formatCurrency(item.price2) : formatCurrency(item.price * 2)})</span>
+                                </label>
+                            </div>
+                        ` : ''}
                     </div>
                     <div class="whey-price">
-                        <span class="price">${formatCurrency(item.price)}</span>
+                        <span class="price">${formatCurrency(currentWheyPrice)}</span>
                         ${wheyMacrosHtml}
                     </div>
                 </div>
@@ -456,12 +478,11 @@ function renderMenuCategories() {
                     
                     if (orderState.selections[catId]) {
                         orderState.selections[catId] = null;
-                        this.classList.remove('selected');
                     } else {
                         orderState.selections[catId] = item;
-                        this.classList.add('selected');
+                        orderState.wheyScoops = 1;
                     }
-                    updateTotals();
+                    renderMenuCategories();
                 });
             }
         } else {
@@ -502,7 +523,7 @@ function renderCards(category, visibleItems) {
             ? (orderState.selections[category.id] && orderState.selections[category.id].id === item.id)
             : (orderState.selections[category.id].some(i => i.id === item.id));
 
-        // Sub options render (versions radios for milk)
+        // Sub options render (versions radios for milk / scoops for whey)
         let subOptionsHtml = '';
         if (category.id === 'milks' && item.versions && isSelected) {
             subOptionsHtml = `
@@ -515,6 +536,20 @@ function renderCards(category, visibleItems) {
                     `).join('')}
                 </div>
             `;
+        } else if (category.id === 'whey' && isSelected) {
+            const scoops = orderState.wheyScoops || 1;
+            subOptionsHtml = `
+                <div class="sub-options-container" onclick="event.stopPropagation()">
+                    <label class="sub-option-label" style="cursor: pointer; display: flex; align-items: center; gap: 4px;">
+                        <input type="radio" name="scoops-${item.id}" value="1" ${scoops === 1 ? 'checked' : ''}>
+                        <span>1 Scoop (${item.price > 0 ? formatCurrency(item.price) : 'Incluso'})</span>
+                    </label>
+                    <label class="sub-option-label" style="cursor: pointer; display: flex; align-items: center; gap: 4px;">
+                        <input type="radio" name="scoops-${item.id}" value="2" ${scoops === 2 ? 'checked' : ''}>
+                        <span>2 Scoops (${item.price2 > 0 ? formatCurrency(item.price2) : formatCurrency(item.price * 2)})</span>
+                    </label>
+                </div>
+            `;
         }
 
         // Photo vs Emoji render check
@@ -523,14 +558,20 @@ function renderCards(category, visibleItems) {
             : `<div class="item-card-media"><span class="item-card-icon">${item.icon || '🥤'}</span></div>`;
 
         // Price tags: hide or show price
-        const priceHtml = `<div class="item-card-price">${item.price > 0 ? formatCurrency(item.price) : 'Incluso'}</div>`;
+        let displayPrice = item.price || 0;
+        if (category.id === 'whey' && isSelected) {
+            const scoops = orderState.wheyScoops || 1;
+            displayPrice = (scoops === 2 && item.price2 !== undefined && item.price2 > 0) ? item.price2 : (item.price * scoops);
+        }
+        const priceHtml = `<div class="item-card-price">${displayPrice > 0 ? formatCurrency(displayPrice) : 'Incluso'}</div>`;
 
         // Macros tag check
-        const showMacros = ['fruits', 'milks', 'toppings'].includes(category.id);
+        const showMacros = ['fruits', 'milks', 'whey', 'toppings'].includes(category.id);
         let macrosHtml = '';
         if (showMacros) {
-            const kcalVal = item.kcal || 0;
-            const proteinVal = item.protein || 0;
+            const scoopsMultiplier = (category.id === 'whey' && isSelected) ? (orderState.wheyScoops || 1) : 1;
+            const kcalVal = (item.kcal || 0) * scoopsMultiplier;
+            const proteinVal = (item.protein || 0) * scoopsMultiplier;
             const kcalHtml = kcalVal > 0 ? `<span class="item-card-macro">${kcalVal} kcal</span>` : '';
             const proteinHtml = proteinVal > 0 ? `<span class="item-card-macro">${proteinVal}g P</span>` : '';
             if (kcalHtml || proteinHtml) {
@@ -593,10 +634,14 @@ function setupEventListeners() {
                     this.classList.add('selected');
                     orderState.selections[catId] = item;
                     
-                    // Default version selector
+                    // Default version/scoops selector
                     const radioChecked = this.querySelector('input[type="radio"]:checked');
                     if (radioChecked) {
-                        orderState.milkVersion = radioChecked.value;
+                        if (catId === 'milks') {
+                            orderState.milkVersion = radioChecked.value;
+                        } else if (catId === 'whey') {
+                            orderState.wheyScoops = parseInt(radioChecked.value) || 1;
+                        }
                     }
                 }
             } else {
@@ -611,8 +656,8 @@ function setupEventListeners() {
                 }
             }
             
-            // Re-render to show/hide sub options radios if milk selected
-            if (catId === 'milks') {
+            // Re-render to show/hide sub options radios if milk or whey selected
+            if (catId === 'milks' || catId === 'whey') {
                 renderMenuCategories();
             } else {
                 updateTotals();
@@ -620,10 +665,14 @@ function setupEventListeners() {
         });
     });
 
-    // Milk version radio buttons
+    // Sub-options radio buttons (Leite versions / Whey scoops)
     document.querySelectorAll('input[type="radio"]').forEach(radio => {
         radio.addEventListener('change', function(e) {
-            orderState.milkVersion = this.value;
+            if (this.name.startsWith('version-')) {
+                orderState.milkVersion = this.value;
+            } else if (this.name.startsWith('scoops-') || this.name === 'whey-single-scoops') {
+                orderState.wheyScoops = parseInt(this.value) || 1;
+            }
             updateTotals();
         });
     });
@@ -755,21 +804,31 @@ function updateTotals() {
 
         if (category.selectionType === 'single') {
             // Single Item selected
-            kcal += selection.kcal || 0;
-            protein += selection.protein || 0;
-            price += selection.price || 0;
+            let itemPrice = selection.price || 0;
+            let itemKcal = selection.kcal || 0;
+            let itemProtein = selection.protein || 0;
             
-            let label = `${category.name.replace('Escolha o ', '').replace('Escolha a ', '')}: ${selection.name}`;
+            let label = `${category.name.replace('Escolha o ', '').replace('Escolha a ', '').replace('Adicione ', '')}: ${selection.name}`;
             if (category.id === 'milks' && orderState.milkVersion !== 'regular') {
                 label += ` (${orderState.milkVersion})`;
+            } else if (category.id === 'whey') {
+                const scoops = orderState.wheyScoops || 1;
+                itemPrice = (scoops === 2 && selection.price2 !== undefined && selection.price2 > 0) ? selection.price2 : (selection.price * scoops);
+                itemKcal = (selection.kcal || 0) * scoops;
+                itemProtein = (selection.protein || 0) * scoops;
+                label += ` (${scoops} scoop${scoops > 1 ? 's' : ''})`;
             }
+
+            kcal += itemKcal;
+            protein += itemProtein;
+            price += itemPrice;
 
             receiptItems.push({
                 categoryId: category.id,
                 itemId: selection.id,
                 name: label,
-                price: selection.price,
-                details: (selection.kcal > 0 || selection.protein > 0) ? `${selection.kcal || 0} kcal | ${selection.protein || 0}g Prot` : 'Extra'
+                price: itemPrice,
+                details: (itemKcal > 0 || itemProtein > 0) ? `${itemKcal || 0} kcal | ${itemProtein || 0}g Prot` : 'Extra'
             });
         } else {
             // Multi items list selected
@@ -838,6 +897,7 @@ function resetOrder() {
         orderState.selections[cat.id] = cat.selectionType === 'single' ? null : [];
     });
     orderState.milkVersion = 'regular';
+    orderState.wheyScoops = 1;
     isDashboardMode = true;
     activeCategoryId = 'fruits';
     renderMenuCategories();
@@ -941,16 +1001,27 @@ function submitOrder(clientName) {
         if (!selection) return;
 
         if (category.selectionType === 'single') {
-            kcal += selection.kcal || 0;
-            protein += selection.protein || 0;
-            price += selection.price || 0;
+            let itemPrice = selection.price || 0;
+            let itemKcal = selection.kcal || 0;
+            let itemProtein = selection.protein || 0;
             
-            let label = `${category.name.replace('Escolha o ', '').replace('Escolha a ', '')}: ${selection.name}`;
+            let label = `${category.name.replace('Escolha o ', '').replace('Escolha a ', '').replace('Adicione ', '')}: ${selection.name}`;
             let details = '';
             if (category.id === 'milks' && orderState.milkVersion !== 'regular') {
                 label += ` (${orderState.milkVersion})`;
                 details = `(${orderState.milkVersion})`;
+            } else if (category.id === 'whey') {
+                const scoops = orderState.wheyScoops || 1;
+                itemPrice = (scoops === 2 && selection.price2 !== undefined && selection.price2 > 0) ? selection.price2 : (selection.price * scoops);
+                itemKcal = (selection.kcal || 0) * scoops;
+                itemProtein = (selection.protein || 0) * scoops;
+                label += ` (${scoops} scoop${scoops > 1 ? 's' : ''})`;
+                details = `(${scoops} scoop${scoops > 1 ? 's' : ''})`;
             }
+
+            kcal += itemKcal;
+            protein += itemProtein;
+            price += itemPrice;
 
             receiptItems.push({
                 name: label,
@@ -958,7 +1029,7 @@ function submitOrder(clientName) {
                 categoryId: category.id,
                 itemName: selection.name,
                 itemDetails: details,
-                price: selection.price
+                price: itemPrice
             });
         } else {
             selection.forEach(item => {

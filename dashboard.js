@@ -70,6 +70,7 @@ const DEFAULT_MENU_DATA = {
                     kcal: 115, 
                     protein: 20.0, 
                     price: 15.90, 
+                    price2: 25.90,
                     icon: '💪', 
                     description: 'Mais performance, recuperação muscular acelerada e ganho de massa.',
                     image: ''
@@ -226,6 +227,7 @@ const dom = {
     itemKcal: document.getElementById('item-kcal-input'),
     itemProtein: document.getElementById('item-protein-input'),
     itemPrice: document.getElementById('item-price-input'),
+    itemPrice2: document.getElementById('item-price2-input'),
     itemDesc: document.getElementById('item-desc-input'),
     itemVersions: document.getElementById('item-versions-input'),
     itemAvailableCheckbox: document.getElementById('item-available-checkbox'),
@@ -449,7 +451,12 @@ function renderItemsTable(resetSearch = false) {
         ];
 
         if (showPrice) {
-            cols.push(`<td class="item-price" onclick="startInlineEdit(this, '${category.id}', '${item.id}', 'price')" style="cursor: pointer;" title="Clique para editar">${formatCurrency(item.price || 0)}</td>`);
+            if (category.id === 'whey') {
+                const price2Text = item.price2 ? ` / ${formatCurrency(item.price2)} (2 S)` : '';
+                cols.push(`<td class="item-price" onclick="openItemEditor('${item.id}')" style="cursor: pointer;" title="Editar completo">${formatCurrency(item.price || 0)} (1 S)${price2Text}</td>`);
+            } else {
+                cols.push(`<td class="item-price" onclick="startInlineEdit(this, '${category.id}', '${item.id}', 'price')" style="cursor: pointer;" title="Clique para editar">${formatCurrency(item.price || 0)}</td>`);
+            }
         }
         if (showMacros) {
             cols.push(`<td onclick="startInlineEdit(this, '${category.id}', '${item.id}', 'kcal')" style="cursor: pointer;" title="Clique para editar">${item.kcal || 0} kcal</td>`);
@@ -665,6 +672,16 @@ window.openItemEditor = function(id = null) {
     descWrapper.style.display = ['milks', 'supplements'].includes(catId) ? 'flex' : 'none';
     versionsWrapper.style.display = catId === 'milks' ? 'flex' : 'none';
 
+    const price2Wrapper = document.getElementById('price2-field-wrapper');
+    const priceLabel = document.querySelector('#price-field-wrapper label');
+    if (catId === 'whey') {
+        if (priceLabel) priceLabel.innerText = 'Preço 1 Scoop (R$)';
+        if (price2Wrapper) price2Wrapper.style.display = 'flex';
+    } else {
+        if (priceLabel) priceLabel.innerText = 'Preço (R$)';
+        if (price2Wrapper) price2Wrapper.style.display = 'none';
+    }
+
     if (id && category) {
         dom.modalTitle.innerText = 'Editar Item';
         let item = category.items.find(i => i.id === id);
@@ -686,6 +703,9 @@ window.openItemEditor = function(id = null) {
             dom.itemKcal.value = item.kcal || 0;
             dom.itemProtein.value = item.protein || 0;
             dom.itemPrice.value = item.price || 0.00;
+            if (dom.itemPrice2) {
+                dom.itemPrice2.value = item.price2 || 0.00;
+            }
             dom.itemDesc.value = item.description || '';
             
             if (dom.itemAvailableCheckbox) {
@@ -702,6 +722,9 @@ window.openItemEditor = function(id = null) {
         dom.modalTitle.innerText = 'Novo Item';
         dom.itemMediaType.value = 'icon';
         dom.itemPrice.value = '0.00';
+        if (dom.itemPrice2) {
+            dom.itemPrice2.value = '0.00';
+        }
         dom.itemKcal.value = '0';
         dom.itemProtein.value = '0';
         if (dom.itemAvailableCheckbox) {
@@ -731,6 +754,7 @@ dom.modalForm.addEventListener('submit', function(e) {
     const kcal = parseFloat(dom.itemKcal.value) || 0;
     const protein = parseFloat(dom.itemProtein.value) || 0;
     const price = parseFloat(dom.itemPrice.value) || 0;
+    const price2 = dom.itemPrice2 ? (parseFloat(dom.itemPrice2.value) || 0) : 0;
     const description = dom.itemDesc.value.trim();
     const rawVersions = dom.itemVersions.value.trim();
 
@@ -747,14 +771,14 @@ dom.modalForm.addEventListener('submit', function(e) {
         if (index !== -1) {
             category.items[index] = {
                 ...category.items[index],
-                name, icon, image, kcal, protein, price, description, versions, outOfStock
+                name, icon, image, kcal, protein, price, price2, description, versions, outOfStock
             };
         }
     } else {
         // ADD NEW ITEM MODE
         const newItem = {
             id: 'item_' + Date.now(),
-            name, icon, image, kcal, protein, price, description, versions, outOfStock
+            name, icon, image, kcal, protein, price, price2, description, versions, outOfStock
         };
         category.items.push(newItem);
     }
