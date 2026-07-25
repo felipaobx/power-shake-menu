@@ -31,7 +31,15 @@ module.exports = async (req, res) => {
 
     let client;
     try {
-        const { orderId, status } = req.body || {};
+        const { orderId, status, pin } = req.body || {};
+        
+        // PIN Validation
+        const ADMIN_PIN = process.env.ADMIN_PIN || '1234';
+        if (!pin || pin.toString() !== ADMIN_PIN.toString()) {
+            res.status(401).json({ success: false, error: 'PIN de Administrador incorreto ou ausente.' });
+            return;
+        }
+
         if (!orderId || !status) {
             res.status(400).json({ success: false, error: 'Missing orderId or status in request body.' });
             return;

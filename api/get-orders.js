@@ -16,6 +16,19 @@ module.exports = async (req, res) => {
 
     const { REDIS_URL } = process.env;
 
+    // PIN Validation
+    const pin = (req.query && req.query.pin) || req.headers['x-admin-pin'];
+    const ADMIN_PIN = process.env.ADMIN_PIN || '1234';
+
+    if (!pin || pin.toString() !== ADMIN_PIN.toString()) {
+        res.status(401).json({
+            success: false,
+            error: 'PIN de Administrador incorreto ou ausente.',
+            orders: []
+        });
+        return;
+    }
+
     if (!REDIS_URL) {
         res.status(200).json({ 
             success: false, 

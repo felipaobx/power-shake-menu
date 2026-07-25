@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Administração - Power Shake Menu</title>
     <link rel="stylesheet" href="dashboard_style.css">
+    <link rel="manifest" href="manifest.json">
     <script type="module" src="https://unpkg.com/ionicons@7.1.0/dist/ionicons/ionicons.esm.js"></script>
     <script nomodule src="https://unpkg.com/ionicons@7.1.0/dist/ionicons/ionicons.js"></script>
 </head>
@@ -14,10 +15,16 @@
         <!-- Header -->
         <header class="dashboard-header">
             <h1>Admin <span>Power Shake</span></h1>
-            <a href="index.html" class="back-btn">
-                <ion-icon name="arrow-back-outline"></ion-icon>
-                Voltar ao Cardápio
-            </a>
+            <div style="display: flex; gap: 10px;">
+                <a href="cozinha.html" class="back-btn" style="background: #10b981; color: white;">
+                    <ion-icon name="restaurant-outline"></ion-icon>
+                    Cozinha Powershake
+                </a>
+                <a href="index.html" class="back-btn">
+                    <ion-icon name="arrow-back-outline"></ion-icon>
+                    Voltar ao Cardápio
+                </a>
+            </div>
         </header>
 
         <!-- Navigation Tabs -->

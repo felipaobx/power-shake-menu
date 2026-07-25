@@ -1194,7 +1194,8 @@ async function loadOrders() {
     
     // 1. Try to load from API
     try {
-        const response = await fetch('/api/get-orders');
+        const pin = sessionStorage.getItem('powershake_admin_pin') || '';
+        const response = await fetch(`/api/get-orders?pin=${encodeURIComponent(pin)}`);
         const data = await response.json();
         if (data.success && Array.isArray(data.orders)) {
             orders = data.orders;
@@ -1400,12 +1401,13 @@ function formatCurrency(value) {
 }
 
 async function updateOrderStatus(orderId, newStatus) {
+    const pin = sessionStorage.getItem('powershake_admin_pin') || '';
     // 1. Update backend
     try {
         await fetch('/api/update-order-status', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ orderId, status: newStatus })
+            body: JSON.stringify({ orderId, status: newStatus, pin })
         });
     } catch (e) {
         console.warn('Failed to update order status on backend:', e);
@@ -1430,13 +1432,14 @@ async function updateOrderStatus(orderId, newStatus) {
 
 async function deleteOrder(orderId) {
     if (!confirm('Deseja excluir permanentemente este pedido do histórico?')) return;
+    const pin = sessionStorage.getItem('powershake_admin_pin') || '';
 
     // 1. Update backend
     try {
         await fetch('/api/update-order-status', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ orderId, status: 'deleted' })
+            body: JSON.stringify({ orderId, status: 'deleted', pin })
         });
     } catch (e) {
         console.warn('Failed to delete order from backend:', e);

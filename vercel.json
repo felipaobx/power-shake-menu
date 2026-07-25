@@ -1,0 +1,6 @@
+{
+  "rewrites": [
+    { "source": "/cozinha", "destination": "/cozinha.html" },
+    { "source": "/dashboard", "destination": "/dashboard.html" }
+  ]
+}
