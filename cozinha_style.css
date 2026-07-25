@@ -404,127 +404,230 @@ body {
     border-color: #475569;
 }
 
-.card-top {
+/* Timeline Styled Kanban Cards */
+.kanban-card {
+    background: #111827;
+    border: 1px solid #1f2937;
+    border-radius: 16px;
+    padding: 20px;
+    cursor: grab;
+    transition: transform 0.15s, box-shadow 0.15s, border-color 0.15s;
+    position: relative;
+    box-shadow: 0 10px 20px -5px rgba(0, 0, 0, 0.4);
+}
+
+.kanban-card:active {
+    cursor: grabbing;
+    transform: scale(0.98);
+}
+
+.kanban-card:hover {
+    border-color: #374151;
+    box-shadow: 0 14px 28px -6px rgba(0, 0, 0, 0.5);
+}
+
+/* Card Top Bar */
+.card-top-bar {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    margin-bottom: 12px;
-    padding-bottom: 8px;
-    border-bottom: 1px dashed var(--border-color);
+    padding-bottom: 12px;
+    margin-bottom: 14px;
+    border-bottom: 1px dashed rgba(255, 255, 255, 0.08);
 }
 
-.order-id {
+.order-id-neon {
     font-weight: 800;
-    font-size: 1.15rem;
-    color: var(--primary);
-    background: rgba(16, 185, 129, 0.15);
-    padding: 4px 10px;
-    border-radius: 8px;
+    font-size: 1.25rem;
+    color: #8bfc03;
     letter-spacing: 0.5px;
+    font-family: system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
 }
 
-.order-time {
-    font-size: 0.88rem;
-    color: var(--text-muted);
+.order-status-pill {
+    font-size: 0.75rem;
+    font-weight: 800;
+    padding: 4px 12px;
+    border-radius: 20px;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+}
+
+.badge-status-pending {
+    border: 1px solid #f59e0b;
+    color: #f59e0b;
+    background: rgba(245, 158, 11, 0.12);
+}
+
+.badge-status-preparing {
+    border: 1px solid #3b82f6;
+    color: #60a5fa;
+    background: rgba(59, 130, 246, 0.12);
+}
+
+.badge-status-completed {
+    border: 1px solid #10b981;
+    color: #34d399;
+    background: rgba(16, 185, 129, 0.12);
+}
+
+.badge-status-cancelled {
+    border: 1px solid #ef4444;
+    color: #f87171;
+    background: rgba(239, 68, 68, 0.12);
+}
+
+/* Customer Row */
+.customer-row {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    margin-bottom: 18px;
+}
+
+.customer-name-heading {
+    font-size: 1.4rem;
+    font-weight: 800;
+    color: #ffffff;
+    letter-spacing: -0.3px;
+}
+
+.order-timestamp-text {
+    font-size: 0.85rem;
+    color: #64748b;
     font-weight: 600;
 }
 
-.customer-info-box {
-    margin-bottom: 12px;
-}
-
-.customer-name {
-    font-size: 1.2rem;
-    font-weight: 800;
-    color: #ffffff;
-    margin-bottom: 6px;
-}
-
-.order-meta-pills {
-    display: flex;
-    gap: 8px;
-    flex-wrap: wrap;
-}
-
-.meta-pill {
-    background: #0f172a;
-    border: 1px solid var(--border-color);
-    padding: 4px 10px;
-    border-radius: 8px;
-    font-size: 0.85rem;
-    font-weight: 700;
-    color: var(--text-main);
-}
-
-.meta-pill.total-price {
-    color: var(--primary);
-    border-color: rgba(16, 185, 129, 0.4);
-}
-
-/* Ingredients & Items Box */
-.order-items-container {
-    background: #0f172a;
-    border: 1px solid #334155;
-    border-radius: 12px;
-    padding: 12px 14px;
-    margin: 14px 0;
+/* Vertical Timeline Section */
+.timeline-container {
+    position: relative;
+    padding-left: 28px;
+    margin-bottom: 20px;
     display: flex;
     flex-direction: column;
-    gap: 8px;
+    gap: 14px;
 }
 
-.item-touch-row {
+.timeline-line {
+    position: absolute;
+    top: 8px;
+    bottom: 8px;
+    left: 7px;
+    width: 2px;
+    background: #374151;
+    border-radius: 1px;
+}
+
+.timeline-step {
+    position: relative;
     display: flex;
     align-items: center;
-    justify-content: space-between;
     gap: 12px;
-    padding: 6px 0;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.06);
 }
 
-.item-touch-row:last-child {
-    border-bottom: none;
+.step-marker-node {
+    position: absolute;
+    left: -28px;
+    width: 14px;
+    height: 14px;
+    border-radius: 50%;
+    border: 2px solid #4b5563;
+    background: #111827;
+    z-index: 2;
 }
 
-.item-qty-tag {
-    background: var(--accent);
-    color: #ffffff;
-    font-size: 1.05rem;
-    font-weight: 900;
-    padding: 4px 8px;
+.step-category-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 5px 12px;
     border-radius: 8px;
-    min-width: 34px;
-    text-align: center;
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+    font-size: 0.78rem;
+    font-weight: 800;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+    white-space: nowrap;
 }
 
-.item-details-box {
-    flex: 1;
-    display: flex;
-    flex-direction: column;
-    gap: 2px;
-}
-
-.item-title-highlight {
-    font-size: 1.08rem;
+.step-item-name {
+    font-size: 1.15rem;
     font-weight: 700;
     color: #ffffff;
     line-height: 1.3;
 }
 
-.item-category-pill {
-    font-size: 0.72rem;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-    color: var(--text-muted);
-    font-weight: 600;
+/* Category Badge Colors */
+.category-fruits {
+    background: rgba(139, 252, 3, 0.12);
+    color: #8bfc03;
+    border: 1px solid rgba(139, 252, 3, 0.3);
 }
 
-.item-price-tag {
-    font-size: 0.95rem;
+.category-milks {
+    background: rgba(0, 191, 255, 0.12);
+    color: #38bdf8;
+    border: 1px solid rgba(0, 191, 255, 0.3);
+}
+
+.category-whey {
+    background: rgba(186, 85, 211, 0.12);
+    color: #c084fc;
+    border: 1px solid rgba(186, 85, 211, 0.3);
+}
+
+.category-toppings {
+    background: rgba(255, 127, 80, 0.12);
+    color: #fb923c;
+    border: 1px solid rgba(255, 127, 80, 0.3);
+}
+
+.category-peanutButters {
+    background: rgba(255, 215, 0, 0.12);
+    color: #facc15;
+    border: 1px solid rgba(255, 215, 0, 0.3);
+}
+
+.category-supplements {
+    background: rgba(255, 69, 0, 0.12);
+    color: #f87171;
+    border: 1px solid rgba(255, 69, 0, 0.3);
+}
+
+.category-default {
+    background: rgba(255, 255, 255, 0.08);
+    color: #e2e8f0;
+    border: 1px solid rgba(255, 255, 255, 0.15);
+}
+
+/* Footer Macros & Price */
+.card-footer-bar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding-top: 14px;
+    border-top: 1px solid rgba(255, 255, 255, 0.08);
+    margin-bottom: 14px;
+}
+
+.macros-group {
+    display: flex;
+    gap: 8px;
+}
+
+.macro-badge {
+    background: #1f2937;
+    border: 1px solid #374151;
+    color: #9ca3af;
+    font-size: 0.82rem;
     font-weight: 700;
-    color: var(--text-muted);
-    white-space: nowrap;
+    padding: 4px 10px;
+    border-radius: 8px;
+}
+
+.card-total-price {
+    font-size: 1.3rem;
+    font-weight: 800;
+    color: #ffffff;
 }
 
 /* Touch Action Buttons (Optimized for Tablets) */

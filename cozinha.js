@@ -234,7 +234,41 @@ function renderKanban() {
     document.getElementById('total-pending-badge').textContent = counts.pending;
 }
 
-// Create Kanban Card Element (Tablet Touch Screen Optimized)
+function getCategoryInfo(categoryId, defaultCategoryName = '', rawText = '') {
+    const maps = {
+        fruits: { label: 'FRUTA', emoji: '🍌', colorClass: 'category-fruits' },
+        milks: { label: 'LEITE', emoji: '🥛', colorClass: 'category-milks' },
+        whey: { label: 'WHEY', emoji: '💪', colorClass: 'category-whey' },
+        toppings: { label: 'TOPPING', emoji: '🍫', colorClass: 'category-toppings' },
+        peanutButters: { label: 'PASTA', emoji: '🥜', colorClass: 'category-peanutButters' },
+        supplements: { label: 'SUPLEMENTO', emoji: '⚡', colorClass: 'category-supplements' }
+    };
+
+    if (categoryId && maps[categoryId]) return maps[categoryId];
+
+    const lower = (defaultCategoryName + ' ' + rawText).toLowerCase();
+    if (lower.includes('fruta')) return maps.fruits;
+    if (lower.includes('leite')) return maps.milks;
+    if (lower.includes('whey')) return maps.whey;
+    if (lower.includes('topping') || lower.includes('acompanhamento')) return maps.toppings;
+    if (lower.includes('pasta') || lower.includes('peanut')) return maps.peanutButters;
+    if (lower.includes('suplemento')) return maps.supplements;
+
+    let cleanLabel = (defaultCategoryName || 'ITEM')
+        .toUpperCase()
+        .replace('ESCOLHA O ', '')
+        .replace('ESCOLHA A ', '')
+        .replace('ADICIONE ', '')
+        .replace('TOPPINGS & ', '');
+
+    return {
+        label: cleanLabel || 'ITEM',
+        emoji: '✨',
+        colorClass: 'category-default'
+    };
+}
+
+// Create Kanban Card Element (Timeline Styled + Touch Screen Tablet)
 function createKanbanCard(order) {
     const card = document.createElement('div');
     card.className = 'kanban-card';
@@ -253,38 +287,46 @@ function createKanbanCard(order) {
     const dateFormatted = order.timestamp || order.createdAt ? 
         new Date(order.timestamp || order.createdAt).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }) : '';
     
+    const dateFull = order.timestamp || order.createdAt ?
+        new Date(order.timestamp || order.createdAt).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' }) + ' ' + dateFormatted : dateFormatted;
+
     const totalFormatted = order.totalPrice ? Number(order.totalPrice).toFixed(2).replace('.', ',') : '0,00';
     const clientName = order.clientName || order.customerName || 'Cliente';
+    const currentStatus = order.status || 'pending';
 
-    // Format item list for maximum visibility on kitchen tablets
+    const statusObj = {
+        pending: { label: 'PENDENTE', class: 'badge-status-pending' },
+        preparing: { label: 'EM PREPARO', class: 'badge-status-preparing' },
+        completed: { label: 'CONCLUÍDO', class: 'badge-status-completed' },
+        cancelled: { label: 'CANCELADO', class: 'badge-status-cancelled' }
+    }[currentStatus] || { label: currentStatus.toUpperCase(), class: 'badge-status-pending' };
+
+    // Format timeline steps for each ingredient/item
     let itemsHtml = '';
     if (order.items && Array.isArray(order.items)) {
         itemsHtml = order.items.map(item => {
             let rawName = item.itemName || item.name || '';
-            let categoryTag = item.categoryName || '';
+            let categoryName = item.categoryName || '';
+            let categoryId = item.categoryId || '';
 
             if (rawName.includes(':')) {
                 const parts = rawName.split(':');
-                categoryTag = parts[0].trim().replace('Escolha a ', '').replace('Adicione ', '').replace('Toppings & ', '');
+                categoryName = parts[0].trim();
                 rawName = parts.slice(1).join(':').trim();
             }
 
-            const itemPrice = Number((item.price || 0) * (item.quantity || 1)).toFixed(2).replace('.', ',');
+            const info = getCategoryInfo(categoryId, categoryName, rawName);
+            const qtyStr = item.quantity && item.quantity > 1 ? ` (${item.quantity}x)` : '';
 
             return `
-                <div class="item-touch-row">
-                    <span class="item-qty-tag">${item.quantity || 1}x</span>
-                    <div class="item-details-box">
-                        <span class="item-title-highlight">${rawName}</span>
-                        ${categoryTag ? `<span class="item-category-pill">${categoryTag}</span>` : ''}
-                    </div>
-                    <span class="item-price-tag">R$ ${itemPrice}</span>
+                <div class="timeline-step">
+                    <div class="step-marker-node"></div>
+                    <span class="step-category-badge ${info.colorClass}">${info.emoji} ${info.label}</span>
+                    <span class="step-item-name">${rawName}${qtyStr}</span>
                 </div>
             `;
         }).join('');
     }
-
-    const currentStatus = order.status || 'pending';
 
     let actionsHtml = '';
     if (currentStatus === 'pending') {
@@ -318,23 +360,34 @@ function createKanbanCard(order) {
         `;
     }
 
-    const shortId = order.id.toString().replace('PS-', '');
+    const shortId = order.id.toString().startsWith('#') ? order.id : `#${order.id}`;
+    const kcalVal = parseFloat(order.totalKcal || 0).toFixed(1);
+    const proteinVal = parseFloat(order.totalProtein || 0).toFixed(1);
 
     card.innerHTML = `
-        <div class="card-top">
-            <span class="order-id">#${shortId}</span>
-            <span class="order-time">🕒 ${dateFormatted}</span>
+        <div class="card-top-bar">
+            <span class="order-id-neon">${shortId}</span>
+            <span class="order-status-pill ${statusObj.class}">${statusObj.label}</span>
         </div>
-        <div class="customer-info-box">
-            <div class="customer-name">${clientName}</div>
-            <div class="order-meta-pills">
-                <span class="meta-pill delivery-type">${order.deliveryType === 'delivery' ? '🛵 Entrega' : '🛍️ Retirada'}</span>
-                <span class="meta-pill total-price">R$ ${totalFormatted}</span>
-            </div>
+
+        <div class="customer-row">
+            <h3 class="customer-name-heading">${clientName}</h3>
+            <span class="order-timestamp-text">${dateFull}</span>
         </div>
-        <div class="order-items-container">
+
+        <div class="timeline-container">
+            <div class="timeline-line"></div>
             ${itemsHtml}
         </div>
+
+        <div class="card-footer-bar">
+            <div class="macros-group">
+                <span class="macro-badge">🔥 ${kcalVal} kcal</span>
+                <span class="macro-badge">💪 ${proteinVal}g prot</span>
+            </div>
+            <span class="card-total-price">R$ ${totalFormatted}</span>
+        </div>
+
         <div class="card-actions touch-actions">
             ${actionsHtml}
         </div>
