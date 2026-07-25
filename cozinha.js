@@ -234,7 +234,7 @@ function renderKanban() {
     document.getElementById('total-pending-badge').textContent = counts.pending;
 }
 
-// Create Kanban Card Element
+// Create Kanban Card Element (Tablet Touch Screen Optimized)
 function createKanbanCard(order) {
     const card = document.createElement('div');
     card.className = 'kanban-card';
@@ -250,17 +250,38 @@ function createKanbanCard(order) {
         card.classList.remove('dragging');
     });
 
-    const dateFormatted = order.timestamp ? new Date(order.timestamp).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }) : '';
+    const dateFormatted = order.timestamp || order.createdAt ? 
+        new Date(order.timestamp || order.createdAt).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }) : '';
+    
     const totalFormatted = order.totalPrice ? Number(order.totalPrice).toFixed(2).replace('.', ',') : '0,00';
+    const clientName = order.clientName || order.customerName || 'Cliente';
 
+    // Format item list for maximum visibility on kitchen tablets
     let itemsHtml = '';
     if (order.items && Array.isArray(order.items)) {
-        itemsHtml = '<ul>' + order.items.map(item => `
-            <li>
-                <span><strong>${item.quantity || 1}x</strong> ${item.name}</span>
-                <span>R$ ${Number(item.price * (item.quantity || 1)).toFixed(2).replace('.', ',')}</span>
-            </li>
-        `).join('') + '</ul>';
+        itemsHtml = order.items.map(item => {
+            let rawName = item.itemName || item.name || '';
+            let categoryTag = item.categoryName || '';
+
+            if (rawName.includes(':')) {
+                const parts = rawName.split(':');
+                categoryTag = parts[0].trim().replace('Escolha a ', '').replace('Adicione ', '').replace('Toppings & ', '');
+                rawName = parts.slice(1).join(':').trim();
+            }
+
+            const itemPrice = Number((item.price || 0) * (item.quantity || 1)).toFixed(2).replace('.', ',');
+
+            return `
+                <div class="item-touch-row">
+                    <span class="item-qty-tag">${item.quantity || 1}x</span>
+                    <div class="item-details-box">
+                        <span class="item-title-highlight">${rawName}</span>
+                        ${categoryTag ? `<span class="item-category-pill">${categoryTag}</span>` : ''}
+                    </div>
+                    <span class="item-price-tag">R$ ${itemPrice}</span>
+                </div>
+            `;
+        }).join('');
     }
 
     const currentStatus = order.status || 'pending';
@@ -269,44 +290,52 @@ function createKanbanCard(order) {
     if (currentStatus === 'pending') {
         actionsHtml = `
             <button class="card-btn prep-btn" onclick="updateOrderStatus('${order.id}', 'preparing')">
-                <ion-icon name="flame-outline"></ion-icon> Preparar
+                <ion-icon name="flame"></ion-icon>
+                <span>Preparar</span>
             </button>
             <button class="card-btn cancel-btn" onclick="updateOrderStatus('${order.id}', 'cancelled')">
-                Cancelar
+                <ion-icon name="close-circle-outline"></ion-icon>
+                <span>Cancelar</span>
             </button>
         `;
     } else if (currentStatus === 'preparing') {
         actionsHtml = `
             <button class="card-btn done-btn" onclick="updateOrderStatus('${order.id}', 'completed')">
-                <ion-icon name="checkmark-done-outline"></ion-icon> Finalizar
+                <ion-icon name="checkmark-done-circle"></ion-icon>
+                <span>Finalizar</span>
             </button>
             <button class="card-btn cancel-btn" onclick="updateOrderStatus('${order.id}', 'cancelled')">
-                Cancelar
+                <ion-icon name="close-circle-outline"></ion-icon>
+                <span>Cancelar</span>
             </button>
         `;
     } else if (currentStatus === 'completed' || currentStatus === 'cancelled') {
         actionsHtml = `
             <button class="card-btn prep-btn" onclick="updateOrderStatus('${order.id}', 'pending')">
-                Voltar p/ Pendentes
+                <ion-icon name="arrow-undo-circle-outline"></ion-icon>
+                <span>Voltar p/ Pendentes</span>
             </button>
         `;
     }
 
+    const shortId = order.id.toString().replace('PS-', '');
+
     card.innerHTML = `
         <div class="card-top">
-            <span class="order-id">#${order.id.toString().slice(-4)}</span>
-            <span class="order-time">${dateFormatted}</span>
+            <span class="order-id">#${shortId}</span>
+            <span class="order-time">🕒 ${dateFormatted}</span>
         </div>
-        <div class="customer-info">
-            <div class="customer-name">${order.customerName || 'Cliente'}</div>
-            <div class="customer-details">
-                ${order.deliveryType === 'delivery' ? '🛵 Entrega' : '🛍️ Retirada'} • R$ ${totalFormatted}
+        <div class="customer-info-box">
+            <div class="customer-name">${clientName}</div>
+            <div class="order-meta-pills">
+                <span class="meta-pill delivery-type">${order.deliveryType === 'delivery' ? '🛵 Entrega' : '🛍️ Retirada'}</span>
+                <span class="meta-pill total-price">R$ ${totalFormatted}</span>
             </div>
         </div>
-        <div class="order-items-list">
+        <div class="order-items-container">
             ${itemsHtml}
         </div>
-        <div class="card-actions">
+        <div class="card-actions touch-actions">
             ${actionsHtml}
         </div>
     `;
