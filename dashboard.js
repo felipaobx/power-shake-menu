@@ -357,6 +357,24 @@ function populateSubmenuDropdown(selectedId = null) {
     `).join('');
 }
 
+function updateCategoryToolbarControls() {
+    const catId = dom.categorySelect.value;
+    const category = MENU_DATA.categories.find(c => c.id === catId);
+    const el = document.getElementById('category-submenu-select');
+    if (el) {
+        const submenus = MENU_DATA.submenus || DEFAULT_MENU_DATA.submenus;
+        el.innerHTML = submenus.filter(s => s.id !== 'all').map(sub => `
+            <option value="${sub.id}" ${sub.id === (category?.submenu || 'monte_o_seu') ? 'selected' : ''}>${sub.icon || '📁'} ${sub.name}</option>
+        `).join('');
+    }
+    if (category && dom.categorySelectionType) {
+        dom.categorySelectionType.value = category.selectionType || 'multi';
+    }
+    if (category && dom.categoryRequiredToggle) {
+        dom.categoryRequiredToggle.checked = !!category.required;
+    }
+}
+
 // Populate the Category select options dynamically from MENU_DATA.categories
 function populateCategoryDropdown(selectedId = null) {
     const activeId = selectedId || dom.categorySelect.value || (MENU_DATA.categories[0] ? MENU_DATA.categories[0].id : 'fruits');
@@ -368,6 +386,8 @@ function populateCategoryDropdown(selectedId = null) {
         let suffix = cat.isStep ? ' (Passo)' : ' (Extra)';
         return `<option value="${cat.id}" ${cat.id === activeId ? 'selected' : ''}>[${subName}] ${cat.name}${suffix}</option>`;
     }).join('');
+
+    updateCategoryToolbarControls();
 }
 
 // Load general text uploader states
@@ -915,12 +935,30 @@ window.moveItemDown = function(id) {
     }
 };
 
+window.onCategorySelectChange = function() {
+    updateCategoryToolbarControls();
+    renderItemsTable(true);
+};
+
+window.changeCategorySubmenuStatus = function() {
+    const catId = dom.categorySelect.value || 'fruits';
+    const category = MENU_DATA.categories.find(c => c.id === catId);
+    const el = document.getElementById('category-submenu-select');
+    if (category && el) {
+        category.submenu = el.value;
+        localStorage.setItem('power_shake_menu_data', JSON.stringify(MENU_DATA));
+        populateCategoryDropdown(catId);
+        showToast(`Categoria "${category.name}" movida para o Submenu.`, 'success');
+    }
+};
+
 // Change Category Selection Mode (single/multi) on dropdown selection change
 window.changeCategorySelectionType = function() {
     const catId = dom.categorySelect.value || 'fruits';
     const category = MENU_DATA.categories.find(c => c.id === catId);
     if (category && dom.categorySelectionType) {
         category.selectionType = dom.categorySelectionType.value;
+        localStorage.setItem('power_shake_menu_data', JSON.stringify(MENU_DATA));
     }
 };
 
@@ -930,6 +968,7 @@ window.changeCategoryRequiredStatus = function() {
     const category = MENU_DATA.categories.find(c => c.id === catId);
     if (category && dom.categoryRequiredToggle) {
         category.required = dom.categoryRequiredToggle.checked;
+        localStorage.setItem('power_shake_menu_data', JSON.stringify(MENU_DATA));
     }
 };
 

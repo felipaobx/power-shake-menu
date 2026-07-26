@@ -116,20 +116,26 @@
             
             <div class="category-select-wrapper" style="display: flex; flex-direction: column; gap: 15px; margin-bottom: 25px; background: rgba(255, 255, 255, 0.02); border: 1px solid var(--border-card); padding: 20px; border-radius: 12px;">
                 <div style="display: flex; gap: 15px; align-items: flex-end; flex-wrap: wrap; width: 100%;">
-                    <div style="flex: 1; min-width: 180px;">
+                    <div style="flex: 1.2; min-width: 200px;">
                         <label style="font-size:0.85rem; color:var(--text-secondary); display:block; margin-bottom:5px;">Categoria do Item</label>
-                        <select id="category-select" class="category-select-control" onchange="renderItemsTable(true)" style="width: 100%;">
+                        <select id="category-select" class="category-select-control" onchange="onCategorySelectChange()" style="width: 100%;">
                             <!-- Populated dynamically by dashboard.js -->
                         </select>
                     </div>
-                    <div style="flex: 1; min-width: 180px;">
+                    <div style="flex: 1; min-width: 170px;">
+                        <label style="font-size:0.85rem; color:var(--text-secondary); display:block; margin-bottom:5px;">Submenu Pertencente</label>
+                        <select id="category-submenu-select" class="category-select-control" onchange="changeCategorySubmenuStatus()" style="width: 100%;">
+                            <!-- Populated dynamically by dashboard.js -->
+                        </select>
+                    </div>
+                    <div style="flex: 1; min-width: 170px;">
                         <label style="font-size:0.85rem; color:var(--text-secondary); display:block; margin-bottom:5px;">Modo de Seleção</label>
                         <select id="category-selection-type" class="category-select-control" onchange="changeCategorySelectionType()" style="width: 100%;">
                             <option value="single">Seleção Única (Escolhe 1)</option>
                             <option value="multi">Seleção Múltipla (Escolhe vários)</option>
                         </select>
                     </div>
-                    <div style="min-width: 150px;">
+                    <div style="min-width: 140px;">
                         <label style="font-size:0.85rem; color:var(--text-secondary); display:block; margin-bottom:5px;">Obrigatoriedade</label>
                         <label class="required-toggle-label" style="display: inline-flex; align-items: center; gap: 8px; cursor: pointer; background: var(--bg-card); border: 1px solid var(--border-card); padding: 10px 15px; border-radius: 8px; font-family: 'Outfit', sans-serif; font-weight: 600; font-size: 0.95rem; height: 42px; box-sizing: border-box; width: 100%; justify-content: center;">
                             <input type="checkbox" id="category-required-toggle" onchange="changeCategoryRequiredStatus()" style="accent-color: var(--accent); width: 16px; height: 16px; margin: 0; cursor: pointer;">
