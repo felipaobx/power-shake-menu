@@ -1,11 +1,57 @@
 // Power Shake Default Database (List of Categories Schema)
 const DEFAULT_MENU_DATA = {
+    submenus: [
+        { id: 'all', name: 'Todos', icon: '🌟' },
+        { id: 'estilo_shakes', name: 'Estilo Shakes', icon: '🥤' },
+        { id: 'monte_o_seu', name: 'Monte o Seu', icon: '🛠️' }
+    ],
     categories: [
+        {
+            id: 'estilo_shakes',
+            name: 'Estilo Shakes',
+            subtitle: 'Combos e receitas exclusivas prontas para pedir',
+            isStep: false,
+            submenu: 'estilo_shakes',
+            selectionType: 'multi',
+            items: [
+                {
+                    id: 'shake_super_protein',
+                    name: 'Super Protein Mu',
+                    kcal: 319,
+                    protein: 28.0,
+                    price: 28.90,
+                    icon: '🥤',
+                    description: 'Mamão + Leite Vegetal + Whey Concentrado + Dr. Peanut Cookies',
+                    image: ''
+                },
+                {
+                    id: 'shake_tropical_energy',
+                    name: 'Tropical Energy',
+                    kcal: 210,
+                    protein: 12.0,
+                    price: 24.90,
+                    icon: '🍍',
+                    description: 'Maracujá + Leite de Amêndoas + Creatina + Sorvete Zero',
+                    image: ''
+                },
+                {
+                    id: 'shake_peanut_choco',
+                    name: 'Peanut Choco Deluxe',
+                    kcal: 420,
+                    protein: 32.0,
+                    price: 32.90,
+                    icon: '🥜',
+                    description: 'Banana + Leite Ninho + Whey Concentrado + Dr. Peanut Bombom',
+                    image: ''
+                }
+            ]
+        },
         {
             id: 'fruits',
             name: 'Escolha a Fruta',
             subtitle: 'Base do Shake (100g)',
             isStep: true,
+            submenu: 'monte_o_seu',
             selectionType: 'single',
             items: [
                 { id: 'mamao', name: 'Mamão', kcal: 43, protein: 0.5, price: 3.50, icon: '🥭', image: '' },
@@ -22,6 +68,7 @@ const DEFAULT_MENU_DATA = {
             name: 'Escolha o Leite',
             subtitle: '200ml',
             isStep: true,
+            submenu: 'monte_o_seu',
             selectionType: 'single',
             items: [
                 { id: 'leite_vegetal_barista', name: 'Leite vegetal Barista', kcal: 0, protein: 0, price: 10.90, icon: '🥛', description: '200ml', image: '' },
@@ -62,6 +109,7 @@ const DEFAULT_MENU_DATA = {
             name: 'Adicione Whey Protein',
             subtitle: 'Proteína Pura',
             isStep: true,
+            submenu: 'monte_o_seu',
             selectionType: 'single',
             items: [
                 { 
@@ -82,6 +130,7 @@ const DEFAULT_MENU_DATA = {
             name: 'Toppings & Acompanhamentos',
             subtitle: 'Toque Final',
             isStep: true,
+            submenu: 'monte_o_seu',
             selectionType: 'multi',
             items: [
                 { id: 'hey_mu', name: 'Hey Mu (20g)', kcal: 29, protein: 1.5, price: 5.90, icon: '🐮', image: '' },
@@ -94,6 +143,7 @@ const DEFAULT_MENU_DATA = {
             name: 'Adicione Pasta Dr. Peanut',
             subtitle: 'Cremosidade (30g)',
             isStep: false,
+            submenu: 'monte_o_seu',
             selectionType: 'multi',
             items: [
                 { id: 'peanut_cookies', name: 'Cookies & Cream', price: 5.90, icon: '🥜', image: '' },
@@ -113,6 +163,7 @@ const DEFAULT_MENU_DATA = {
             name: 'Suplementos & Extras',
             subtitle: 'Potencialize',
             isStep: false,
+            submenu: 'monte_o_seu',
             selectionType: 'multi',
             items: [
                 { id: 'sup_multivitaminico', name: 'Multivitamínico + Ômega 3 (Max Titanium)', price: 5.99, icon: '💊', description: '2 cáps. de cada', image: '' },
@@ -172,12 +223,30 @@ if (MENU_DATA && !MENU_DATA.categories) {
     MENU_DATA = migrateFruitPrices(MENU_DATA);
 }
 
-// Migration Check: Ensure all categories have a required status property
+// Migration Check: Submenus & Submenu Categorization
+if (!MENU_DATA.submenus) {
+    MENU_DATA.submenus = DEFAULT_MENU_DATA.submenus;
+} else {
+    if (!MENU_DATA.submenus.some(s => s.id === 'all')) {
+        MENU_DATA.submenus.unshift({ id: 'all', name: 'Todos', icon: '🌟' });
+    }
+}
+
 MENU_DATA.categories.forEach(cat => {
+    if (!cat.submenu) {
+        cat.submenu = (cat.id === 'estilo_shakes') ? 'estilo_shakes' : 'monte_o_seu';
+    }
     if (cat.required === undefined) {
         cat.required = ['fruits', 'milks'].includes(cat.id);
     }
 });
+
+if (!MENU_DATA.categories.some(c => c.id === 'estilo_shakes')) {
+    const defaultEstiloShakesCat = DEFAULT_MENU_DATA.categories.find(c => c.id === 'estilo_shakes');
+    if (defaultEstiloShakesCat) {
+        MENU_DATA.categories.unshift(defaultEstiloShakesCat);
+    }
+}
 
 // Temporary file uploader state
 let uploadedProductImageBase64 = '';
@@ -278,12 +347,26 @@ function switchTab(tabId) {
     }
 }
 
+// Populate Submenu dropdown for Category Modal
+function populateSubmenuDropdown(selectedId = null) {
+    const el = document.getElementById('cat-submenu-input');
+    if (!el) return;
+    const submenus = MENU_DATA.submenus || DEFAULT_MENU_DATA.submenus;
+    el.innerHTML = submenus.filter(s => s.id !== 'all').map(sub => `
+        <option value="${sub.id}" ${sub.id === selectedId ? 'selected' : ''}>${sub.icon || '📁'} ${sub.name}</option>
+    `).join('');
+}
+
 // Populate the Category select options dynamically from MENU_DATA.categories
 function populateCategoryDropdown(selectedId = null) {
-    const activeId = selectedId || dom.categorySelect.value || 'fruits';
+    const activeId = selectedId || dom.categorySelect.value || (MENU_DATA.categories[0] ? MENU_DATA.categories[0].id : 'fruits');
+    const submenus = MENU_DATA.submenus || DEFAULT_MENU_DATA.submenus;
+    
     dom.categorySelect.innerHTML = MENU_DATA.categories.map(cat => {
+        const sub = submenus.find(s => s.id === (cat.submenu || 'monte_o_seu'));
+        const subName = sub ? sub.name : 'Geral';
         let suffix = cat.isStep ? ' (Passo)' : ' (Extra)';
-        return `<option value="${cat.id}" ${cat.id === activeId ? 'selected' : ''}>${cat.name}${suffix}</option>`;
+        return `<option value="${cat.id}" ${cat.id === activeId ? 'selected' : ''}>[${subName}] ${cat.name}${suffix}</option>`;
     }).join('');
 }
 
@@ -898,6 +981,7 @@ function setupCategoryActions() {
             dom.catImagePreview.style.backgroundImage = 'none';
             dom.catImagePreview.innerText = 'Sem Foto';
         }
+        populateSubmenuDropdown('monte_o_seu');
         toggleCategoryMediaFields();
         dom.catModal.style.display = 'flex';
     });
@@ -916,6 +1000,7 @@ function setupCategoryActions() {
         dom.catPosition.value = category.isStep ? 'step' : 'extra';
         dom.catSelection.value = category.selectionType || 'multi';
         dom.catRequired.value = category.required ? 'true' : 'false';
+        populateSubmenuDropdown(category.submenu || 'monte_o_seu');
         
         if (category.image) {
             dom.catMediaType.value = 'image';
@@ -953,6 +1038,7 @@ function setupCategoryActions() {
         const position = dom.catPosition.value;
         const selection = dom.catSelection.value;
         const required = dom.catRequired.value === 'true';
+        const submenu = document.getElementById('cat-submenu-input')?.value || 'monte_o_seu';
         const mediaType = dom.catMediaType.value;
         
         const icon = mediaType === 'icon' ? dom.catIcon.value.trim() : '';
@@ -967,6 +1053,7 @@ function setupCategoryActions() {
                 category.isStep = position === 'step';
                 category.selectionType = selection;
                 category.required = required;
+                category.submenu = submenu;
                 category.icon = icon;
                 category.image = image;
             }
@@ -983,6 +1070,7 @@ function setupCategoryActions() {
                 isStep: position === 'step',
                 selectionType: selection,
                 required,
+                submenu,
                 icon,
                 image,
                 items: []
@@ -1016,8 +1104,97 @@ function setupCategoryActions() {
     });
 }
 
+// Render submenus inside Submenu Manager Modal
+function renderSubmenusTable() {
+    const tbody = document.getElementById('submenus-table-body');
+    if (!tbody) return;
+
+    const submenus = (MENU_DATA.submenus || DEFAULT_MENU_DATA.submenus).filter(s => s.id !== 'all');
+    tbody.innerHTML = submenus.map(sub => {
+        const isDefault = ['monte_o_seu', 'estilo_shakes'].includes(sub.id);
+        const actionHtml = isDefault 
+            ? `<span style="color: var(--text-muted); font-size: 0.8rem;">Padrão</span>`
+            : `<button type="button" onclick="deleteSubmenu('${sub.id}')" style="background: rgba(255, 77, 79, 0.15); border: 1px solid rgba(255, 77, 79, 0.3); color: var(--danger); padding: 4px 10px; border-radius: 6px; cursor: pointer; font-size: 0.8rem;">Excluir</button>`;
+
+        return `
+            <tr style="border-bottom: 1px solid rgba(255,255,255,0.05);">
+                <td style="padding: 10px; font-size: 1.2rem;">${sub.icon || '📁'}</td>
+                <td style="padding: 10px; font-weight: 600;">${sub.name}</td>
+                <td style="padding: 10px; text-align: right;">${actionHtml}</td>
+            </tr>
+        `;
+    }).join('');
+}
+
+window.deleteSubmenu = function(subId) {
+    const sub = MENU_DATA.submenus.find(s => s.id === subId);
+    if (!sub) return;
+
+    if (confirm(`Tem certeza que deseja excluir o submenu "${sub.name}"? As categorias deste submenu serão movidas para "Monte o Seu".`)) {
+        MENU_DATA.categories.forEach(c => {
+            if (c.submenu === subId) {
+                c.submenu = 'monte_o_seu';
+            }
+        });
+        MENU_DATA.submenus = MENU_DATA.submenus.filter(s => s.id !== subId);
+        localStorage.setItem('power_shake_menu_data', JSON.stringify(MENU_DATA));
+        renderSubmenusTable();
+        populateCategoryDropdown();
+        showToast(`Submenu "${sub.name}" excluído.`, 'success');
+    }
+};
+
+function setupSubmenuManagerActions() {
+    const btn = document.getElementById('manage-submenus-btn');
+    const modal = document.getElementById('submenu-modal');
+    const closeBtn = document.getElementById('submenu-modal-close-btn');
+    const cancelBtn = document.getElementById('submenu-modal-cancel-btn');
+    const form = document.getElementById('add-submenu-form');
+
+    if (btn && modal) {
+        btn.addEventListener('click', () => {
+            renderSubmenusTable();
+            modal.style.display = 'flex';
+        });
+    }
+
+    const closeModal = () => {
+        if (modal) modal.style.display = 'none';
+    };
+
+    if (closeBtn) closeBtn.addEventListener('click', closeModal);
+    if (cancelBtn) cancelBtn.addEventListener('click', closeModal);
+
+    if (form) {
+        form.addEventListener('submit', (e) => {
+            e.preventDefault();
+            const icon = document.getElementById('new-submenu-icon').value.trim();
+            const name = document.getElementById('new-submenu-name').value.trim();
+
+            if (!name) return;
+
+            const newSubId = 'sub_' + Date.now();
+            if (!MENU_DATA.submenus) MENU_DATA.submenus = [...DEFAULT_MENU_DATA.submenus];
+
+            MENU_DATA.submenus.push({
+                id: newSubId,
+                name: name,
+                icon: icon || '📁'
+            });
+
+            localStorage.setItem('power_shake_menu_data', JSON.stringify(MENU_DATA));
+            form.reset();
+            renderSubmenusTable();
+            populateCategoryDropdown();
+            showToast(`Submenu "${name}" criado com sucesso!`, 'success');
+        });
+    }
+}
+
 // Setup Event Listeners and Button Actions
 function setupDashboardActions() {
+    setupSubmenuManagerActions();
+
     // Switch media type dropdown in modal editor
     dom.itemMediaType.addEventListener('change', toggleItemMediaFields);
 

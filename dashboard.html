@@ -143,6 +143,10 @@
                         <input type="text" id="item-search-input" placeholder="🔍 Buscar item nesta categoria..." oninput="renderItemsTable()" class="category-select-control" style="width: 100%; padding-left: 15px; box-sizing: border-box;">
                     </div>
                     <div style="display: flex; gap: 10px; flex-wrap: wrap; margin-left: auto;">
+                        <button class="add-item-btn" id="manage-submenus-btn" style="background: rgba(139, 252, 3, 0.1); border: 1px solid rgba(139, 252, 3, 0.25); color: var(--accent); margin: 0;">
+                            <ion-icon name="grid-outline"></ion-icon>
+                            Gerenciar Submenus
+                        </button>
                         <button class="add-item-btn" id="add-category-btn" style="background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.08); color: var(--text-primary); margin: 0;">
                             <ion-icon name="folder-open-outline"></ion-icon>
                             Nova Categoria
@@ -363,12 +367,20 @@
                         </select>
                     </div>
                 </div>
-                <div class="form-group">
-                    <label for="cat-required-input">Preenchimento</label>
-                    <select id="cat-required-input" class="form-control">
-                        <option value="false">Opcional (Avançar / Pular)</option>
-                        <option value="true">Obrigatório para Finalizar</option>
-                    </select>
+                <div class="grid-2">
+                    <div class="form-group">
+                        <label for="cat-submenu-input">Submenu / Agrupamento</label>
+                        <select id="cat-submenu-input" class="form-control">
+                            <!-- Populated dynamically by dashboard.js -->
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="cat-required-input">Preenchimento</label>
+                        <select id="cat-required-input" class="form-control">
+                            <option value="false">Opcional (Avançar / Pular)</option>
+                            <option value="true">Obrigatório para Finalizar</option>
+                        </select>
+                    </div>
                 </div>
                 <div class="grid-2">
                     <div class="form-group">
@@ -397,6 +409,47 @@
                     <button type="submit" class="modal-btn confirm-btn" id="category-modal-confirm-btn">Salvar</button>
                 </div>
             </form>
+        </div>
+    </div>
+
+    <!-- Submenu Manager Modal Popup -->
+    <div class="modal-overlay" id="submenu-modal">
+        <div class="modal-content">
+            <button class="modal-close" id="submenu-modal-close-btn">&times;</button>
+            <h3 class="modal-title">Gerenciar Submenus</h3>
+            
+            <div style="margin-bottom: 20px;">
+                <form id="add-submenu-form" onsubmit="event.preventDefault()" style="display: flex; gap: 10px; flex-wrap: wrap; align-items: flex-end;">
+                    <div style="flex: 1; min-width: 90px;">
+                        <label style="font-size: 0.8rem; color: var(--text-secondary); display: block; margin-bottom: 4px;">Ícone</label>
+                        <input type="text" id="new-submenu-icon" class="form-control" placeholder="Ex: 🍧" required>
+                    </div>
+                    <div style="flex: 2; min-width: 160px;">
+                        <label style="font-size: 0.8rem; color: var(--text-secondary); display: block; margin-bottom: 4px;">Nome do Submenu</label>
+                        <input type="text" id="new-submenu-name" class="form-control" placeholder="Ex: Sobremesas" required>
+                    </div>
+                    <button type="submit" class="modal-btn confirm-btn" style="height: 42px; padding: 0 16px;">Criar</button>
+                </form>
+            </div>
+
+            <div style="max-height: 250px; overflow-y: auto; border: 1px solid var(--border-card); border-radius: 8px; padding: 10px;">
+                <table style="width: 100%; border-collapse: collapse; font-size: 0.9rem;">
+                    <thead>
+                        <tr style="text-align: left; border-bottom: 1px solid rgba(255,255,255,0.1); color: var(--text-secondary);">
+                            <th style="padding: 8px;">Ícone</th>
+                            <th style="padding: 8px;">Nome</th>
+                            <th style="padding: 8px; text-align: right;">Ação</th>
+                        </tr>
+                    </thead>
+                    <tbody id="submenus-table-body">
+                        <!-- Populated by dashboard.js -->
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="modal-actions" style="margin-top: 15px;">
+                <button type="button" class="modal-btn cancel-btn" id="submenu-modal-cancel-btn">Fechar</button>
+            </div>
         </div>
     </div>
 

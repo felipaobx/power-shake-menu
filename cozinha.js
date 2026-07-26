@@ -366,12 +366,14 @@ function createKanbanCard(order) {
 
     card.innerHTML = `
         <div class="card-top-bar">
-            <span class="order-id-neon">${shortId}</span>
+            <div class="card-id-client">
+                <span class="order-id-neon">${shortId}</span>
+                <h3 class="customer-name-heading">${clientName}</h3>
+            </div>
             <span class="order-status-pill ${statusObj.class}">${statusObj.label}</span>
         </div>
 
-        <div class="customer-row">
-            <h3 class="customer-name-heading">${clientName}</h3>
+        <div class="customer-sub-row">
             <span class="order-timestamp-text">${dateFull}</span>
         </div>
 

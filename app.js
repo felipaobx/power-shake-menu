@@ -1,11 +1,57 @@
 // Power Shake Default Menu Data (List of Categories Schema)
 const DEFAULT_MENU_DATA = {
+    submenus: [
+        { id: 'all', name: 'Todos', icon: '🌟' },
+        { id: 'estilo_shakes', name: 'Estilo Shakes', icon: '🥤' },
+        { id: 'monte_o_seu', name: 'Monte o Seu', icon: '🛠️' }
+    ],
     categories: [
+        {
+            id: 'estilo_shakes',
+            name: 'Estilo Shakes',
+            subtitle: 'Combos e receitas exclusivas prontas para pedir',
+            isStep: false,
+            submenu: 'estilo_shakes',
+            selectionType: 'multi',
+            items: [
+                {
+                    id: 'shake_super_protein',
+                    name: 'Super Protein Mu',
+                    kcal: 319,
+                    protein: 28.0,
+                    price: 28.90,
+                    icon: '🥤',
+                    description: 'Mamão + Leite Vegetal + Whey Concentrado + Dr. Peanut Cookies',
+                    image: ''
+                },
+                {
+                    id: 'shake_tropical_energy',
+                    name: 'Tropical Energy',
+                    kcal: 210,
+                    protein: 12.0,
+                    price: 24.90,
+                    icon: '🍍',
+                    description: 'Maracujá + Leite de Amêndoas + Creatina + Sorvete Zero',
+                    image: ''
+                },
+                {
+                    id: 'shake_peanut_choco',
+                    name: 'Peanut Choco Deluxe',
+                    kcal: 420,
+                    protein: 32.0,
+                    price: 32.90,
+                    icon: '🥜',
+                    description: 'Banana + Leite Ninho + Whey Concentrado + Dr. Peanut Bombom',
+                    image: ''
+                }
+            ]
+        },
         {
             id: 'fruits',
             name: 'Escolha a Fruta',
             subtitle: 'Base do Shake (100g)',
             isStep: true,
+            submenu: 'monte_o_seu',
             selectionType: 'single',
             items: [
                 { id: 'mamao', name: 'Mamão', kcal: 43, protein: 0.5, price: 3.50, icon: '🥭', image: '' },
@@ -22,6 +68,7 @@ const DEFAULT_MENU_DATA = {
             name: 'Escolha o Leite',
             subtitle: '200ml',
             isStep: true,
+            submenu: 'monte_o_seu',
             selectionType: 'single',
             items: [
                 { id: 'leite_vegetal_barista', name: 'Leite vegetal Barista', kcal: 0, protein: 0, price: 10.90, icon: '🥛', description: '200ml', image: '' },
@@ -62,6 +109,7 @@ const DEFAULT_MENU_DATA = {
             name: 'Adicione Whey Protein',
             subtitle: 'Proteína Pura',
             isStep: true,
+            submenu: 'monte_o_seu',
             selectionType: 'single',
             items: [
                 { 
@@ -82,6 +130,7 @@ const DEFAULT_MENU_DATA = {
             name: 'Toppings & Acompanhamentos',
             subtitle: 'Toque Final',
             isStep: true,
+            submenu: 'monte_o_seu',
             selectionType: 'multi',
             items: [
                 { id: 'hey_mu', name: 'Hey Mu (20g)', kcal: 29, protein: 1.5, price: 5.90, icon: '🐮', image: '' },
@@ -94,6 +143,7 @@ const DEFAULT_MENU_DATA = {
             name: 'Adicione Pasta Dr. Peanut',
             subtitle: 'Cremosidade (30g)',
             isStep: false,
+            submenu: 'monte_o_seu',
             selectionType: 'multi',
             items: [
                 { id: 'peanut_cookies', name: 'Cookies & Cream', price: 5.90, icon: '🥜', image: '' },
@@ -113,6 +163,7 @@ const DEFAULT_MENU_DATA = {
             name: 'Suplementos & Extras',
             subtitle: 'Potencialize',
             isStep: false,
+            submenu: 'monte_o_seu',
             selectionType: 'multi',
             items: [
                 { id: 'sup_multivitaminico', name: 'Multivitamínico + Ômega 3 (Max Titanium)', price: 5.99, icon: '💊', description: '2 cáps. de cada', image: '' },
@@ -174,12 +225,33 @@ if (!MENU_DATA) {
     MENU_DATA = migrateFruitPrices(MENU_DATA);
 }
 
-// Migration: Ensure all categories have a required field (fruits and milks true by default)
+// Migration: Submenus & Submenu Categorization
+if (!MENU_DATA.submenus) {
+    MENU_DATA.submenus = DEFAULT_MENU_DATA.submenus;
+} else {
+    // Ensure 'all' tab is in submenus
+    if (!MENU_DATA.submenus.some(s => s.id === 'all')) {
+        MENU_DATA.submenus.unshift({ id: 'all', name: 'Todos', icon: '🌟' });
+    }
+}
+
+// Ensure every category has a submenu
 MENU_DATA.categories.forEach(cat => {
+    if (!cat.submenu) {
+        cat.submenu = (cat.id === 'estilo_shakes') ? 'estilo_shakes' : 'monte_o_seu';
+    }
     if (cat.required === undefined) {
         cat.required = ['fruits', 'milks'].includes(cat.id);
     }
 });
+
+// Ensure 'estilo_shakes' category exists in loaded data
+if (!MENU_DATA.categories.some(c => c.id === 'estilo_shakes')) {
+    const defaultEstiloShakesCat = DEFAULT_MENU_DATA.categories.find(c => c.id === 'estilo_shakes');
+    if (defaultEstiloShakesCat) {
+        MENU_DATA.categories.unshift(defaultEstiloShakesCat);
+    }
+}
 if (!SETTINGS) {
     SETTINGS = DEFAULT_SETTINGS;
     localStorage.setItem('power_shake_settings', JSON.stringify(DEFAULT_SETTINGS));
@@ -314,8 +386,11 @@ function updateNextStepButtonLabel() {
     }
 }
 
+let activeSubmenuId = 'all';
+
 function getCategoryIcon(categoryId) {
     const maps = {
+        estilo_shakes: '🥤',
         fruits: '🍌',
         milks: '🥛',
         whey: '💪',
@@ -344,21 +419,79 @@ function getCategorySelectionSummary(category) {
     }
 }
 
+// Render Submenu Filter Pills Navigation Bar
+function renderSubmenuTabs() {
+    const container = document.getElementById('submenu-nav-container');
+    if (!container) return;
+
+    if (!MENU_DATA.submenus || MENU_DATA.submenus.length === 0) {
+        container.style.display = 'none';
+        return;
+    }
+
+    let submenus = [...MENU_DATA.submenus];
+    if (!submenus.some(s => s.id === 'all')) {
+        submenus.unshift({ id: 'all', name: 'Todos', icon: '🌟' });
+    }
+
+    container.innerHTML = submenus.map(sub => {
+        const count = sub.id === 'all'
+            ? MENU_DATA.categories.length
+            : MENU_DATA.categories.filter(c => (c.submenu || 'monte_o_seu') === sub.id).length;
+
+        const isActive = activeSubmenuId === sub.id;
+        return `
+            <button class="submenu-tab-btn ${isActive ? 'active' : ''}" data-submenu-id="${sub.id}">
+                <span class="tab-icon">${sub.icon || '📁'}</span>
+                <span>${sub.name}</span>
+                <span class="submenu-tab-badge">${count}</span>
+            </button>
+        `;
+    }).join('');
+
+    container.querySelectorAll('.submenu-tab-btn').forEach(btn => {
+        btn.addEventListener('click', function() {
+            activeSubmenuId = this.dataset.submenuId;
+            renderSubmenuTabs();
+            renderMenuCategories();
+        });
+    });
+}
+
 // Render dynamic sections from categories list
 function renderMenuCategories() {
     // Clear DOM containers
     if (elements.categoryDashboard) elements.categoryDashboard.innerHTML = '';
     if (elements.selectionItemsGrid) elements.selectionItemsGrid.innerHTML = '';
 
+    const submenuContainer = document.getElementById('submenu-nav-container');
+
     if (isDashboardMode) {
-        // Render Category Dashboard (Main Screen)
+        // Render Category Dashboard (Home Screen)
+        if (submenuContainer) {
+            submenuContainer.style.display = 'flex';
+            renderSubmenuTabs();
+        }
         if (elements.categorySelectionView) elements.categorySelectionView.style.display = 'none';
         if (elements.categoryDashboard) elements.categoryDashboard.style.display = 'grid';
         if (elements.promoBanner) {
             elements.promoBanner.style.display = 'block';
         }
 
-        MENU_DATA.categories.forEach(category => {
+        const filteredCategories = MENU_DATA.categories.filter(category => {
+            if (activeSubmenuId === 'all') return true;
+            const catSubmenu = category.submenu || 'monte_o_seu';
+            return catSubmenu === activeSubmenuId;
+        });
+
+        if (filteredCategories.length === 0) {
+            if (elements.categoryDashboard) {
+                elements.categoryDashboard.innerHTML = `<div style="grid-column: 1 / -1; text-align: center; color: var(--text-secondary); padding: 40px 0;">Nenhuma categoria nesta aba no momento.</div>`;
+            }
+            return;
+        }
+
+        filteredCategories.forEach(category => {
             if (!category.items || category.items.length === 0) return;
 
             const summary = getCategorySelectionSummary(category);
@@ -397,6 +530,7 @@ function renderMenuCategories() {
 
     } else {
         // Render Active Step (Wizard Screen)
+        if (submenuContainer) submenuContainer.style.display = 'none';
         if (elements.categoryDashboard) elements.categoryDashboard.style.display = 'none';
         if (elements.promoBanner) {
             elements.promoBanner.style.display = 'none';
