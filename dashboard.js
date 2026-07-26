@@ -339,6 +339,10 @@ function switchTab(tabId) {
         renderItemsTable();
     }
 
+    if (tabId === 'tab-submenus') {
+        renderSubmenusTab();
+    }
+
     if (tabId === 'tab-orders') {
         loadOrders();
         startOrdersPolling();
@@ -1143,45 +1147,137 @@ function setupCategoryActions() {
     });
 }
 
-// Render submenus inside Submenu Manager Modal
-function renderSubmenusTable() {
-    const tbody = document.getElementById('submenus-table-body');
-    if (!tbody) return;
+let uploadedSubmenuImageBase64 = '';
 
-    const submenus = (MENU_DATA.submenus || DEFAULT_MENU_DATA.submenus).filter(s => s.id !== 'all');
-    tbody.innerHTML = submenus.map(sub => {
-        const isDefault = ['monte_o_seu', 'estilo_shakes'].includes(sub.id);
-        const actionHtml = isDefault 
-            ? `<span style="color: var(--text-muted); font-size: 0.8rem;">Padrão</span>`
-            : `<button type="button" onclick="deleteSubmenu('${sub.id}')" style="background: rgba(255, 77, 79, 0.15); border: 1px solid rgba(255, 77, 79, 0.3); color: var(--danger); padding: 4px 10px; border-radius: 6px; cursor: pointer; font-size: 0.8rem;">Excluir</button>`;
-
-        return `
-            <tr style="border-bottom: 1px solid rgba(255,255,255,0.05);">
-                <td style="padding: 10px; font-size: 1.2rem;">${sub.icon || '📁'}</td>
-                <td style="padding: 10px; font-weight: 600;">${sub.name}</td>
-                <td style="padding: 10px; text-align: right;">${actionHtml}</td>
-            </tr>
-        `;
-    }).join('');
+function resetSubmenuForm() {
+    const form = document.getElementById('submenu-editor-form');
+    if (form) form.reset();
+    const editIdInput = document.getElementById('edit-submenu-id');
+    if (editIdInput) editIdInput.value = '';
+    const titleEl = document.getElementById('submenu-form-title');
+    if (titleEl) titleEl.innerText = 'Criar Novo Submenu Prioritário';
+    const cancelBtn = document.getElementById('sub-cancel-btn');
+    if (cancelBtn) cancelBtn.style.display = 'none';
+    uploadedSubmenuImageBase64 = '';
 }
+
+window.editSubmenu = function(subId) {
+    const sub = MENU_DATA.submenus.find(s => s.id === subId);
+    if (!sub) return;
+
+    document.getElementById('edit-submenu-id').value = sub.id;
+    document.getElementById('sub-name-input').value = sub.name || '';
+    document.getElementById('sub-subtitle-input').value = sub.subtitle || '';
+    document.getElementById('sub-icon-input').value = sub.icon || '';
+    uploadedSubmenuImageBase64 = sub.image || '';
+
+    document.getElementById('submenu-form-title').innerText = 'Editar Submenu: ' + sub.name;
+    const cancelBtn = document.getElementById('sub-cancel-btn');
+    if (cancelBtn) cancelBtn.style.display = 'inline-block';
+
+    const form = document.getElementById('submenu-editor-form');
+    if (form) form.scrollIntoView({ behavior: 'smooth' });
+};
 
 window.deleteSubmenu = function(subId) {
     const sub = MENU_DATA.submenus.find(s => s.id === subId);
     if (!sub) return;
 
-    if (confirm(`Tem certeza que deseja excluir o submenu "${sub.name}"? As categorias deste submenu serão movidas para "Monte o Seu".`)) {
+    if (confirm(`Tem certeza que deseja excluir o Submenu "${sub.name}"? As categorias pertencentes a ele serão desvinculadas.`)) {
+        const fallbackSub = MENU_DATA.submenus.find(s => s.id !== 'all' && s.id !== subId)?.id || 'monte_o_seu';
         MENU_DATA.categories.forEach(c => {
             if (c.submenu === subId) {
-                c.submenu = 'monte_o_seu';
+                c.submenu = fallbackSub;
             }
         });
         MENU_DATA.submenus = MENU_DATA.submenus.filter(s => s.id !== subId);
         localStorage.setItem('power_shake_menu_data', JSON.stringify(MENU_DATA));
-        renderSubmenusTable();
+        resetSubmenuForm();
+        renderSubmenusTab();
         populateCategoryDropdown();
-        showToast(`Submenu "${sub.name}" excluído.`, 'success');
+        showToast(`Submenu "${sub.name}" foi excluído com sucesso.`, 'success');
     }
 };
+
+window.assignCategoryToSubmenu = function(catId, targetSubmenuId) {
+    const category = MENU_DATA.categories.find(c => c.id === catId);
+    if (category) {
+        category.submenu = targetSubmenuId;
+        localStorage.setItem('power_shake_menu_data', JSON.stringify(MENU_DATA));
+        renderSubmenusTab();
+        populateCategoryDropdown();
+        showToast(`Categoria "${category.name}" vinculada ao submenu.`, 'success');
+    }
+};
+
+function renderSubmenusTab() {
+    const grid = document.getElementById('submenus-dashboard-grid');
+    if (!grid) return;
+
+    const submenus = (MENU_DATA.submenus || DEFAULT_MENU_DATA.submenus).filter(s => s.id !== 'all');
+
+    if (submenus.length === 0) {
+        grid.innerHTML = `<div style="grid-column: 1 / -1; text-align: center; color: var(--text-secondary); padding: 30px;">Nenhum submenu cadastrado. Crie um no formulário acima!</div>`;
+        return;
+    }
+
+    grid.innerHTML = submenus.map(sub => {
+        const assignedCategories = MENU_DATA.categories.filter(c => (c.submenu || 'monte_o_seu') === sub.id);
+        const unassignedCategories = MENU_DATA.categories.filter(c => (c.submenu || 'monte_o_seu') !== sub.id);
+
+        const mediaHtml = sub.image 
+            ? `<div style="width: 50px; height: 50px; border-radius: 10px; background-image: url('${sub.image}'); background-size: cover; background-position: center; flex-shrink: 0;"></div>`
+            : `<div style="font-size: 2rem; width: 50px; height: 50px; display: flex; align-items: center; justify-content: center; background: rgba(255,255,255,0.05); border-radius: 10px; flex-shrink: 0;">${sub.icon || '📁'}</div>`;
+
+        const categoriesListHtml = assignedCategories.length > 0
+            ? assignedCategories.map(cat => `
+                <div style="display: flex; align-items: center; justify-content: space-between; background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.05); padding: 8px 12px; border-radius: 8px; font-size: 0.88rem;">
+                    <span>${cat.icon || '📁'} <strong>${cat.name}</strong> (${cat.items ? cat.items.length : 0} itens)</span>
+                </div>
+            `).join('')
+            : `<div style="font-size: 0.82rem; color: var(--text-muted); font-style: italic;">Nenhuma categoria vinculada a este submenu.</div>`;
+
+        const addCategoryOptions = unassignedCategories.map(c => `<option value="${c.id}">${c.name}</option>`).join('');
+
+        return `
+            <div style="background: rgba(22, 25, 35, 0.7); border: 1px solid var(--border-card); border-radius: 14px; padding: 20px; display: flex; flex-direction: column; gap: 15px; box-shadow: 0 4px 15px rgba(0,0,0,0.2);">
+                <div style="display: flex; gap: 15px; align-items: center;">
+                    ${mediaHtml}
+                    <div style="flex: 1;">
+                        <h4 style="font-size: 1.15rem; color: var(--text-primary); margin-bottom: 2px;">${sub.name}</h4>
+                        <p style="font-size: 0.8rem; color: var(--text-secondary);">${sub.subtitle || 'Submenu prioritário'}</p>
+                    </div>
+                </div>
+
+                <div style="border-top: 1px solid rgba(255,255,255,0.06); padding-top: 12px;">
+                    <div style="font-size: 0.8rem; font-weight: 700; color: var(--accent); margin-bottom: 8px; text-transform: uppercase;">Categorias Pertencentes (${assignedCategories.length})</div>
+                    <div style="display: flex; flex-direction: column; gap: 6px;">
+                        ${categoriesListHtml}
+                    </div>
+                </div>
+
+                ${unassignedCategories.length > 0 ? `
+                    <div style="display: flex; gap: 8px; align-items: center; border-top: 1px solid rgba(255,255,255,0.06); padding-top: 12px;">
+                        <select id="assign-cat-select-${sub.id}" class="category-select-control" style="flex: 1; font-size: 0.82rem; padding: 6px 10px;">
+                            <option value="">+ Vincular Categoria...</option>
+                            ${addCategoryOptions}
+                        </select>
+                        <button type="button" onclick="const select = document.getElementById('assign-cat-select-${sub.id}'); if(select.value) assignCategoryToSubmenu(select.value, '${sub.id}')" style="background: rgba(139, 252, 3, 0.15); border: 1px solid rgba(139, 252, 3, 0.3); color: var(--accent); padding: 6px 12px; border-radius: 6px; font-weight: 600; cursor: pointer; font-size: 0.82rem;">Vincular</button>
+                    </div>
+                ` : ''}
+
+                <div style="display: flex; gap: 8px; justify-content: flex-end; border-top: 1px solid rgba(255,255,255,0.06); padding-top: 12px; margin-top: auto;">
+                    <button type="button" onclick="editSubmenu('${sub.id}')" style="background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); color: var(--text-primary); padding: 6px 12px; border-radius: 6px; cursor: pointer; font-size: 0.85rem; display: inline-flex; align-items: center; gap: 4px;">
+                        <ion-icon name="create-outline"></ion-icon> Editar
+                    </button>
+                    <button type="button" onclick="deleteSubmenu('${sub.id}')" style="background: rgba(255, 77, 79, 0.12); border: 1px solid rgba(255, 77, 79, 0.25); color: var(--danger); padding: 6px 12px; border-radius: 6px; cursor: pointer; font-size: 0.85rem; display: inline-flex; align-items: center; gap: 4px;">
+                        <ion-icon name="trash-outline"></ion-icon> Excluir
+                    </button>
+                </div>
+            </div>
+        `;
+    }).join('');
+}
 
 function setupSubmenuManagerActions() {
     const btn = document.getElementById('manage-submenus-btn');
@@ -1189,11 +1285,67 @@ function setupSubmenuManagerActions() {
     const closeBtn = document.getElementById('submenu-modal-close-btn');
     const cancelBtn = document.getElementById('submenu-modal-cancel-btn');
     const form = document.getElementById('add-submenu-form');
+    const editorForm = document.getElementById('submenu-editor-form');
+    const subImageFile = document.getElementById('sub-image-file');
+
+    if (subImageFile) {
+        subImageFile.addEventListener('change', (e) => {
+            const file = e.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = (evt) => {
+                    uploadedSubmenuImageBase64 = evt.target.result;
+                };
+                reader.readAsDataURL(file);
+            }
+        });
+    }
+
+    if (editorForm) {
+        editorForm.addEventListener('submit', (e) => {
+            e.preventDefault();
+            const id = document.getElementById('edit-submenu-id').value;
+            const name = document.getElementById('sub-name-input').value.trim();
+            const subtitle = document.getElementById('sub-subtitle-input').value.trim();
+            const icon = document.getElementById('sub-icon-input').value.trim();
+
+            if (!name) return;
+
+            if (!MENU_DATA.submenus) MENU_DATA.submenus = [...DEFAULT_MENU_DATA.submenus];
+
+            if (id) {
+                // EDIT SUBMENU
+                const sub = MENU_DATA.submenus.find(s => s.id === id);
+                if (sub) {
+                    sub.name = name;
+                    sub.subtitle = subtitle;
+                    sub.icon = icon || '📁';
+                    if (uploadedSubmenuImageBase64) sub.image = uploadedSubmenuImageBase64;
+                }
+                showToast(`Submenu "${name}" atualizado com sucesso!`, 'success');
+            } else {
+                // CREATE SUBMENU
+                const newSubId = 'sub_' + Date.now();
+                MENU_DATA.submenus.push({
+                    id: newSubId,
+                    name: name,
+                    subtitle: subtitle,
+                    icon: icon || '📁',
+                    image: uploadedSubmenuImageBase64 || ''
+                });
+                showToast(`Submenu "${name}" criado com sucesso!`, 'success');
+            }
+
+            localStorage.setItem('power_shake_menu_data', JSON.stringify(MENU_DATA));
+            resetSubmenuForm();
+            renderSubmenusTab();
+            populateCategoryDropdown();
+        });
+    }
 
     if (btn && modal) {
         btn.addEventListener('click', () => {
-            renderSubmenusTable();
-            modal.style.display = 'flex';
+            switchTab('tab-submenus');
         });
     }
 
@@ -1203,31 +1355,6 @@ function setupSubmenuManagerActions() {
 
     if (closeBtn) closeBtn.addEventListener('click', closeModal);
     if (cancelBtn) cancelBtn.addEventListener('click', closeModal);
-
-    if (form) {
-        form.addEventListener('submit', (e) => {
-            e.preventDefault();
-            const icon = document.getElementById('new-submenu-icon').value.trim();
-            const name = document.getElementById('new-submenu-name').value.trim();
-
-            if (!name) return;
-
-            const newSubId = 'sub_' + Date.now();
-            if (!MENU_DATA.submenus) MENU_DATA.submenus = [...DEFAULT_MENU_DATA.submenus];
-
-            MENU_DATA.submenus.push({
-                id: newSubId,
-                name: name,
-                icon: icon || '📁'
-            });
-
-            localStorage.setItem('power_shake_menu_data', JSON.stringify(MENU_DATA));
-            form.reset();
-            renderSubmenusTable();
-            populateCategoryDropdown();
-            showToast(`Submenu "${name}" criado com sucesso!`, 'success');
-        });
-    }
 }
 
 // Setup Event Listeners and Button Actions

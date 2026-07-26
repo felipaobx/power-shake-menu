@@ -386,7 +386,7 @@ function updateNextStepButtonLabel() {
     }
 }
 
-let activeSubmenuId = 'all';
+let activeSubmenuId = 'home';
 
 function getCategoryIcon(categoryId) {
     const maps = {
@@ -424,20 +424,24 @@ function renderSubmenuTabs() {
     const container = document.getElementById('submenu-nav-container');
     if (!container) return;
 
-    if (!MENU_DATA.submenus || MENU_DATA.submenus.length === 0) {
+    const submenus = MENU_DATA.submenus || DEFAULT_MENU_DATA.submenus;
+    if (submenus.length === 0) {
         container.style.display = 'none';
         return;
     }
 
-    let submenus = [...MENU_DATA.submenus];
-    if (!submenus.some(s => s.id === 'all')) {
-        submenus.unshift({ id: 'all', name: 'Todos', icon: '🌟' });
-    }
+    let navList = [
+        { id: 'home', name: 'Início (Submenus)', icon: '🏠' },
+        ...submenus.filter(s => s.id !== 'all')
+    ];
 
-    container.innerHTML = submenus.map(sub => {
-        const count = sub.id === 'all'
-            ? MENU_DATA.categories.length
-            : MENU_DATA.categories.filter(c => (c.submenu || 'monte_o_seu') === sub.id).length;
+    container.innerHTML = navList.map(sub => {
+        let count = 0;
+        if (sub.id === 'home') {
+            count = submenus.filter(s => s.id !== 'all').length;
+        } else {
+            count = MENU_DATA.categories.filter(c => (c.submenu || 'monte_o_seu') === sub.id).length;
+        }
 
         const isActive = activeSubmenuId === sub.id;
         return `
@@ -478,55 +482,105 @@ function renderMenuCategories() {
             elements.promoBanner.style.display = 'block';
         }
 
-        const filteredCategories = MENU_DATA.categories.filter(category => {
-            if (activeSubmenuId === 'all') return true;
-            const catSubmenu = category.submenu || 'monte_o_seu';
-            return catSubmenu === activeSubmenuId;
-        });
+        if (activeSubmenuId === 'home') {
+            // RENDER SUBMENU PRIORITY CARDS HOME VIEW
+            const submenusToRender = (MENU_DATA.submenus || DEFAULT_MENU_DATA.submenus).filter(s => s.id !== 'all');
 
-        if (filteredCategories.length === 0) {
-            if (elements.categoryDashboard) {
-                elements.categoryDashboard.innerHTML = `<div style="grid-column: 1 / -1; text-align: center; color: var(--text-secondary); padding: 40px 0;">Nenhuma categoria nesta aba no momento.</div>`;
-            }
-            return;
-        }
-
-        filteredCategories.forEach(category => {
-            if (!category.items || category.items.length === 0) return;
-
-            const summary = getCategorySelectionSummary(category);
-            const isFilled = summary !== 'Pendente';
-            
-            // Choose image or icon
-            let mediaHtml = '';
-            if (category.image) {
-                mediaHtml = `<img src="${category.image}" class="category-card-img" alt="${category.name}">`;
-            } else {
-                const icon = category.icon || getCategoryIcon(category.id);
-                mediaHtml = `<div class="category-card-icon">${icon}</div>`;
+            if (submenusToRender.length === 0) {
+                elements.categoryDashboard.innerHTML = `<div style="grid-column: 1 / -1; text-align: center; color: var(--text-secondary); padding: 40px 0;">Nenhum submenu cadastrado no momento.</div>`;
+                return;
             }
 
-            const cardHtml = `
-                <div class="category-card ${isFilled ? 'filled' : ''}" data-category-id="${category.id}">
-                    <div class="category-card-check">✓</div>
-                    ${mediaHtml}
-                    <div class="category-card-title">${category.name.replace('Escolha a ', '').replace('Escolha o ', '').replace('Adicione ', '')}</div>
-                    <div class="category-card-status">${summary}</div>
-                </div>
-            `;
-            if (elements.categoryDashboard) elements.categoryDashboard.insertAdjacentHTML('beforeend', cardHtml);
-        });
+            elements.categoryDashboard.innerHTML = submenusToRender.map(sub => {
+                const assignedCategories = MENU_DATA.categories.filter(c => (c.submenu || 'monte_o_seu') === sub.id);
+                
+                let isFilled = false;
+                assignedCategories.forEach(cat => {
+                    const sel = orderState.selections[cat.id];
+                    if (Array.isArray(sel) ? sel.length > 0 : !!sel) {
+                        isFilled = true;
+                    }
+                });
 
-        // Add event listeners to category cards
-        document.querySelectorAll('.category-card').forEach(card => {
-            card.addEventListener('click', function() {
-                const catId = this.dataset.categoryId;
-                isDashboardMode = false;
-                activeCategoryId = catId;
-                renderMenuCategories();
-                window.scrollTo({ top: 0, behavior: 'smooth' });
+                let mediaHtml = '';
+                if (sub.image) {
+                    mediaHtml = `<img src="${sub.image}" class="category-card-img" alt="${sub.name}">`;
+                } else {
+                    mediaHtml = `<div class="category-card-icon">${sub.icon || '🥤'}</div>`;
+                }
+
+                const catCountText = `${assignedCategories.length} categoria${assignedCategories.length !== 1 ? 's' : ''}`;
+                const subtitleText = sub.subtitle || catCountText;
+
+                return `
+                    <div class="category-card submenu-priority-card ${isFilled ? 'filled' : ''}" data-submenu-card-id="${sub.id}">
+                        <div class="category-card-check">✓</div>
+                        ${mediaHtml}
+                        <div class="category-card-title">${sub.name}</div>
+                        <div class="category-card-status">${subtitleText}</div>
+                    </div>
+                `;
+            }).join('');
+
+            document.querySelectorAll('.submenu-priority-card').forEach(card => {
+                card.addEventListener('click', function() {
+                    const subId = this.dataset.submenuCardId;
+                    activeSubmenuId = subId;
+                    renderSubmenuTabs();
+                    renderMenuCategories();
+                    window.scrollTo({ top: 0, behavior: 'smooth' });
+                });
             });
-        });
+
+        } else {
+            // RENDER CATEGORIES INSIDE ACTIVE SUBMENU
+            const filteredCategories = MENU_DATA.categories.filter(category => {
+                const catSubmenu = category.submenu || 'monte_o_seu';
+                return catSubmenu === activeSubmenuId;
+            });
+
+            if (filteredCategories.length === 0) {
+                if (elements.categoryDashboard) {
+                    elements.categoryDashboard.innerHTML = `<div style="grid-column: 1 / -1; text-align: center; color: var(--text-secondary); padding: 40px 0;">Nenhuma categoria neste submenu no momento.</div>`;
+                }
+                return;
+            }
+
+            filteredCategories.forEach(category => {
+                if (!category.items || category.items.length === 0) return;
+
+                const summary = getCategorySelectionSummary(category);
+                const isFilled = summary !== 'Pendente';
+                
+                let mediaHtml = '';
+                if (category.image) {
+                    mediaHtml = `<img src="${category.image}" class="category-card-img" alt="${category.name}">`;
+                } else {
+                    const icon = category.icon || getCategoryIcon(category.id);
+                    mediaHtml = `<div class="category-card-icon">${icon}</div>`;
+                }
+
+                const cardHtml = `
+                    <div class="category-card ${isFilled ? 'filled' : ''}" data-category-id="${category.id}">
+                        <div class="category-card-check">✓</div>
+                        ${mediaHtml}
+                        <div class="category-card-title">${category.name.replace('Escolha a ', '').replace('Escolha o ', '').replace('Adicione ', '')}</div>
+                        <div class="category-card-status">${summary}</div>
+                    </div>
+                `;
+                if (elements.categoryDashboard) elements.categoryDashboard.insertAdjacentHTML('beforeend', cardHtml);
+            });
+
+            document.querySelectorAll('.category-card').forEach(card => {
+                card.addEventListener('click', function() {
+                    const catId = this.dataset.categoryId;
+                    isDashboardMode = false;
+                    activeCategoryId = catId;
+                    renderMenuCategories();
+                    window.scrollTo({ top: 0, behavior: 'smooth' });
+                });
+            });
+        }
 
     } else {
         // Render Active Step (Wizard Screen)
