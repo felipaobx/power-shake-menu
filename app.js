@@ -244,14 +244,6 @@ MENU_DATA.categories.forEach(cat => {
         cat.required = ['fruits', 'milks'].includes(cat.id);
     }
 });
-
-// Ensure 'estilo_shakes' category exists in loaded data
-if (!MENU_DATA.categories.some(c => c.id === 'estilo_shakes')) {
-    const defaultEstiloShakesCat = DEFAULT_MENU_DATA.categories.find(c => c.id === 'estilo_shakes');
-    if (defaultEstiloShakesCat) {
-        MENU_DATA.categories.unshift(defaultEstiloShakesCat);
-    }
-}
 if (!SETTINGS) {
     SETTINGS = DEFAULT_SETTINGS;
     localStorage.setItem('power_shake_settings', JSON.stringify(DEFAULT_SETTINGS));
