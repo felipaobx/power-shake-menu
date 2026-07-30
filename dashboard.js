@@ -375,6 +375,11 @@ function switchTab(tabId) {
         loadLocationSettings();
     }
 
+    if (tabId === 'tab-export') {
+        loadBoardDataInputs();
+        renderBoardPreview();
+    }
+
     if (tabId === 'tab-orders') {
         loadOrders();
         startOrdersPolling();
@@ -1318,11 +1323,16 @@ function renderSubmenusTab() {
             ? assignedCategories.map(cat => `
                 <div style="display: flex; align-items: center; justify-content: space-between; background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.05); padding: 8px 12px; border-radius: 8px; font-size: 0.88rem;">
                     <span>${cat.icon || '📁'} <strong>${cat.name}</strong> (${cat.items ? cat.items.length : 0} itens)</span>
+                    <button type="button" onclick="addItemDirectToCategory('${cat.id}')" style="background: rgba(139, 252, 3, 0.15); border: 1px solid rgba(139, 252, 3, 0.3); color: var(--accent); padding: 4px 10px; border-radius: 6px; font-size: 0.78rem; font-weight: 700; cursor: pointer; display: inline-flex; align-items: center; gap: 4px;" title="Adicionar novo item nesta categoria">
+                        <ion-icon name="add-outline"></ion-icon> Novo Item
+                    </button>
                 </div>
             `).join('')
             : `<div style="font-size: 0.82rem; color: var(--text-muted); font-style: italic;">Nenhuma categoria vinculada a este submenu.</div>`;
 
         const addCategoryOptions = unassignedCategories.map(c => `<option value="${c.id}">${c.name}</option>`).join('');
+
+        const firstCatId = assignedCategories.length > 0 ? assignedCategories[0].id : (MENU_DATA.categories[0]?.id || 'fruits');
 
         return `
             <div style="background: rgba(22, 25, 35, 0.7); border: 1px solid var(--border-card); border-radius: 14px; padding: 20px; display: flex; flex-direction: column; gap: 15px; box-shadow: 0 4px 15px rgba(0,0,0,0.2);">
@@ -1332,6 +1342,9 @@ function renderSubmenusTab() {
                         <h4 style="font-size: 1.15rem; color: var(--text-primary); margin-bottom: 2px;">${sub.name}</h4>
                         <p style="font-size: 0.8rem; color: var(--text-secondary);">${sub.subtitle || 'Submenu prioritário'}</p>
                     </div>
+                    <button type="button" onclick="addItemDirectToCategory('${firstCatId}')" style="background: var(--accent); color: #000; padding: 6px 12px; border-radius: 8px; font-size: 0.82rem; font-weight: 800; cursor: pointer; display: inline-flex; align-items: center; gap: 4px;" title="Incluir item direto neste submenu">
+                        <ion-icon name="add-circle-outline"></ion-icon> + Item
+                    </button>
                 </div>
 
                 <div style="border-top: 1px solid rgba(255,255,255,0.06); padding-top: 12px;">
@@ -2113,33 +2126,97 @@ function updateLocationPreview() {
     `;
 }
 
-// 1920x1080 Digital Menu Board Customizer Studio
-let boardAccentColor = '#8bfc03';
-let boardPhotos = {
-    hero: 'assets/hero.png',
-    fruits: 'assets/fruits.png',
-    combos: 'assets/combos.jpg'
+// 1920x1080 Digital Menu Board Customizer Studio (6 Páginas Edição Completa)
+let defaultBoardData = {
+    accentColor: '#8bfc03',
+    bgColor: '#07090e',
+    p1_title: 'CARDÁPIO DIGITAL',
+    p1_subtitle: 'ENERGIA E SABOR EM CADA GOLE!',
+    p1_b1: 'ENERGIA DE VERDADE',
+    p1_b2: 'SEU ALIADO NA SUA DIETA',
+    p1_b3: 'DESEMPENHO E FOCO',
+    p1_photo: 'assets/hero.png',
+
+    p2_title: 'SHAKES TRADICIONAIS',
+    p2_subtitle: 'FEITOS COM MUITO SABOR E PROTEÍNA DE VERDADE!',
+    p2_footer: '+ PROTEÍNA     + SABOR     + ENERGIA',
+    p2_photo: 'assets/hero.png',
+
+    p3_title: 'FRUTAS SELECIONADAS',
+    p3_subtitle: 'MAIS FRESCOR PARA DEIXAR SEU SHAKE AINDA MELHOR!',
+    p3_footer: 'FRUTAS FRESCA E SELECIONADAS TODOS OS DIAS!',
+    p3_photo: 'assets/fruits.png',
+
+    p4_title: 'COMPLEMENTOS & ADICIONAIS',
+    p4_subtitle: 'TURBINE SEU SHAKE DO SEU JEITO!',
+    p4_toppingsLabel: 'CHOCOLATE  •  MORANGO  •  CARAMELO',
+    p4_toppingsPrice: 'R$ 2,00',
+    p4_photo: 'assets/complements.jpg',
+
+    p5_title: 'COMBOS PROMOCIONAIS',
+    p5_subtitle: 'MAIS SABOR, MAIS ENERGIA, MAIS ECONOMIA!',
+    p5_powerTitle: 'COMBO POWER',
+    p5_powerPrice: 'R$ 24,90',
+    p5_turboTitle: 'COMBO TURBO',
+    p5_turboPrice: 'R$ 29,90',
+    p5_photo: 'assets/combos.jpg',
+
+    p6_title: 'POWER SHAKE',
+    p6_subtitle: '- SEU ALIADO NA SUA DIETA -',
+    p6_hours: 'SEGUNDA A DOMINGO 10H ÀS 22H',
+    p6_phone: '(81) 99999-9999',
+    p6_instagram: '@powershake.caruaru',
+    p6_qrUrl: 'https://power-shake-menu.vercel.app',
+    p6_footerText: 'OBRIGADO PELA PREFERÊNCIA!',
+    p6_photo: 'assets/hero.png'
 };
 
-function setBoardAccentColor(color, btn) {
-    boardAccentColor = color;
-    document.querySelectorAll('.color-dot').forEach(dot => dot.classList.remove('active'));
-    if (btn) btn.classList.add('active');
+let boardData = { ...defaultBoardData };
+
+try {
+    const saved = localStorage.getItem('power_shake_board_data');
+    if (saved) {
+        boardData = { ...defaultBoardData, ...JSON.parse(saved) };
+    }
+} catch(e) {}
+
+function loadBoardDataInputs() {
+    for (const key in boardData) {
+        const idMap = key.replace('_', '-').toLowerCase();
+        const input = document.getElementById(`board-${idMap}`);
+        if (input) {
+            input.value = boardData[key];
+        }
+    }
+}
+
+function updateBoardField(key, val) {
+    boardData[key] = val;
+    localStorage.setItem('power_shake_board_data', JSON.stringify(boardData));
     renderBoardPreview();
 }
 
-function updateBoardPhoto(type, input) {
+function setBoardAccentColor(color, btn) {
+    boardData.accentColor = color;
+    document.querySelectorAll('.color-dot').forEach(dot => dot.classList.remove('active'));
+    if (btn) btn.classList.add('active');
+    localStorage.setItem('power_shake_board_data', JSON.stringify(boardData));
+    renderBoardPreview();
+}
+
+function updateBoardPagePhoto(pageKey, input) {
     if (input.files && input.files[0]) {
         const reader = new FileReader();
         reader.onload = function(e) {
-            boardPhotos[type] = e.target.result;
+            boardData[`${pageKey}_photo`] = e.target.result;
+            localStorage.setItem('power_shake_board_data', JSON.stringify(boardData));
             renderBoardPreview();
         };
         reader.readAsDataURL(input.files[0]);
     }
 }
 
-function filterBoardPage(pageId, btn) {
+function switchBoardEditPage(pageId, btn) {
     document.querySelectorAll('.board-filter-btn').forEach(b => b.classList.remove('active'));
     if (btn) btn.classList.add('active');
 
@@ -2151,26 +2228,34 @@ function filterBoardPage(pageId, btn) {
             wrap.style.display = 'none';
         }
     });
+
+    const panels = document.querySelectorAll('.board-edit-panel');
+    panels.forEach(p => p.style.display = 'none');
+
+    if (pageId === 'all') {
+        const pGlobal = document.getElementById('board-panel-global');
+        if (pGlobal) pGlobal.style.display = 'block';
+    } else {
+        const targetPanel = document.getElementById(`board-panel-p${pageId}`);
+        if (targetPanel) targetPanel.style.display = 'block';
+    }
 }
 
-function syncBoardFromMenuData() {
-    renderBoardPreview();
-    showToast('Cardápio sincronizado com os dados atuais do sistema!', 'success');
+function addItemDirectToCategory(catId) {
+    switchTab('tab-items');
+    if (dom.categorySelect) {
+        dom.categorySelect.value = catId;
+        onCategorySelectChange();
+    }
+    openItemEditor();
 }
 
 function renderBoardPreview() {
     const container = document.getElementById('board-preview-container');
     if (!container) return;
 
-    const comboPowerPrice = document.getElementById('board-combo-power-price')?.value || 'R$ 24,90';
-    const comboTurboPrice = document.getElementById('board-combo-turbo-price')?.value || 'R$ 29,90';
-    const qrUrl = document.getElementById('board-qr-url')?.value || 'https://power-shake-menu.vercel.app';
-    const bgColor = document.getElementById('board-bg-style')?.value || '#07090e';
-    const accent = boardAccentColor;
-
-    const hours = SETTINGS.hours || 'SEGUNDA A DOMINGO 10H ÀS 22H';
-    const phone = SETTINGS.phone || '(81) 99999-9999';
-    const instagram = SETTINGS.instagram || '@powershake.caruaru';
+    const accent = boardData.accentColor || '#8bfc03';
+    const bgColor = boardData.bgColor || '#07090e';
 
     container.innerHTML = `
         <!-- PAGE 1: CAPA & HERÓI (1920x1080) -->
@@ -2186,24 +2271,24 @@ function renderBoardPreview() {
                             </div>
                         </div>
 
-                        <h2 style="font-size: 64px; font-weight: 900; color: #fff; margin: 20px 0 10px 0; line-height: 1.05;">CARDÁPIO DIGITAL</h2>
-                        <div style="font-size: 28px; font-weight: 800; color: ${accent}; margin-bottom: 40px;">ENERGIA E SABOR EM CADA GOLE!</div>
+                        <h2 style="font-size: 64px; font-weight: 900; color: #fff; margin: 20px 0 10px 0; line-height: 1.05;">${boardData.p1_title || 'CARDÁPIO DIGITAL'}</h2>
+                        <div style="font-size: 28px; font-weight: 800; color: ${accent}; margin-bottom: 40px;">${boardData.p1_subtitle || 'ENERGIA E SABOR EM CADA GOLE!'}</div>
 
                         <div style="display: flex; flex-direction: column; gap: 16px; max-width: 420px;">
                             <div style="background: rgba(255,255,255,0.04); border: 1.5px solid ${accent}55; border-radius: 14px; padding: 18px 24px; font-size: 16px; font-weight: 800; color: #fff;">
-                                ENERGIA DE VERDADE
+                                ${boardData.p1_b1 || 'ENERGIA DE VERDADE'}
                             </div>
                             <div style="background: rgba(255,255,255,0.04); border: 1.5px solid ${accent}55; border-radius: 14px; padding: 18px 24px; font-size: 16px; font-weight: 800; color: #fff;">
-                                SEU ALIADO NA SUA DIETA
+                                ${boardData.p1_b2 || 'SEU ALIADO NA SUA DIETA'}
                             </div>
                             <div style="background: rgba(255,255,255,0.04); border: 1.5px solid ${accent}55; border-radius: 14px; padding: 18px 24px; font-size: 16px; font-weight: 800; color: #fff;">
-                                DESEMPENHO E FOCO
+                                ${boardData.p1_b3 || 'DESEMPENHO E FOCO'}
                             </div>
                         </div>
                     </div>
 
                     <div style="height: 100%; display: flex; align-items: center; justify-content: center; position: relative;">
-                        <img src="${boardPhotos.hero}" style="max-height: 850px; max-width: 100%; object-fit: contain; filter: drop-shadow(0 20px 40px rgba(0,0,0,0.8));">
+                        <img src="${boardData.p1_photo || 'assets/hero.png'}" style="max-height: 850px; max-width: 100%; object-fit: contain; filter: drop-shadow(0 20px 40px rgba(0,0,0,0.8));">
                     </div>
                 </div>
             </div>
@@ -2215,8 +2300,8 @@ function renderBoardPreview() {
                 <div class="board-page-canvas" id="board-page-2" style="width: 1920px; height: 1080px; background: ${bgColor}; color: #fff; font-family: 'Outfit', sans-serif; position: relative; box-sizing: border-box; padding: 50px; display: grid; grid-template-columns: 1.2fr 0.8fr; gap: 40px;">
                     <div style="display: flex; flex-direction: column; height: 100%;">
                         <div style="margin-bottom: 25px;">
-                            <h2 style="font-size: 40px; font-weight: 900; color: ${accent}; margin: 0 0 6px 0;">SHAKES TRADICIONAIS</h2>
-                            <div style="font-size: 15px; font-weight: 700; color: #9aa0a6;">FEITOS COM MUITO SABOR E PROTEÍNA DE VERDADE!</div>
+                            <h2 style="font-size: 40px; font-weight: 900; color: ${accent}; margin: 0 0 6px 0;">${boardData.p2_title || 'SHAKES TRADICIONAIS'}</h2>
+                            <div style="font-size: 15px; font-weight: 700; color: #9aa0a6;">${boardData.p2_subtitle || 'FEITOS COM MUITO SABOR E PROTEÍNA DE VERDADE!'}</div>
                         </div>
 
                         <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 30px;">
@@ -2263,12 +2348,12 @@ function renderBoardPreview() {
                         </div>
 
                         <div style="margin-top: auto; background: ${accent}18; border: 1.5px solid ${accent}66; border-radius: 16px; padding: 20px; text-align: center; color: ${accent}; font-weight: 900; font-size: 20px; letter-spacing: 3px;">
-                            + PROTEÍNA &nbsp;&nbsp;&nbsp;&nbsp; + SABOR &nbsp;&nbsp;&nbsp;&nbsp; + ENERGIA
+                            ${boardData.p2_footer || '+ PROTEÍNA     + SABOR     + ENERGIA'}
                         </div>
                     </div>
 
                     <div style="background: #0e121a; border: 1.5px solid ${accent}44; border-radius: 24px; padding: 30px; display: flex; align-items: center; justify-content: center; overflow: hidden; position: relative;">
-                        <img src="${boardPhotos.hero}" style="max-height: 850px; width: 100%; object-fit: contain;">
+                        <img src="${boardData.p2_photo || 'assets/hero.png'}" style="max-height: 850px; width: 100%; object-fit: contain;">
                     </div>
                 </div>
             </div>
@@ -2280,8 +2365,8 @@ function renderBoardPreview() {
                 <div class="board-page-canvas" id="board-page-3" style="width: 1920px; height: 1080px; background: ${bgColor}; color: #fff; font-family: 'Outfit', sans-serif; position: relative; box-sizing: border-box; padding: 50px; display: grid; grid-template-columns: 1.2fr 0.8fr; gap: 40px;">
                     <div style="display: flex; flex-direction: column; height: 100%;">
                         <div style="margin-bottom: 25px;">
-                            <h2 style="font-size: 40px; font-weight: 900; color: ${accent}; margin: 0 0 6px 0;">FRUTAS SELECIONADAS</h2>
-                            <div style="font-size: 15px; font-weight: 700; color: #9aa0a6;">MAIS FRESCOR PARA DEIXAR SEU SHAKE AINDA MELHOR!</div>
+                            <h2 style="font-size: 40px; font-weight: 900; color: ${accent}; margin: 0 0 6px 0;">${boardData.p3_title || 'FRUTAS SELECIONADAS'}</h2>
+                            <div style="font-size: 15px; font-weight: 700; color: #9aa0a6;">${boardData.p3_subtitle || 'MAIS FRESCOR PARA DEIXAR SEU SHAKE AINDA MELHOR!'}</div>
                         </div>
 
                         <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 30px;">
@@ -2320,12 +2405,12 @@ function renderBoardPreview() {
                         </div>
 
                         <div style="margin-top: auto; background: ${accent}18; border: 1.5px solid ${accent}66; border-radius: 16px; padding: 20px; text-align: center; color: ${accent}; font-weight: 900; font-size: 20px;">
-                            FRUTAS FRESCA E SELECIONADAS TODOS OS DIAS!
+                            ${boardData.p3_footer || 'FRUTAS FRESCA E SELECIONADAS TODOS OS DIAS!'}
                         </div>
                     </div>
 
                     <div style="background: #0e121a; border: 1.5px solid ${accent}44; border-radius: 24px; padding: 30px; display: flex; align-items: center; justify-content: center; overflow: hidden; position: relative;">
-                        <img src="${boardPhotos.fruits}" style="max-height: 850px; width: 100%; object-fit: contain;">
+                        <img src="${boardData.p3_photo || 'assets/fruits.png'}" style="max-height: 850px; width: 100%; object-fit: contain;">
                     </div>
                 </div>
             </div>
@@ -2337,8 +2422,8 @@ function renderBoardPreview() {
                 <div class="board-page-canvas" id="board-page-4" style="width: 1920px; height: 1080px; background: ${bgColor}; color: #fff; font-family: 'Outfit', sans-serif; position: relative; box-sizing: border-box; padding: 50px; display: grid; grid-template-columns: 1.2fr 0.8fr; gap: 40px;">
                     <div style="display: flex; flex-direction: column; height: 100%;">
                         <div style="margin-bottom: 25px;">
-                            <h2 style="font-size: 40px; font-weight: 900; color: ${accent}; margin: 0 0 6px 0;">COMPLEMENTOS & ADICIONAIS</h2>
-                            <div style="font-size: 15px; font-weight: 700; color: #9aa0a6;">TURBINE SEU SHAKE DO SEU JEITO!</div>
+                            <h2 style="font-size: 40px; font-weight: 900; color: ${accent}; margin: 0 0 6px 0;">${boardData.p4_title || 'COMPLEMENTOS & ADICIONAIS'}</h2>
+                            <div style="font-size: 15px; font-weight: 700; color: #9aa0a6;">${boardData.p4_subtitle || 'TURBINE SEU SHAKE DO SEU JEITO!'}</div>
                         </div>
 
                         <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 25px;">
@@ -2387,14 +2472,14 @@ function renderBoardPreview() {
                         <div style="margin-top: auto; background: ${accent}14; border: 1.5px solid ${accent}55; border-radius: 16px; padding: 22px; display: flex; align-items: center; justify-content: space-between;">
                             <div>
                                 <span style="color: ${accent}; font-weight: 900; font-size: 20px; margin-right: 20px;">COBERTURAS</span>
-                                <span style="color: #fff; font-size: 16px; font-weight: 700;">CHOCOLATE &nbsp;•&nbsp; MORANGO &nbsp;•&nbsp; CARAMELO</span>
+                                <span style="color: #fff; font-size: 16px; font-weight: 700;">${boardData.p4_toppingsLabel || 'CHOCOLATE  •  MORANGO  •  CARAMELO'}</span>
                             </div>
-                            <span class="board-price-pill" style="background: ${accent}; font-size: 18px; padding: 8px 18px;">R$ 2,00</span>
+                            <span class="board-price-pill" style="background: ${accent}; font-size: 18px; padding: 8px 18px;">${boardData.p4_toppingsPrice || 'R$ 2,00'}</span>
                         </div>
                     </div>
 
                     <div style="background: #0e121a; border: 1.5px solid ${accent}44; border-radius: 24px; padding: 30px; display: flex; align-items: center; justify-content: center; overflow: hidden; position: relative;">
-                        <img src="${boardPhotos.combos}" style="max-height: 850px; width: 100%; object-fit: cover; border-radius: 16px;">
+                        <img src="${boardData.p4_photo || 'assets/complements.jpg'}" style="max-height: 850px; width: 100%; object-fit: cover; border-radius: 16px;">
                     </div>
                 </div>
             </div>
@@ -2406,33 +2491,33 @@ function renderBoardPreview() {
                 <div class="board-page-canvas" id="board-page-5" style="width: 1920px; height: 1080px; background: ${bgColor}; color: #fff; font-family: 'Outfit', sans-serif; position: relative; box-sizing: border-box; padding: 50px; display: grid; grid-template-columns: 1.2fr 0.8fr; gap: 40px;">
                     <div style="display: flex; flex-direction: column; height: 100%;">
                         <div style="margin-bottom: 25px;">
-                            <h2 style="font-size: 40px; font-weight: 900; color: ${accent}; margin: 0 0 6px 0;">COMBOS PROMOCIONAIS</h2>
-                            <div style="font-size: 15px; font-weight: 700; color: #9aa0a6;">MAIS SABOR, MAIS ENERGIA, MAIS ECONOMIA!</div>
+                            <h2 style="font-size: 40px; font-weight: 900; color: ${accent}; margin: 0 0 6px 0;">${boardData.p5_title || 'COMBOS PROMOCIONAIS'}</h2>
+                            <div style="font-size: 15px; font-weight: 700; color: #9aa0a6;">${boardData.p5_subtitle || 'MAIS SABOR, MAIS ENERGIA, MAIS ECONOMIA!'}</div>
                         </div>
 
                         <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 24px; margin-bottom: 35px;">
                             <div style="background: #0e121a; border: 2px solid ${accent}66; border-radius: 20px; padding: 30px; display: flex; flex-direction: column; justify-content: space-between; height: 260px;">
                                 <div>
-                                    <div style="color: ${accent}; font-weight: 900; font-size: 26px; margin-bottom: 14px;">COMBO POWER</div>
+                                    <div style="color: ${accent}; font-weight: 900; font-size: 26px; margin-bottom: 14px;">${boardData.p5_powerTitle || 'COMBO POWER'}</div>
                                     <div style="color: #9aa0a6; font-size: 16px; line-height: 1.7; font-weight: 700;">
                                         1 SHAKE TRADICIONAL<br>
                                         + 1 COMPLEMENTO<br>
                                         + 1 FRUTA
                                     </div>
                                 </div>
-                                <div style="color: ${accent}; font-size: 44px; font-weight: 900;">${comboPowerPrice}</div>
+                                <div style="color: ${accent}; font-size: 44px; font-weight: 900;">${boardData.p5_powerPrice || 'R$ 24,90'}</div>
                             </div>
 
                             <div style="background: #0e121a; border: 2px solid ${accent}66; border-radius: 20px; padding: 30px; display: flex; flex-direction: column; justify-content: space-between; height: 260px;">
                                 <div>
-                                    <div style="color: ${accent}; font-weight: 900; font-size: 26px; margin-bottom: 14px;">COMBO TURBO</div>
+                                    <div style="color: ${accent}; font-weight: 900; font-size: 26px; margin-bottom: 14px;">${boardData.p5_turboTitle || 'COMBO TURBO'}</div>
                                     <div style="color: #9aa0a6; font-size: 16px; line-height: 1.7; font-weight: 700;">
                                         1 SHAKE ESPECIAL<br>
                                         + 2 COMPLEMENTOS<br>
                                         + 1 FRUTA
                                     </div>
                                 </div>
-                                <div style="color: ${accent}; font-size: 44px; font-weight: 900;">${comboTurboPrice}</div>
+                                <div style="color: ${accent}; font-size: 44px; font-weight: 900;">${boardData.p5_turboPrice || 'R$ 29,90'}</div>
                             </div>
                         </div>
 
@@ -2466,7 +2551,7 @@ function renderBoardPreview() {
                     </div>
 
                     <div style="background: #0e121a; border: 1.5px solid ${accent}44; border-radius: 24px; padding: 30px; display: flex; align-items: center; justify-content: center; overflow: hidden; position: relative;">
-                        <img src="${boardPhotos.combos}" style="max-height: 850px; width: 100%; object-fit: cover; border-radius: 16px;">
+                        <img src="${boardData.p5_photo || 'assets/combos.jpg'}" style="max-height: 850px; width: 100%; object-fit: cover; border-radius: 16px;">
                     </div>
                 </div>
             </div>
@@ -2480,25 +2565,25 @@ function renderBoardPreview() {
                         <div style="display: flex; align-items: center; gap: 20px; margin-bottom: 35px;">
                             <img src="assets/logo.png" style="width: 80px; height: 80px; object-fit: contain;">
                             <div>
-                                <h3 style="font-size: 36px; font-weight: 900; color: ${accent}; margin: 0; line-height: 1;">POWER SHAKE</h3>
-                                <div style="font-size: 13px; font-weight: 700; color: #9aa0a6; letter-spacing: 1.5px; margin-top: 5px;">- SEU ALIADO NA SUA DIETA -</div>
+                                <h3 style="font-size: 36px; font-weight: 900; color: ${accent}; margin: 0; line-height: 1;">${boardData.p6_title || 'POWER SHAKE'}</h3>
+                                <div style="font-size: 13px; font-weight: 700; color: #9aa0a6; letter-spacing: 1.5px; margin-top: 5px;">${boardData.p6_subtitle || '- SEU ALIADO NA SUA DIETA -'}</div>
                             </div>
                         </div>
 
                         <div style="display: flex; flex-direction: column; gap: 20px; margin-bottom: 35px;">
                             <div style="background: #0e121a; border: 1px solid rgba(255,255,255,0.08); border-radius: 18px; padding: 22px 28px;">
                                 <div style="font-size: 13px; font-weight: 900; color: #9aa0a6; letter-spacing: 1px;">HORÁRIO DE FUNCIONAMENTO</div>
-                                <div style="font-size: 22px; font-weight: 900; color: ${accent}; margin-top: 6px;">${hours}</div>
+                                <div style="font-size: 22px; font-weight: 900; color: ${accent}; margin-top: 6px;">${boardData.p6_hours || 'SEGUNDA A DOMINGO 10H ÀS 22H'}</div>
                             </div>
 
                             <div style="background: #0e121a; border: 1px solid rgba(255,255,255,0.08); border-radius: 18px; padding: 22px 28px;">
                                 <div style="font-size: 13px; font-weight: 900; color: #9aa0a6; letter-spacing: 1px;">PEÇA PELO WHATSAPP</div>
-                                <div style="font-size: 22px; font-weight: 900; color: ${accent}; margin-top: 6px;">${phone}</div>
+                                <div style="font-size: 22px; font-weight: 900; color: ${accent}; margin-top: 6px;">${boardData.p6_phone || '(81) 99999-9999'}</div>
                             </div>
 
                             <div style="background: #0e121a; border: 1px solid rgba(255,255,255,0.08); border-radius: 18px; padding: 22px 28px;">
                                 <div style="font-size: 13px; font-weight: 900; color: #9aa0a6; letter-spacing: 1px;">SIGA NOSSO INSTAGRAM</div>
-                                <div style="font-size: 22px; font-weight: 900; color: ${accent}; margin-top: 6px;">${instagram}</div>
+                                <div style="font-size: 22px; font-weight: 900; color: ${accent}; margin-top: 6px;">${boardData.p6_instagram || '@powershake.caruaru'}</div>
                             </div>
                         </div>
 
@@ -2509,17 +2594,17 @@ function renderBoardPreview() {
                                 <div style="color: #9aa0a6; font-size: 15px; margin-top: 6px; font-weight: 700;">Acesse nosso cardápio digital<br>direto no seu celular.</div>
                             </div>
                             <div style="background: #fff; padding: 10px; border-radius: 12px;">
-                                <img src="https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(qrUrl)}" style="width: 120px; height: 120px; display: block;">
+                                <img src="https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(boardData.p6_qrUrl || 'https://power-shake-menu.vercel.app')}" style="width: 120px; height: 120px; display: block;">
                             </div>
                         </div>
 
                         <div style="margin-top: auto; text-align: center; color: #9aa0a6; font-weight: 900; font-size: 18px;">
-                            OBRIGADO PELA PREFERÊNCIA!
+                            ${boardData.p6_footerText || 'OBRIGADO PELA PREFERÊNCIA!'}
                         </div>
                     </div>
 
                     <div style="background: #0e121a; border: 1.5px solid ${accent}44; border-radius: 24px; padding: 30px; display: flex; align-items: center; justify-content: center; overflow: hidden; position: relative;">
-                        <img src="${boardPhotos.hero}" style="max-height: 850px; width: 100%; object-fit: contain;">
+                        <img src="${boardData.p6_photo || 'assets/hero.png'}" style="max-height: 850px; width: 100%; object-fit: contain;">
                     </div>
                 </div>
             </div>

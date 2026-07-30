@@ -475,89 +475,228 @@
                         </div>
                     </div>
 
-                    <!-- ADVANCED CUSTOMIZER STUDIO TOOLBAR -->
+                    <!-- ADVANCED MULTI-PAGE CUSTOMIZER STUDIO TOOLBAR -->
                     <div style="background: rgba(0,0,0,0.4); border: 1px solid var(--border-card); padding: 22px; border-radius: 16px; margin-bottom: 25px; box-shadow: 0 8px 24px rgba(0,0,0,0.3);">
                         
-                        <!-- Filter Page Tabs -->
+                        <!-- Filter / Select Active Page to Edit & Preview -->
                         <div style="display: flex; align-items: center; gap: 10px; overflow-x: auto; padding-bottom: 12px; margin-bottom: 20px; border-bottom: 1px solid rgba(255,255,255,0.08);">
-                            <span style="font-size: 0.85rem; font-weight: 700; color: var(--text-muted); white-space: nowrap; margin-right: 5px;">Filtrar Página:</span>
-                            <button type="button" class="board-filter-btn active" onclick="filterBoardPage('all', this)">Todas as 6 Páginas</button>
-                            <button type="button" class="board-filter-btn" onclick="filterBoardPage('1', this)">Pág 1: Capa</button>
-                            <button type="button" class="board-filter-btn" onclick="filterBoardPage('2', this)">Pág 2: Shakes</button>
-                            <button type="button" class="board-filter-btn" onclick="filterBoardPage('3', this)">Pág 3: Frutas</button>
-                            <button type="button" class="board-filter-btn" onclick="filterBoardPage('4', this)">Pág 4: Complementos</button>
-                            <button type="button" class="board-filter-btn" onclick="filterBoardPage('5', this)">Pág 5: Combos</button>
-                            <button type="button" class="board-filter-btn" onclick="filterBoardPage('6', this)">Pág 6: Contato</button>
+                            <span style="font-size: 0.85rem; font-weight: 700; color: var(--accent); white-space: nowrap; margin-right: 5px; display: flex; align-items: center; gap: 6px;">
+                                <ion-icon name="create-outline"></ion-icon> Selecionar Página para Editar:
+                            </span>
+                            <button type="button" class="board-filter-btn active" onclick="switchBoardEditPage('all', this)">Todas as 6 Páginas</button>
+                            <button type="button" class="board-filter-btn" onclick="switchBoardEditPage('1', this)">📄 Pág 1: Capa</button>
+                            <button type="button" class="board-filter-btn" onclick="switchBoardEditPage('2', this)">📄 Pág 2: Shakes</button>
+                            <button type="button" class="board-filter-btn" onclick="switchBoardEditPage('3', this)">📄 Pág 3: Frutas</button>
+                            <button type="button" class="board-filter-btn" onclick="switchBoardEditPage('4', this)">📄 Pág 4: Complementos</button>
+                            <button type="button" class="board-filter-btn" onclick="switchBoardEditPage('5', this)">📄 Pág 5: Combos</button>
+                            <button type="button" class="board-filter-btn" onclick="switchBoardEditPage('6', this)">📄 Pág 6: Contato</button>
                         </div>
 
-                        <!-- 3-Column Customization Options -->
-                        <div class="grid-3" style="gap: 20px;">
-                            <!-- Column 1: Cores & Tema -->
-                            <div style="background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.05); padding: 16px; border-radius: 12px;">
-                                <h5 style="color: var(--accent); font-size: 0.9rem; margin-bottom: 14px; display: flex; align-items: center; gap: 8px;">
-                                    <ion-icon name="color-fill-outline"></ion-icon> Cores & Estilo Visual
-                                </h5>
-                                <div class="form-group" style="margin-bottom: 12px;">
-                                    <label style="font-size: 0.8rem;">Cor Neon de Destaque</label>
-                                    <div style="display: flex; gap: 8px; margin-top: 6px;">
-                                        <button type="button" onclick="setBoardAccentColor('#8bfc03', this)" class="color-dot active" style="background: #8bfc03;" title="Verde Neon"></button>
-                                        <button type="button" onclick="setBoardAccentColor('#00f3ff', this)" class="color-dot" style="background: #00f3ff;" title="Azul Ciano"></button>
-                                        <button type="button" onclick="setBoardAccentColor('#ffd700', this)" class="color-dot" style="background: #ffd700;" title="Amarelo Ouro"></button>
-                                        <button type="button" onclick="setBoardAccentColor('#ff6b00', this)" class="color-dot" style="background: #ff6b00;" title="Laranja Turbo"></button>
-                                        <button type="button" onclick="setBoardAccentColor('#ff007f', this)" class="color-dot" style="background: #ff007f;" title="Rosa Choque"></button>
+                        <!-- EDITING PANELS CONTAINER -->
+                        <div id="board-editor-panels">
+                            <!-- PANEL GLOBAL: CORES & TEMA -->
+                            <div class="board-edit-panel" id="board-panel-global" style="display: block;">
+                                <div class="grid-3" style="gap: 15px;">
+                                    <div style="background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.05); padding: 14px; border-radius: 12px;">
+                                        <label style="font-size: 0.8rem; color: var(--text-secondary); display: block; margin-bottom: 8px;">Cor Neon de Destaque</label>
+                                        <div style="display: flex; gap: 8px;">
+                                            <button type="button" onclick="setBoardAccentColor('#8bfc03', this)" class="color-dot active" style="background: #8bfc03;" title="Verde Neon"></button>
+                                            <button type="button" onclick="setBoardAccentColor('#00f3ff', this)" class="color-dot" style="background: #00f3ff;" title="Azul Ciano"></button>
+                                            <button type="button" onclick="setBoardAccentColor('#ffd700', this)" class="color-dot" style="background: #ffd700;" title="Amarelo Ouro"></button>
+                                            <button type="button" onclick="setBoardAccentColor('#ff6b00', this)" class="color-dot" style="background: #ff6b00;" title="Laranja Turbo"></button>
+                                            <button type="button" onclick="setBoardAccentColor('#ff007f', this)" class="color-dot" style="background: #ff007f;" title="Rosa Choque"></button>
+                                        </div>
                                     </div>
-                                </div>
-                                <div class="form-group" style="margin: 0;">
-                                    <label style="font-size: 0.8rem;">Fundo do Painel</label>
-                                    <select id="board-bg-style" class="form-control" style="font-size: 0.85rem;" onchange="renderBoardPreview()">
-                                        <option value="#07090e">Dark Obsidian (#07090e)</option>
-                                        <option value="#000000">Black Carbon (#000000)</option>
-                                        <option value="#0b132b">Deep Navy (#0b132b)</option>
-                                    </select>
+                                    <div style="background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.05); padding: 14px; border-radius: 12px;">
+                                        <label style="font-size: 0.8rem; color: var(--text-secondary); display: block; margin-bottom: 6px;">Fundo do Painel Digital</label>
+                                        <select id="board-bg-style" class="form-control" style="font-size: 0.85rem;" onchange="updateBoardField('bgColor', this.value)">
+                                            <option value="#07090e">Dark Obsidian (#07090e)</option>
+                                            <option value="#000000">Black Carbon (#000000)</option>
+                                            <option value="#0b132b">Deep Navy (#0b132b)</option>
+                                        </select>
+                                    </div>
+                                    <div style="background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.05); padding: 14px; border-radius: 12px; display: flex; align-items: flex-end;">
+                                        <button type="button" class="add-item-btn" onclick="syncBoardFromMenuData()" style="width: 100%; margin: 0; background: rgba(139, 252, 3, 0.1); border: 1px solid rgba(139, 252, 3, 0.25); color: var(--accent); height: 38px; font-size: 0.82rem;">
+                                            <ion-icon name="sync-outline"></ion-icon> Sincronizar Preços do Cardápio
+                                        </button>
+                                    </div>
                                 </div>
                             </div>
 
-                            <!-- Column 2: Fotos Personalizadas das Páginas -->
-                            <div style="background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.05); padding: 16px; border-radius: 12px;">
-                                <h5 style="color: var(--accent); font-size: 0.9rem; margin-bottom: 14px; display: flex; align-items: center; gap: 8px;">
-                                    <ion-icon name="images-outline"></ion-icon> Upload de Fotos por Página
-                                </h5>
-                                <div class="form-group" style="margin-bottom: 10px;">
-                                    <label style="font-size: 0.78rem;">Foto Pág 1 & 6 (Capa/Contato)</label>
-                                    <input type="file" accept="image/*" class="form-control" style="font-size: 0.78rem; padding: 6px;" onchange="updateBoardPhoto('hero', this)">
+                            <!-- PANEL PAGE 1: CAPA -->
+                            <div class="board-edit-panel" id="board-panel-p1" style="display: none;">
+                                <h5 style="color: var(--accent); margin-bottom: 12px;">📄 Editar Conteúdo da Página 1 (Capa & Apresentação)</h5>
+                                <div class="grid-3" style="gap: 15px;">
+                                    <div class="form-group" style="margin: 0;">
+                                        <label style="font-size: 0.78rem;">Foto de Destaque da Capa</label>
+                                        <input type="file" accept="image/*" class="form-control" style="font-size: 0.78rem; padding: 5px;" onchange="updateBoardPagePhoto('p1', this)">
+                                    </div>
+                                    <div class="form-group" style="margin: 0;">
+                                        <label style="font-size: 0.78rem;">Título Principal</label>
+                                        <input type="text" id="board-p1-title" class="form-control" style="font-size: 0.82rem;" oninput="updateBoardField('p1_title', this.value)">
+                                    </div>
+                                    <div class="form-group" style="margin: 0;">
+                                        <label style="font-size: 0.78rem;">Subtítulo Slogan</label>
+                                        <input type="text" id="board-p1-subtitle" class="form-control" style="font-size: 0.82rem;" oninput="updateBoardField('p1_subtitle', this.value)">
+                                    </div>
                                 </div>
-                                <div class="form-group" style="margin-bottom: 10px;">
-                                    <label style="font-size: 0.78rem;">Foto Pág 3 (Frutas Selecionadas)</label>
-                                    <input type="file" accept="image/*" class="form-control" style="font-size: 0.78rem; padding: 6px;" onchange="updateBoardPhoto('fruits', this)">
-                                </div>
-                                <div class="form-group" style="margin: 0;">
-                                    <label style="font-size: 0.78rem;">Foto Pág 4 & 5 (Complementos/Combos)</label>
-                                    <input type="file" accept="image/*" class="form-control" style="font-size: 0.78rem; padding: 6px;" onchange="updateBoardPhoto('combos', this)">
+                                <div class="grid-3" style="gap: 15px; margin-top: 10px;">
+                                    <div class="form-group" style="margin: 0;">
+                                        <label style="font-size: 0.78rem;">Selo / Badge 1</label>
+                                        <input type="text" id="board-p1-b1" class="form-control" style="font-size: 0.82rem;" oninput="updateBoardField('p1_b1', this.value)">
+                                    </div>
+                                    <div class="form-group" style="margin: 0;">
+                                        <label style="font-size: 0.78rem;">Selo / Badge 2</label>
+                                        <input type="text" id="board-p1-b2" class="form-control" style="font-size: 0.82rem;" oninput="updateBoardField('p1_b2', this.value)">
+                                    </div>
+                                    <div class="form-group" style="margin: 0;">
+                                        <label style="font-size: 0.78rem;">Selo / Badge 3</label>
+                                        <input type="text" id="board-p1-b3" class="form-control" style="font-size: 0.82rem;" oninput="updateBoardField('p1_b3', this.value)">
+                                    </div>
                                 </div>
                             </div>
 
-                            <!-- Column 3: Preços & Textos Promocionais -->
-                            <div style="background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.05); padding: 16px; border-radius: 12px;">
-                                <h5 style="color: var(--accent); font-size: 0.9rem; margin-bottom: 14px; display: flex; align-items: center; gap: 8px;">
-                                    <ion-icon name="create-outline"></ion-icon> Preços & Informações
-                                </h5>
-                                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 10px;">
+                            <!-- PANEL PAGE 2: SHAKES -->
+                            <div class="board-edit-panel" id="board-panel-p2" style="display: none;">
+                                <h5 style="color: var(--accent); margin-bottom: 12px;">📄 Editar Conteúdo da Página 2 (Shakes Tradicionais)</h5>
+                                <div class="grid-3" style="gap: 15px;">
                                     <div class="form-group" style="margin: 0;">
-                                        <label style="font-size: 0.78rem;">Combo Power</label>
-                                        <input type="text" id="board-combo-power-price" value="R$ 24,90" class="form-control" style="font-size: 0.82rem;" oninput="renderBoardPreview()">
+                                        <label style="font-size: 0.78rem;">Foto da Página 2 (Shake)</label>
+                                        <input type="file" accept="image/*" class="form-control" style="font-size: 0.78rem; padding: 5px;" onchange="updateBoardPagePhoto('p2', this)">
                                     </div>
                                     <div class="form-group" style="margin: 0;">
-                                        <label style="font-size: 0.78rem;">Combo Turbo</label>
-                                        <input type="text" id="board-combo-turbo-price" value="R$ 29,90" class="form-control" style="font-size: 0.82rem;" oninput="renderBoardPreview()">
+                                        <label style="font-size: 0.78rem;">Título da Seção</label>
+                                        <input type="text" id="board-p2-title" class="form-control" style="font-size: 0.82rem;" oninput="updateBoardField('p2_title', this.value)">
+                                    </div>
+                                    <div class="form-group" style="margin: 0;">
+                                        <label style="font-size: 0.78rem;">Subtítulo da Seção</label>
+                                        <input type="text" id="board-p2-subtitle" class="form-control" style="font-size: 0.82rem;" oninput="updateBoardField('p2_subtitle', this.value)">
                                     </div>
                                 </div>
-                                <div class="form-group" style="margin-bottom: 10px;">
-                                    <label style="font-size: 0.78rem;">Link do QR Code (Cardápio Digital)</label>
-                                    <input type="text" id="board-qr-url" value="https://power-shake-menu.vercel.app" class="form-control" style="font-size: 0.82rem;" oninput="renderBoardPreview()">
+                                <div class="form-group" style="margin-top: 10px;">
+                                    <label style="font-size: 0.78rem;">Texto do Banner de Rodapé</label>
+                                    <input type="text" id="board-p2-footer" class="form-control" style="font-size: 0.82rem;" oninput="updateBoardField('p2_footer', this.value)">
                                 </div>
-                                <button type="button" class="add-item-btn" onclick="syncBoardFromMenuData()" style="width: 100%; margin: 0; background: rgba(139, 252, 3, 0.1); border: 1px solid rgba(139, 252, 3, 0.25); color: var(--accent); height: 38px; font-size: 0.82rem;">
-                                    <ion-icon name="sync-outline"></ion-icon> Sincronizar Preços do Cardápio
-                                </button>
+                            </div>
+
+                            <!-- PANEL PAGE 3: FRUTAS -->
+                            <div class="board-edit-panel" id="board-panel-p3" style="display: none;">
+                                <h5 style="color: var(--accent); margin-bottom: 12px;">📄 Editar Conteúdo da Página 3 (Frutas Selecionadas)</h5>
+                                <div class="grid-3" style="gap: 15px;">
+                                    <div class="form-group" style="margin: 0;">
+                                        <label style="font-size: 0.78rem;">Foto da Página 3 (Frutas)</label>
+                                        <input type="file" accept="image/*" class="form-control" style="font-size: 0.78rem; padding: 5px;" onchange="updateBoardPagePhoto('p3', this)">
+                                    </div>
+                                    <div class="form-group" style="margin: 0;">
+                                        <label style="font-size: 0.78rem;">Título da Seção</label>
+                                        <input type="text" id="board-p3-title" class="form-control" style="font-size: 0.82rem;" oninput="updateBoardField('p3_title', this.value)">
+                                    </div>
+                                    <div class="form-group" style="margin: 0;">
+                                        <label style="font-size: 0.78rem;">Subtítulo da Seção</label>
+                                        <input type="text" id="board-p3-subtitle" class="form-control" style="font-size: 0.82rem;" oninput="updateBoardField('p3_subtitle', this.value)">
+                                    </div>
+                                </div>
+                                <div class="form-group" style="margin-top: 10px;">
+                                    <label style="font-size: 0.78rem;">Texto do Banner de Rodapé</label>
+                                    <input type="text" id="board-p3-footer" class="form-control" style="font-size: 0.82rem;" oninput="updateBoardField('p3_footer', this.value)">
+                                </div>
+                            </div>
+
+                            <!-- PANEL PAGE 4: COMPLEMENTOS -->
+                            <div class="board-edit-panel" id="board-panel-p4" style="display: none;">
+                                <h5 style="color: var(--accent); margin-bottom: 12px;">📄 Editar Conteúdo da Página 4 (Complementos & Adicionais)</h5>
+                                <div class="grid-3" style="gap: 15px;">
+                                    <div class="form-group" style="margin: 0;">
+                                        <label style="font-size: 0.78rem;">Foto da Página 4 (Complementos)</label>
+                                        <input type="file" accept="image/*" class="form-control" style="font-size: 0.78rem; padding: 5px;" onchange="updateBoardPagePhoto('p4', this)">
+                                    </div>
+                                    <div class="form-group" style="margin: 0;">
+                                        <label style="font-size: 0.78rem;">Título da Seção</label>
+                                        <input type="text" id="board-p4-title" class="form-control" style="font-size: 0.82rem;" oninput="updateBoardField('p4_title', this.value)">
+                                    </div>
+                                    <div class="form-group" style="margin: 0;">
+                                        <label style="font-size: 0.78rem;">Subtítulo da Seção</label>
+                                        <input type="text" id="board-p4-subtitle" class="form-control" style="font-size: 0.82rem;" oninput="updateBoardField('p4_subtitle', this.value)">
+                                    </div>
+                                </div>
+                                <div class="grid-2" style="gap: 15px; margin-top: 10px;">
+                                    <div class="form-group" style="margin: 0;">
+                                        <label style="font-size: 0.78rem;">Lista de Coberturas</label>
+                                        <input type="text" id="board-p4-toppings-label" class="form-control" style="font-size: 0.82rem;" oninput="updateBoardField('p4_toppingsLabel', this.value)">
+                                    </div>
+                                    <div class="form-group" style="margin: 0;">
+                                        <label style="font-size: 0.78rem;">Preço das Coberturas</label>
+                                        <input type="text" id="board-p4-toppings-price" class="form-control" style="font-size: 0.82rem;" oninput="updateBoardField('p4_toppingsPrice', this.value)">
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- PANEL PAGE 5: COMBOS -->
+                            <div class="board-edit-panel" id="board-panel-p5" style="display: none;">
+                                <h5 style="color: var(--accent); margin-bottom: 12px;">📄 Editar Conteúdo da Página 5 (Combos Promocionais)</h5>
+                                <div class="grid-3" style="gap: 15px;">
+                                    <div class="form-group" style="margin: 0;">
+                                        <label style="font-size: 0.78rem;">Foto da Página 5 (Combos)</label>
+                                        <input type="file" accept="image/*" class="form-control" style="font-size: 0.78rem; padding: 5px;" onchange="updateBoardPagePhoto('p5', this)">
+                                    </div>
+                                    <div class="form-group" style="margin: 0;">
+                                        <label style="font-size: 0.78rem;">Título da Seção</label>
+                                        <input type="text" id="board-p5-title" class="form-control" style="font-size: 0.82rem;" oninput="updateBoardField('p5_title', this.value)">
+                                    </div>
+                                    <div class="form-group" style="margin: 0;">
+                                        <label style="font-size: 0.78rem;">Subtítulo da Seção</label>
+                                        <input type="text" id="board-p5-subtitle" class="form-control" style="font-size: 0.82rem;" oninput="updateBoardField('p5_subtitle', this.value)">
+                                    </div>
+                                </div>
+                                <div class="grid-2" style="gap: 15px; margin-top: 10px;">
+                                    <div style="background: rgba(255,255,255,0.02); padding: 10px; border-radius: 8px;">
+                                        <label style="font-size: 0.78rem; color: var(--accent); font-weight: 700;">Combo Power</label>
+                                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 5px;">
+                                            <input type="text" id="board-p5-power-title" class="form-control" style="font-size: 0.8rem;" placeholder="Nome Combo" oninput="updateBoardField('p5_powerTitle', this.value)">
+                                            <input type="text" id="board-p5-power-price" class="form-control" style="font-size: 0.8rem;" placeholder="Preço" oninput="updateBoardField('p5_powerPrice', this.value)">
+                                        </div>
+                                    </div>
+                                    <div style="background: rgba(255,255,255,0.02); padding: 10px; border-radius: 8px;">
+                                        <label style="font-size: 0.78rem; color: var(--accent); font-weight: 700;">Combo Turbo</label>
+                                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 5px;">
+                                            <input type="text" id="board-p5-turbo-title" class="form-control" style="font-size: 0.8rem;" placeholder="Nome Combo" oninput="updateBoardField('p5_turboTitle', this.value)">
+                                            <input type="text" id="board-p5-turbo-price" class="form-control" style="font-size: 0.8rem;" placeholder="Preço" oninput="updateBoardField('p5_turboPrice', this.value)">
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- PANEL PAGE 6: CONTATO & QR CODE -->
+                            <div class="board-edit-panel" id="board-panel-p6" style="display: none;">
+                                <h5 style="color: var(--accent); margin-bottom: 12px;">📄 Editar Conteúdo da Página 6 (Contato & QR Code)</h5>
+                                <div class="grid-3" style="gap: 15px;">
+                                    <div class="form-group" style="margin: 0;">
+                                        <label style="font-size: 0.78rem;">Foto da Página 6 (Lateral)</label>
+                                        <input type="file" accept="image/*" class="form-control" style="font-size: 0.78rem; padding: 5px;" onchange="updateBoardPagePhoto('p6', this)">
+                                    </div>
+                                    <div class="form-group" style="margin: 0;">
+                                        <label style="font-size: 0.78rem;">Horário de Funcionamento</label>
+                                        <input type="text" id="board-p6-hours" class="form-control" style="font-size: 0.82rem;" oninput="updateBoardField('p6_hours', this.value)">
+                                    </div>
+                                    <div class="form-group" style="margin: 0;">
+                                        <label style="font-size: 0.78rem;">WhatsApp para Pedidos</label>
+                                        <input type="text" id="board-p6-phone" class="form-control" style="font-size: 0.82rem;" oninput="updateBoardField('p6_phone', this.value)">
+                                    </div>
+                                </div>
+                                <div class="grid-3" style="gap: 15px; margin-top: 10px;">
+                                    <div class="form-group" style="margin: 0;">
+                                        <label style="font-size: 0.78rem;">Instagram</label>
+                                        <input type="text" id="board-p6-instagram" class="form-control" style="font-size: 0.82rem;" oninput="updateBoardField('p6_instagram', this.value)">
+                                    </div>
+                                    <div class="form-group" style="margin: 0;">
+                                        <label style="font-size: 0.78rem;">Link do QR Code</label>
+                                        <input type="text" id="board-p6-qrurl" class="form-control" style="font-size: 0.82rem;" oninput="updateBoardField('p6_qrUrl', this.value)">
+                                    </div>
+                                    <div class="form-group" style="margin: 0;">
+                                        <label style="font-size: 0.78rem;">Texto do Rodapé</label>
+                                        <input type="text" id="board-p6-footer" class="form-control" style="font-size: 0.82rem;" oninput="updateBoardField('p6_footerText', this.value)">
+                                    </div>
+                                </div>
                             </div>
                         </div>
                     </div>
