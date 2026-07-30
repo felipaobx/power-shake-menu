@@ -11,272 +11,470 @@
 </head>
 <body>
 
-    <div class="dashboard-container">
-        <!-- Header -->
-        <header class="dashboard-header">
-            <h1>Admin <span>Power Shake</span></h1>
-            <div style="display: flex; gap: 10px;">
-                <a href="cozinha.html" class="back-btn" style="background: #10b981; color: white;">
+    <div class="dashboard-layout">
+        <!-- LEFT VERTICAL SIDEBAR -->
+        <aside class="sidebar">
+            <div class="sidebar-brand">
+                <img src="assets/logo.png" alt="Power Shake Logo" class="brand-logo-img">
+                <div>
+                    <div class="brand-title">POWER <span>SHAKE</span></div>
+                    <div class="brand-badge">
+                        <span class="live-dot"></span>
+                        Painel de Controle
+                    </div>
+                </div>
+            </div>
+
+            <!-- Navigation Menu Items -->
+            <nav class="sidebar-nav">
+                <div class="nav-section-label">Geral & Indicadores</div>
+
+                <button class="sidebar-nav-btn active" onclick="switchTab('tab-overview')">
+                    <ion-icon name="grid-outline"></ion-icon>
+                    <span>Visão Geral</span>
+                </button>
+
+                <div class="nav-section-label">Gestão do Cardápio</div>
+
+                <button class="sidebar-nav-btn" onclick="switchTab('tab-items')">
                     <ion-icon name="restaurant-outline"></ion-icon>
-                    Cozinha Powershake
+                    <span>Cardápio & Itens</span>
+                </button>
+
+                <button class="sidebar-nav-btn" onclick="switchTab('tab-submenus')">
+                    <ion-icon name="layers-outline"></ion-icon>
+                    <span>Gerenciar Submenus</span>
+                </button>
+
+                <button class="sidebar-nav-btn" onclick="switchTab('tab-general')">
+                    <ion-icon name="create-outline"></ion-icon>
+                    <span>Textos & Banners</span>
+                </button>
+
+                <div class="nav-section-label">Configurações & Acessos</div>
+
+                <button class="sidebar-nav-btn" onclick="switchTab('tab-users')">
+                    <ion-icon name="people-outline"></ion-icon>
+                    <span>Usuários & Acessos</span>
+                    <span class="sidebar-badge" id="users-nav-badge">2</span>
+                </button>
+
+                <button class="sidebar-nav-btn" onclick="switchTab('tab-location')">
+                    <ion-icon name="location-outline"></ion-icon>
+                    <span>Endereço & Contato</span>
+                </button>
+
+                <div class="nav-section-label">Operacional</div>
+
+                <button class="sidebar-nav-btn" onclick="switchTab('tab-orders')">
+                    <ion-icon name="receipt-outline"></ion-icon>
+                    <span>Fila de Pedidos</span>
+                    <span class="sidebar-badge" id="orders-nav-badge">0</span>
+                </button>
+
+                <button class="sidebar-nav-btn" onclick="switchTab('tab-export')">
+                    <ion-icon name="document-text-outline"></ion-icon>
+                    <span>Exportar PDF</span>
+                </button>
+            </nav>
+
+            <!-- Sidebar Quick Action Links -->
+            <div class="sidebar-footer">
+                <a href="index.html" target="_blank" class="sidebar-footer-link">
+                    <ion-icon name="open-outline"></ion-icon>
+                    Ver Cardápio
                 </a>
-                <a href="index.html" class="back-btn">
-                    <ion-icon name="arrow-back-outline"></ion-icon>
-                    Voltar ao Cardápio
+                <a href="cozinha.html" target="_blank" class="sidebar-footer-link highlight">
+                    <ion-icon name="restaurant-outline"></ion-icon>
+                    Painel Cozinha
                 </a>
             </div>
-        </header>
+        </aside>
 
-        <!-- Navigation Tabs -->
-        <nav class="tabs-navigation">
-            <button class="tab-btn active" onclick="switchTab('tab-general')">Textos e Banners</button>
-            <button class="tab-btn" onclick="switchTab('tab-items')">Gerenciar Itens</button>
-            <button class="tab-btn" onclick="switchTab('tab-submenus')">Gerenciar Submenus</button>
-            <button class="tab-btn" onclick="switchTab('tab-orders')">Recebimento de Pedido</button>
-            <button class="tab-btn" onclick="switchTab('tab-export')">Exportar PDF</button>
-        </nav>
-
-        <!-- Tab 1: General Settings Form -->
-        <main id="tab-general" class="tab-content active">
-            
-            <!-- Hero Settings -->
-            <section class="form-section">
-                <h3 class="form-section-title">Cabeçalho (Hero Banner)</h3>
-                <div class="grid-2">
-                    <div class="form-group">
-                        <label for="hero-title-input">Título do Banner</label>
-                        <input type="text" id="hero-title-input" class="form-control" placeholder="Ex: Monte o Shake Perfeito">
-                    </div>
-                    <div class="form-group">
-                        <label>Imagem de Fundo do Cabeçalho</label>
-                        <div class="image-uploader-wrapper">
-                            <div id="hero-image-preview" class="image-preview"></div>
-                            <label class="file-input-btn">
-                                <ion-icon name="cloud-upload-outline"></ion-icon>
-                                Upload Nova Imagem
-                                <input type="file" id="hero-image-file" accept="image/*">
-                            </label>
-                        </div>
-                    </div>
+        <!-- MAIN CONTENT AREA -->
+        <main class="main-content">
+            <!-- Top Header Action Bar -->
+            <header class="top-bar-header">
+                <div class="top-bar-title">
+                    <h2 id="current-tab-heading"><ion-icon name="grid-outline"></ion-icon> Visão Geral</h2>
+                    <p id="current-tab-description">Resumo operacional, atalhos rápidos e métricas do seu cardápio.</p>
                 </div>
-                <div class="form-group">
-                    <label for="hero-subtitle-input">Subtítulo / Descrição</label>
-                    <textarea id="hero-subtitle-input" class="form-control" placeholder="Descrição do cabeçalho..."></textarea>
-                </div>
-            </section>
-
-            <!-- Mid Promotion Banner Settings -->
-            <section class="form-section">
-                <h3 class="form-section-title">Banner Promocional Central</h3>
-                <div class="grid-2">
-                    <div class="form-group">
-                        <label for="mid-title-input">Título do Banner Promocional</label>
-                        <input type="text" id="mid-title-input" class="form-control" placeholder="Ex: Experimente um novo estilo de vida">
-                    </div>
-                    <div class="form-group">
-                        <label>Imagem de Fundo do Banner</label>
-                        <div class="image-uploader-wrapper">
-                            <div id="mid-image-preview" class="image-preview"></div>
-                            <label class="file-input-btn">
-                                <ion-icon name="cloud-upload-outline"></ion-icon>
-                                Upload Nova Imagem
-                                <input type="file" id="mid-image-file" accept="image/*">
-                            </label>
-                        </div>
-                    </div>
-                </div>
-                <div class="form-group">
-                    <label for="mid-subtitle-input">Texto do Banner Promocional</label>
-                    <textarea id="mid-subtitle-input" class="form-control" placeholder="Texto promocional..."></textarea>
-                </div>
-            </section>
-
-            <!-- Address and Maps Settings -->
-            <section class="form-section">
-                <h3 class="form-section-title">Endereço & Contato (Rodapé)</h3>
-                <div class="form-group">
-                    <label for="address-input">Endereço Principal (HTML Suportado)</label>
-                    <input type="text" id="address-input" class="form-control" placeholder="Ex: 📍 <strong>Endereço:</strong> Rua Zeferino Galvão...">
-                </div>
-                <div class="grid-2">
-                    <div class="form-group">
-                        <label for="subaddress-input">Complemento / Informação Adicional</label>
-                        <input type="text" id="subaddress-input" class="form-control" placeholder="Ex: Em frente ao receptivo de lotação...">
-                    </div>
-                    <div class="form-group">
-                        <label for="mapurl-input">Link do Google Maps</label>
-                        <input type="text" id="mapurl-input" class="form-control" placeholder="https://maps.google.com/?q=...">
-                    </div>
-                </div>
-            </section>
-
-        </main>
-
-        <!-- Tab 2: Menu Items List Manager -->
-        <main id="tab-items" class="tab-content">
-            
-            <div class="category-select-wrapper" style="display: flex; flex-direction: column; gap: 15px; margin-bottom: 25px; background: rgba(255, 255, 255, 0.02); border: 1px solid var(--border-card); padding: 20px; border-radius: 12px;">
-                <div style="display: flex; gap: 15px; align-items: flex-end; flex-wrap: wrap; width: 100%;">
-                    <div style="flex: 1.2; min-width: 200px;">
-                        <label style="font-size:0.85rem; color:var(--text-secondary); display:block; margin-bottom:5px;">Categoria do Item</label>
-                        <select id="category-select" class="category-select-control" onchange="onCategorySelectChange()" style="width: 100%;">
-                            <!-- Populated dynamically by dashboard.js -->
-                        </select>
-                    </div>
-                    <div style="flex: 1; min-width: 170px;">
-                        <label style="font-size:0.85rem; color:var(--text-secondary); display:block; margin-bottom:5px;">Submenu Pertencente</label>
-                        <select id="category-submenu-select" class="category-select-control" onchange="changeCategorySubmenuStatus()" style="width: 100%;">
-                            <!-- Populated dynamically by dashboard.js -->
-                        </select>
-                    </div>
-                    <div style="flex: 1; min-width: 170px;">
-                        <label style="font-size:0.85rem; color:var(--text-secondary); display:block; margin-bottom:5px;">Modo de Seleção</label>
-                        <select id="category-selection-type" class="category-select-control" onchange="changeCategorySelectionType()" style="width: 100%;">
-                            <option value="single">Seleção Única (Escolhe 1)</option>
-                            <option value="multi">Seleção Múltipla (Escolhe vários)</option>
-                        </select>
-                    </div>
-                    <div style="min-width: 140px;">
-                        <label style="font-size:0.85rem; color:var(--text-secondary); display:block; margin-bottom:5px;">Obrigatoriedade</label>
-                        <label class="required-toggle-label" style="display: inline-flex; align-items: center; gap: 8px; cursor: pointer; background: var(--bg-card); border: 1px solid var(--border-card); padding: 10px 15px; border-radius: 8px; font-family: 'Outfit', sans-serif; font-weight: 600; font-size: 0.95rem; height: 42px; box-sizing: border-box; width: 100%; justify-content: center;">
-                            <input type="checkbox" id="category-required-toggle" onchange="changeCategoryRequiredStatus()" style="accent-color: var(--accent); width: 16px; height: 16px; margin: 0; cursor: pointer;">
-                            <span>Obrigatório</span>
-                        </label>
-                    </div>
-                </div>
-                
-                <div style="display: flex; gap: 15px; align-items: center; flex-wrap: wrap; width: 100%; border-top: 1px solid rgba(255, 255, 255, 0.05); padding-top: 15px;">
-                    <div style="flex: 1; min-width: 250px; position: relative;">
-                        <input type="text" id="item-search-input" placeholder="🔍 Buscar item nesta categoria..." oninput="renderItemsTable()" class="category-select-control" style="width: 100%; padding-left: 15px; box-sizing: border-box;">
-                    </div>
-                    <div style="display: flex; gap: 10px; flex-wrap: wrap; margin-left: auto;">
-                        <button class="add-item-btn" id="manage-submenus-btn" style="background: rgba(139, 252, 3, 0.1); border: 1px solid rgba(139, 252, 3, 0.25); color: var(--accent); margin: 0;">
-                            <ion-icon name="grid-outline"></ion-icon>
-                            Gerenciar Submenus
-                        </button>
-                        <button class="add-item-btn" id="add-category-btn" style="background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.08); color: var(--text-primary); margin: 0;">
-                            <ion-icon name="folder-open-outline"></ion-icon>
-                            Nova Categoria
-                        </button>
-                        <button class="add-item-btn" id="edit-category-btn" style="background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.08); color: var(--text-primary); margin: 0;" title="Editar Categoria Atual">
-                            <ion-icon name="create-outline"></ion-icon>
-                            Editar Categoria
-                        </button>
-                        <button class="add-item-btn" id="delete-category-btn" style="background: rgba(255, 77, 79, 0.12); border: 1px solid rgba(255, 77, 79, 0.2); color: var(--danger); margin: 0;" title="Excluir Categoria Atual">
-                            <ion-icon name="trash-outline"></ion-icon>
-                            Excluir Categoria
-                        </button>
-                        <button class="add-item-btn" id="add-item-btn" style="background: var(--accent); color: #000; margin: 0; box-shadow: 0 0 10px rgba(139, 252, 3, 0.15);">
-                            <ion-icon name="add-outline"></ion-icon>
-                            Novo Item
-                        </button>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Items Table List -->
-            <div class="items-list-container">
-                <table class="items-table">
-                    <thead>
-                        <tr id="table-headers">
-                            <!-- Headers dynamically set by JS -->
-                        </tr>
-                    </thead>
-                    <tbody id="items-table-body">
-                        <!-- Table rows populated dynamically -->
-                    </tbody>
-                </table>
-            </div>
-
-        </main>
-
-        <!-- Tab: Gerenciar Submenus -->
-        <main id="tab-submenus" class="tab-content">
-            <section class="form-section">
-                <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 15px; margin-bottom: 15px;">
-                    <div>
-                        <h3 class="form-section-title" style="margin-bottom: 5px;">Gerenciador de Submenus & Organização</h3>
-                        <p style="color: var(--text-secondary); font-size: 0.95rem; margin: 0;">
-                            Crie, edite ou exclua qualquer submenu e organize as categorias do cardápio em cada um.
-                        </p>
-                    </div>
-                    <button class="add-item-btn" onclick="openSubmenuEditor()" style="background: var(--accent); color: #000; font-weight: 700; margin: 0;">
-                        <ion-icon name="add-circle-outline"></ion-icon>
-                        Criar Novo Submenu
+                <div class="top-bar-actions">
+                    <button class="add-item-btn" id="reset-defaults-btn" style="background: rgba(255, 77, 79, 0.12); border: 1px solid rgba(255, 77, 79, 0.25); color: var(--danger); margin: 0;" title="Restaurar Padrões">
+                        <ion-icon name="refresh-outline"></ion-icon>
+                        Restaurar
+                    </button>
+                    <button class="add-item-btn" id="save-settings-btn" style="background: var(--accent); color: #000; font-weight: 700; margin: 0; box-shadow: 0 0 12px rgba(139, 252, 3, 0.25);">
+                        <ion-icon name="cloud-upload-outline"></ion-icon>
+                        Salvar Alterações
                     </button>
                 </div>
+            </header>
 
-                <!-- List of Submenus Grid -->
-                <div id="submenus-dashboard-grid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 20px;">
-                    <!-- Dynamically populated by dashboard.js -->
+            <!-- TAB 1: VISÃO GERAL (OVERVIEW) -->
+            <section id="tab-overview" class="tab-content active">
+                <!-- Stats Overview Grid -->
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <div class="stat-icon-wrapper">
+                            <ion-icon name="nutrition-outline"></ion-icon>
+                        </div>
+                        <div class="stat-info">
+                            <div class="stat-value" id="stat-total-items">0</div>
+                            <div class="stat-label">Itens Cadastrados</div>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon-wrapper" style="background: rgba(24, 144, 255, 0.1); border-color: rgba(24, 144, 255, 0.2); color: #1890ff;">
+                            <ion-icon name="folder-outline"></ion-icon>
+                        </div>
+                        <div class="stat-info">
+                            <div class="stat-value" id="stat-total-categories">0</div>
+                            <div class="stat-label">Categorias Ativas</div>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon-wrapper" style="background: rgba(250, 173, 20, 0.1); border-color: rgba(250, 173, 20, 0.2); color: #faad14;">
+                            <ion-icon name="layers-outline"></ion-icon>
+                        </div>
+                        <div class="stat-info">
+                            <div class="stat-value" id="stat-total-submenus">0</div>
+                            <div class="stat-label">Submenus Prioritários</div>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon-wrapper" style="background: rgba(82, 196, 26, 0.1); border-color: rgba(82, 196, 26, 0.2); color: #52c41a;">
+                            <ion-icon name="people-outline"></ion-icon>
+                        </div>
+                        <div class="stat-info">
+                            <div class="stat-value" id="stat-total-users">0</div>
+                            <div class="stat-label">Usuários com Acesso</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Quick Action Cards Grid -->
+                <div class="grid-2" style="margin-bottom: 25px;">
+                    <div class="form-section" style="margin-bottom: 0;">
+                        <h3 class="form-section-title">Ações Rápidas do Cardápio</h3>
+                        <div style="display: flex; flex-direction: column; gap: 12px;">
+                            <button class="add-item-btn" onclick="switchTab('tab-items')" style="background: rgba(255,255,255,0.03); border: 1px solid var(--border-card); color: #fff; width: 100%; justify-content: flex-start; padding: 14px;">
+                                <ion-icon name="add-circle-outline" style="color: var(--accent); font-size: 1.3rem;"></ion-icon>
+                                <span>Cadastrar Novo Produto ou Ingrediente</span>
+                            </button>
+                            <button class="add-item-btn" onclick="switchTab('tab-submenus')" style="background: rgba(255,255,255,0.03); border: 1px solid var(--border-card); color: #fff; width: 100%; justify-content: flex-start; padding: 14px;">
+                                <ion-icon name="layers-outline" style="color: #faad14; font-size: 1.3rem;"></ion-icon>
+                                <span>Organizar Agrupamento de Submenus</span>
+                            </button>
+                            <button class="add-item-btn" onclick="switchTab('tab-users')" style="background: rgba(255,255,255,0.03); border: 1px solid var(--border-card); color: #fff; width: 100%; justify-content: flex-start; padding: 14px;">
+                                <ion-icon name="key-outline" style="color: #1890ff; font-size: 1.3rem;"></ion-icon>
+                                <span>Gerenciar Senhas & Usuários da Cozinha</span>
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="form-section" style="margin-bottom: 0;">
+                        <h3 class="form-section-title">Resumo da Unidade & Localização</h3>
+                        <div id="overview-location-summary" style="display: flex; flex-direction: column; gap: 10px; font-size: 0.9rem; color: var(--text-secondary);">
+                            <!-- Populated dynamically -->
+                        </div>
+                    </div>
                 </div>
             </section>
-        </main>
 
-        <!-- Tab 3: Export PDF -->
-        <main id="tab-export" class="tab-content">
-            <section class="form-section export-section">
-                <h3 class="form-section-title">Gerar PDF do Cardápio</h3>
-                <p class="export-description">
-                    Gere e faça o download de um cardápio em PDF completo e atualizado com todos os itens, preços e informações nutricionais que estão atualmente no site.
-                </p>
-                
-                <div class="pdf-preview-box">
-                    <div class="pdf-preview-icon">
-                        <ion-icon name="document-text-outline"></ion-icon>
+            <!-- TAB 2: GERENCIAR ITENS DO CARDÁPIO -->
+            <section id="tab-items" class="tab-content">
+                <div class="category-select-wrapper" style="display: flex; flex-direction: column; gap: 15px; margin-bottom: 25px; background: rgba(255, 255, 255, 0.02); border: 1px solid var(--border-card); padding: 20px; border-radius: 14px;">
+                    <div style="display: flex; gap: 15px; align-items: flex-end; flex-wrap: wrap; width: 100%;">
+                        <div style="flex: 1.2; min-width: 200px;">
+                            <label style="font-size:0.85rem; color:var(--text-secondary); display:block; margin-bottom:5px;">Categoria do Item</label>
+                            <select id="category-select" class="category-select-control" onchange="onCategorySelectChange()" style="width: 100%;">
+                                <!-- Populated dynamically by dashboard.js -->
+                            </select>
+                        </div>
+                        <div style="flex: 1; min-width: 170px;">
+                            <label style="font-size:0.85rem; color:var(--text-secondary); display:block; margin-bottom:5px;">Submenu Pertencente</label>
+                            <select id="category-submenu-select" class="category-select-control" onchange="changeCategorySubmenuStatus()" style="width: 100%;">
+                                <!-- Populated dynamically by dashboard.js -->
+                            </select>
+                        </div>
+                        <div style="flex: 1; min-width: 170px;">
+                            <label style="font-size:0.85rem; color:var(--text-secondary); display:block; margin-bottom:5px;">Modo de Seleção</label>
+                            <select id="category-selection-type" class="category-select-control" onchange="changeCategorySelectionType()" style="width: 100%;">
+                                <option value="single">Seleção Única (Escolhe 1)</option>
+                                <option value="multi">Seleção Múltipla (Escolhe vários)</option>
+                            </select>
+                        </div>
+                        <div style="min-width: 140px;">
+                            <label style="font-size:0.85rem; color:var(--text-secondary); display:block; margin-bottom:5px;">Obrigatoriedade</label>
+                            <label class="required-toggle-label" style="display: inline-flex; align-items: center; gap: 8px; cursor: pointer; background: var(--bg-card); border: 1px solid var(--border-card); padding: 10px 15px; border-radius: 8px; font-family: 'Outfit', sans-serif; font-weight: 600; font-size: 0.95rem; height: 42px; box-sizing: border-box; width: 100%; justify-content: center;">
+                                <input type="checkbox" id="category-required-toggle" onchange="changeCategoryRequiredStatus()" style="accent-color: var(--accent); width: 16px; height: 16px; margin: 0; cursor: pointer;">
+                                <span>Obrigatório</span>
+                            </label>
+                        </div>
                     </div>
-                    <div class="pdf-preview-info">
-                        <h4>Power_Shake_Cardapio.pdf</h4>
-                        <p>Formatado para impressão em A4 vertical</p>
+                    
+                    <div style="display: flex; gap: 15px; align-items: center; flex-wrap: wrap; width: 100%; border-top: 1px solid rgba(255, 255, 255, 0.05); padding-top: 15px;">
+                        <div style="flex: 1; min-width: 250px; position: relative;">
+                            <input type="text" id="item-search-input" placeholder="🔍 Buscar item nesta categoria..." oninput="renderItemsTable()" class="category-select-control" style="width: 100%; padding-left: 15px; box-sizing: border-box;">
+                        </div>
+                        <div style="display: flex; gap: 10px; flex-wrap: wrap; margin-left: auto;">
+                            <button class="add-item-btn" id="manage-submenus-btn" style="background: rgba(139, 252, 3, 0.1); border: 1px solid rgba(139, 252, 3, 0.25); color: var(--accent); margin: 0;">
+                                <ion-icon name="layers-outline"></ion-icon>
+                                Gerenciar Submenus
+                            </button>
+                            <button class="add-item-btn" id="add-category-btn" style="background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.08); color: var(--text-primary); margin: 0;">
+                                <ion-icon name="folder-open-outline"></ion-icon>
+                                Nova Categoria
+                            </button>
+                            <button class="add-item-btn" id="edit-category-btn" style="background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.08); color: var(--text-primary); margin: 0;" title="Editar Categoria Atual">
+                                <ion-icon name="create-outline"></ion-icon>
+                                Editar Categoria
+                            </button>
+                            <button class="add-item-btn" id="delete-category-btn" style="background: rgba(255, 77, 79, 0.12); border: 1px solid rgba(255, 77, 79, 0.2); color: var(--danger); margin: 0;" title="Excluir Categoria Atual">
+                                <ion-icon name="trash-outline"></ion-icon>
+                                Excluir Categoria
+                            </button>
+                            <button class="add-item-btn" id="add-item-btn" style="background: var(--accent); color: #000; margin: 0; box-shadow: 0 0 10px rgba(139, 252, 3, 0.15);">
+                                <ion-icon name="add-outline"></ion-icon>
+                                Novo Item
+                            </button>
+                        </div>
                     </div>
                 </div>
 
-                <div class="export-actions">
-                    <a href="/api/generate-pdf" download class="export-pdf-btn">
-                        <ion-icon name="download-outline"></ion-icon>
-                        Baixar PDF do Cardápio
-                    </a>
+                <!-- Items Table List -->
+                <div class="items-list-container">
+                    <table class="items-table">
+                        <thead>
+                            <tr id="table-headers">
+                                <!-- Headers dynamically set by JS -->
+                            </tr>
+                        </thead>
+                        <tbody id="items-table-body">
+                            <!-- Table rows populated dynamically -->
+                        </tbody>
+                    </table>
                 </div>
             </section>
-        </main>
 
-        <!-- Tab 4: Recebimento de Pedido -->
-        <main id="tab-orders" class="tab-content">
-            <section class="form-section">
-                <div class="orders-header-row" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; flex-wrap: wrap; gap: 15px;">
-                    <div>
-                        <h3 class="form-section-title" style="margin-bottom: 5px;">Pedidos Recentes</h3>
-                        <p style="font-size: 0.85rem; color: var(--text-secondary); margin-top: 5px;">Acompanhe e gerencie a fila de preparo de shakes na cozinha.</p>
-                    </div>
-                    <div style="display: flex; align-items: center; gap: 15px;">
-                        <span class="refresh-indicator" style="font-size: 0.8rem; color: var(--text-muted); display: flex; align-items: center; gap: 6px;">
-                            <span class="pulse-dot"></span>
-                            Atualização automática (12s)
-                        </span>
-                        <button class="add-item-btn" id="refresh-orders-btn" style="margin-top: 0; padding: 8px 16px;">
-                            <ion-icon name="refresh-outline" id="refresh-icon" style="transition: transform 0.5s ease;"></ion-icon>
-                            Atualizar
+            <!-- TAB 3: GERENCIAR SUBMENUS -->
+            <section id="tab-submenus" class="tab-content">
+                <div class="form-section">
+                    <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 15px; margin-bottom: 20px;">
+                        <div>
+                            <h3 class="form-section-title" style="margin-bottom: 5px;">Gerenciador de Submenus & Organização</h3>
+                            <p style="color: var(--text-secondary); font-size: 0.95rem; margin: 0;">
+                                Crie, edite ou exclua submenus e agrupe as categorias do cardápio nos cards prioritários da tela inicial.
+                            </p>
+                        </div>
+                        <button class="add-item-btn" onclick="openSubmenuEditor()" style="background: var(--accent); color: #000; font-weight: 700; margin: 0;">
+                            <ion-icon name="add-circle-outline"></ion-icon>
+                            Criar Novo Submenu
                         </button>
                     </div>
+
+                    <!-- List of Submenus Grid -->
+                    <div id="submenus-dashboard-grid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 20px;">
+                        <!-- Dynamically populated by dashboard.js -->
+                    </div>
+                </div>
+            </section>
+
+            <!-- TAB 4: USUÁRIOS & ACESSOS -->
+            <section id="tab-users" class="tab-content">
+                <div class="form-section">
+                    <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 15px; margin-bottom: 20px;">
+                        <div>
+                            <h3 class="form-section-title" style="margin-bottom: 5px;">Usuários & Controle de Acesso</h3>
+                            <p style="color: var(--text-secondary); font-size: 0.95rem; margin: 0;">
+                                Crie logins e PINs de acesso separados para Administradores do Dashboard e Operadores da Cozinha.
+                            </p>
+                        </div>
+                        <button class="add-item-btn" onclick="openUserModal()" style="background: var(--accent); color: #000; font-weight: 700; margin: 0;">
+                            <ion-icon name="person-add-outline"></ion-icon>
+                            Novo Usuário
+                        </button>
+                    </div>
+
+                    <!-- Users Cards Grid -->
+                    <div class="users-grid" id="users-list-grid">
+                        <!-- Populated dynamically by dashboard.js -->
+                    </div>
+                </div>
+            </section>
+
+            <!-- TAB 5: ENDEREÇO & CONTATO -->
+            <section id="tab-location" class="tab-content">
+                <div class="form-section">
+                    <h3 class="form-section-title">Informações de Localização, Horários e Contato</h3>
+                    
+                    <div class="grid-2">
+                        <div class="form-group">
+                            <label for="loc-street-input">Logradouro / Endereço</label>
+                            <input type="text" id="loc-street-input" class="form-control" placeholder="Ex: Rua Zeferino Galvão, nº 508, 1º andar">
+                        </div>
+                        <div class="form-group">
+                            <label for="loc-complement-input">Ponto de Referência / Complemento</label>
+                            <input type="text" id="loc-complement-input" class="form-control" placeholder="Ex: Em frente ao receptivo de lotação (Acima da Medic Center)">
+                        </div>
+                    </div>
+
+                    <div class="grid-2">
+                        <div class="form-group">
+                            <label for="loc-hours-input">Horário de Funcionamento</label>
+                            <input type="text" id="loc-hours-input" class="form-control" placeholder="Ex: Segunda a Sábado: 10h às 22h">
+                        </div>
+                        <div class="form-group">
+                            <label for="loc-phone-input">WhatsApp / Telefone para Pedidos</label>
+                            <input type="text" id="loc-phone-input" class="form-control" placeholder="Ex: (81) 99999-9999">
+                        </div>
+                    </div>
+
+                    <div class="grid-2">
+                        <div class="form-group">
+                            <label for="loc-mapurl-input">Link do Google Maps</label>
+                            <input type="text" id="loc-mapurl-input" class="form-control" placeholder="https://maps.google.com/?q=...">
+                        </div>
+                        <div class="form-group">
+                            <label for="loc-instagram-input">Instagram da Loja</label>
+                            <input type="text" id="loc-instagram-input" class="form-control" placeholder="Ex: @powershake.caruaru">
+                        </div>
+                    </div>
+
+                    <!-- Live Address Card Preview -->
+                    <div style="margin-top: 25px; border-top: 1px solid rgba(255,255,255,0.08); padding-top: 20px;">
+                        <h4 style="font-size: 1rem; color: var(--accent); margin-bottom: 12px; display: flex; align-items: center; gap: 8px;">
+                            <ion-icon name="eye-outline"></ion-icon>
+                            Pré-visualização do Rodapé para os Clientes
+                        </h4>
+                        <div class="location-preview-card" id="location-live-preview">
+                            <!-- Populated dynamically -->
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- TAB 6: TEXTOS E BANNERS -->
+            <section id="tab-general" class="tab-content">
+                <!-- Hero Settings -->
+                <div class="form-section">
+                    <h3 class="form-section-title">Cabeçalho (Hero Banner)</h3>
+                    <div class="grid-2">
+                        <div class="form-group">
+                            <label for="hero-title-input">Título do Banner</label>
+                            <input type="text" id="hero-title-input" class="form-control" placeholder="Ex: Monte o Shake Perfeito">
+                        </div>
+                        <div class="form-group">
+                            <label>Imagem de Fundo do Cabeçalho</label>
+                            <div class="image-uploader-wrapper">
+                                <div id="hero-image-preview" class="image-preview"></div>
+                                <label class="file-input-btn">
+                                    <ion-icon name="cloud-upload-outline"></ion-icon>
+                                    Upload Nova Imagem
+                                    <input type="file" id="hero-image-file" accept="image/*">
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label for="hero-subtitle-input">Subtítulo / Descrição</label>
+                        <textarea id="hero-subtitle-input" class="form-control" placeholder="Descrição do cabeçalho..."></textarea>
+                    </div>
                 </div>
 
-                <!-- Orders Container -->
-                <div class="orders-list-grid" id="orders-list-container">
-                    <!-- Orders will be rendered here dynamically -->
-                    <div class="empty-orders-state">
-                        <ion-icon name="restaurant-outline" style="font-size: 3rem; color: var(--text-muted); margin-bottom: 15px;"></ion-icon>
-                        <p>Nenhum pedido recebido ainda.</p>
+                <!-- Mid Promotion Banner Settings -->
+                <div class="form-section">
+                    <h3 class="form-section-title">Banner Promocional Central</h3>
+                    <div class="grid-2">
+                        <div class="form-group">
+                            <label for="mid-title-input">Título do Banner Promocional</label>
+                            <input type="text" id="mid-title-input" class="form-control" placeholder="Ex: Experimente um novo estilo de vida">
+                        </div>
+                        <div class="form-group">
+                            <label>Imagem de Fundo do Banner</label>
+                            <div class="image-uploader-wrapper">
+                                <div id="mid-image-preview" class="image-preview"></div>
+                                <label class="file-input-btn">
+                                    <ion-icon name="cloud-upload-outline"></ion-icon>
+                                    Upload Nova Imagem
+                                    <input type="file" id="mid-image-file" accept="image/*">
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label for="mid-subtitle-input">Texto do Banner Promocional</label>
+                        <textarea id="mid-subtitle-input" class="form-control" placeholder="Texto promocional..."></textarea>
+                    </div>
+                </div>
+
+                <!-- Compatibility Address Input -->
+                <div style="display: none;">
+                    <input type="text" id="address-input">
+                    <input type="text" id="subaddress-input">
+                    <input type="text" id="mapurl-input">
+                </div>
+            </section>
+
+            <!-- TAB 7: RECEBIMENTO DE PEDIDOS -->
+            <section id="tab-orders" class="tab-content">
+                <div class="form-section">
+                    <div class="orders-header-row" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; flex-wrap: wrap; gap: 15px;">
+                        <div>
+                            <h3 class="form-section-title" style="margin-bottom: 5px;">Pedidos Recentes</h3>
+                            <p style="font-size: 0.85rem; color: var(--text-secondary); margin-top: 5px;">Acompanhe e gerencie a fila de preparo de shakes na cozinha.</p>
+                        </div>
+                        <div style="display: flex; align-items: center; gap: 15px;">
+                            <span class="refresh-indicator" style="font-size: 0.8rem; color: var(--text-muted); display: flex; align-items: center; gap: 6px;">
+                                <span class="live-dot"></span>
+                                Atualização automática (12s)
+                            </span>
+                            <button class="add-item-btn" id="refresh-orders-btn" style="margin-top: 0; padding: 8px 16px;">
+                                <ion-icon name="refresh-outline" id="refresh-icon" style="transition: transform 0.5s ease;"></ion-icon>
+                                Atualizar
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Orders Container -->
+                    <div class="orders-list-grid" id="orders-list-container">
+                        <!-- Orders will be rendered here dynamically -->
+                        <div class="empty-orders-state">
+                            <ion-icon name="restaurant-outline" style="font-size: 3rem; color: var(--text-muted); margin-bottom: 15px;"></ion-icon>
+                            <p>Nenhum pedido recebido ainda.</p>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- TAB 8: EXPORTAR PDF -->
+            <section id="tab-export" class="tab-content">
+                <div class="form-section export-section">
+                    <h3 class="form-section-title">Gerar PDF do Cardápio</h3>
+                    <p class="export-description">
+                        Gere e faça o download de um cardápio em PDF completo e atualizado com todos os itens, preços e informações nutricionais que estão atualmente no site.
+                    </p>
+                    
+                    <div class="pdf-preview-box">
+                        <div class="pdf-preview-icon">
+                            <ion-icon name="document-text-outline"></ion-icon>
+                        </div>
+                        <div class="pdf-preview-info">
+                            <h4>Power_Shake_Cardapio.pdf</h4>
+                            <p>Formatado para impressão em A4 vertical</p>
+                        </div>
+                    </div>
+
+                    <div class="export-actions">
+                        <a href="/api/generate-pdf" download class="export-pdf-btn">
+                            <ion-icon name="download-outline"></ion-icon>
+                            Baixar PDF do Cardápio
+                        </a>
                     </div>
                 </div>
             </section>
         </main>
-
-        <!-- Bottom Actions Bar -->
-        <footer class="dashboard-actions-bar">
-            <button class="reset-btn" id="reset-defaults-btn">Restaurar Padrões do Cardápio</button>
-            <button class="save-all-btn" id="save-settings-btn">Salvar Alterações</button>
-        </footer>
-
     </div>
 
     <!-- Product Editing Modal Popup Form -->
@@ -516,6 +714,47 @@
                 <div class="modal-actions" style="margin-top: 20px;">
                     <button type="button" class="modal-btn cancel-btn" onclick="closeSubmenuEditor()">Cancelar</button>
                     <button type="submit" class="modal-btn confirm-btn" style="background: var(--accent); color: #000; font-weight: 700;">Salvar Submenu</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- User Editor Modal Popup -->
+    <div class="modal-overlay" id="user-editor-modal" style="display: none;">
+        <div class="modal-content" style="max-width: 500px;">
+            <button class="modal-close" onclick="closeUserModal()">&times;</button>
+            <h3 class="modal-title" id="user-modal-title">Cadastrar Novo Usuário</h3>
+            
+            <form id="user-editor-form" onsubmit="event.preventDefault(); saveUserFromModal();">
+                <input type="hidden" id="edit-user-id" value="">
+
+                <div class="form-group" style="margin-bottom: 15px;">
+                    <label for="user-name-input">Nome Completo / Identificação</label>
+                    <input type="text" id="user-name-input" class="form-control" placeholder="Ex: Felipe Cozinha, Admin Principal..." required>
+                </div>
+
+                <div class="form-group" style="margin-bottom: 15px;">
+                    <label for="user-username-input">Usuário / E-mail de Acesso</label>
+                    <input type="text" id="user-username-input" class="form-control" placeholder="Ex: felipe.cozinha ou admin" required>
+                </div>
+
+                <div class="grid-2" style="margin-bottom: 15px;">
+                    <div class="form-group">
+                        <label for="user-pin-input">PIN / Senha de Acesso</label>
+                        <input type="text" id="user-pin-input" class="form-control" placeholder="Ex: 1234 ou senha" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="user-role-select">Função / Permissão</label>
+                        <select id="user-role-select" class="form-control">
+                            <option value="cozinha">Operador da Cozinha</option>
+                            <option value="admin">Administrador (Dashboard)</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="modal-actions" style="margin-top: 20px;">
+                    <button type="button" class="modal-btn cancel-btn" onclick="closeUserModal()">Cancelar</button>
+                    <button type="submit" class="modal-btn confirm-btn" style="background: var(--accent); color: #000; font-weight: 700;">Salvar Usuário</button>
                 </div>
             </form>
         </div>

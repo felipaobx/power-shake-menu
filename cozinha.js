@@ -65,9 +65,20 @@ async function handlePinLogin() {
 }
 
 async function validateAndStartApp(pin) {
+    // Check if PIN matches any user in settings
+    let localSettings = null;
+    try {
+        localSettings = JSON.parse(localStorage.getItem('power_shake_settings'));
+    } catch (e) {}
+
+    let userMatch = null;
+    if (localSettings && localSettings.users) {
+        userMatch = localSettings.users.find(u => u.pin === pin || u.username === pin);
+    }
+
     try {
         const response = await fetch(`/api/get-orders?pin=${encodeURIComponent(pin)}`);
-        if (response.status === 401) {
+        if (response.status === 401 && !userMatch) {
             sessionStorage.removeItem('powershake_admin_pin');
             showAuthModal(true);
             return false;

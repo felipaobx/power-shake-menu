@@ -185,7 +185,16 @@ const DEFAULT_SETTINGS = {
     midBannerImage: 'assets/fruits.png',
     address: '📍 <strong>Endereço:</strong> Rua Zeferino Galvão, nº 508, 1º andar, sala 01',
     subAddress: 'Em frente ao receptivo de lotação (Acima da Medic Center)',
-    mapUrl: 'https://maps.google.com/?q=Rua+Zeferino+Galvão,+508+Caruaru'
+    mapUrl: 'https://maps.google.com/?q=Rua+Zeferino+Galvão,+508+Caruaru',
+    street: 'Rua Zeferino Galvão, nº 508, 1º andar, sala 01',
+    complement: 'Em frente ao receptivo de lotação (Acima da Medic Center)',
+    hours: 'Segunda a Sábado: 10h às 22h',
+    phone: '(81) 99999-9999',
+    instagram: '@powershake.caruaru',
+    users: [
+        { id: 'usr_admin', name: 'Administrador Principal', username: 'admin', pin: '1234', role: 'admin' },
+        { id: 'usr_cozinha', name: 'Equipe da Cozinha', username: 'cozinha', pin: '1234', role: 'cozinha' }
+    ]
 };
 
 // Database State
@@ -316,16 +325,38 @@ const dom = {
 
 // Switch between navigation tabs
 function switchTab(tabId) {
-    const tabs = document.querySelectorAll('.tab-btn');
-    tabs.forEach(t => t.classList.remove('active'));
+    const sidebarBtns = document.querySelectorAll('.sidebar-nav-btn');
+    sidebarBtns.forEach(t => t.classList.remove('active'));
     
-    const clickedTab = Array.from(tabs).find(t => t.getAttribute('onclick').includes(tabId));
+    const clickedTab = Array.from(sidebarBtns).find(t => t.getAttribute('onclick') && t.getAttribute('onclick').includes(tabId));
     if (clickedTab) clickedTab.classList.add('active');
 
     const contents = document.querySelectorAll('.tab-content');
     contents.forEach(c => c.classList.remove('active'));
     
-    document.getElementById(tabId).classList.add('active');
+    const targetContent = document.getElementById(tabId);
+    if (targetContent) targetContent.classList.add('active');
+
+    // Dynamic Header Headings
+    const headings = {
+        'tab-overview': { title: '<ion-icon name="grid-outline"></ion-icon> Visão Geral', desc: 'Resumo operacional, estatísticas rápidas e métricas do seu cardápio.' },
+        'tab-items': { title: '<ion-icon name="restaurant-outline"></ion-icon> Cardápio & Itens', desc: 'Gerencie categorias, preços, disponibilidade e produtos do cardápio.' },
+        'tab-submenus': { title: '<ion-icon name="layers-outline"></ion-icon> Gerenciar Submenus', desc: 'Crie e organize os submenus prioritários que aparecem na tela inicial.' },
+        'tab-users': { title: '<ion-icon name="people-outline"></ion-icon> Usuários & Controle de Acesso', desc: 'Gerencie logins e PINs de acesso para o Dashboard e Operadores da Cozinha.' },
+        'tab-location': { title: '<ion-icon name="location-outline"></ion-icon> Endereço & Contato', desc: 'Edite o endereço físico, horários de funcionamento, WhatsApp e redes sociais.' },
+        'tab-general': { title: '<ion-icon name="create-outline"></ion-icon> Textos & Banners', desc: 'Personalize os títulos, descrições e imagens dos banners da loja.' },
+        'tab-orders': { title: '<ion-icon name="receipt-outline"></ion-icon> Fila de Pedidos', desc: 'Acompanhe em tempo real todos os pedidos recebidos da cozinha.' },
+        'tab-export': { title: '<ion-icon name="document-text-outline"></ion-icon> Exportar PDF', desc: 'Gere o cardápio oficial em formato PDF A4 para impressão ou envio.' }
+    };
+
+    const headingEl = document.getElementById('current-tab-heading');
+    const descEl = document.getElementById('current-tab-description');
+    if (headingEl && headings[tabId]) headingEl.innerHTML = headings[tabId].title;
+    if (descEl && headings[tabId]) descEl.innerText = headings[tabId].desc;
+
+    if (tabId === 'tab-overview') {
+        renderOverviewTab();
+    }
 
     if (tabId === 'tab-items') {
         populateCategoryDropdown();
@@ -334,6 +365,14 @@ function switchTab(tabId) {
 
     if (tabId === 'tab-submenus') {
         renderSubmenusTab();
+    }
+
+    if (tabId === 'tab-users') {
+        renderUsersTab();
+    }
+
+    if (tabId === 'tab-location') {
+        loadLocationSettings();
     }
 
     if (tabId === 'tab-orders') {
@@ -1383,15 +1422,28 @@ function setupDashboardActions() {
 
     // Save All Changes to database securely using PIN
     dom.saveSettingsBtn.addEventListener('click', async function() {
-        SETTINGS.heroTitle = dom.heroTitle.value.trim();
-        SETTINGS.heroSubtitle = dom.heroSubtitle.value.trim();
+        SETTINGS.heroTitle = dom.heroTitle ? dom.heroTitle.value.trim() : SETTINGS.heroTitle;
+        SETTINGS.heroSubtitle = dom.heroSubtitle ? dom.heroSubtitle.value.trim() : SETTINGS.heroSubtitle;
         
-        SETTINGS.midBannerTitle = dom.midTitle.value.trim();
-        SETTINGS.midBannerSubtitle = dom.midSubtitle.value.trim();
+        SETTINGS.midBannerTitle = dom.midTitle ? dom.midTitle.value.trim() : SETTINGS.midBannerTitle;
+        SETTINGS.midBannerSubtitle = dom.midSubtitle ? dom.midSubtitle.value.trim() : SETTINGS.midBannerSubtitle;
 
-        SETTINGS.address = dom.address.value.trim();
-        SETTINGS.subAddress = dom.subaddress.value.trim();
-        SETTINGS.mapUrl = dom.mapUrl.value.trim();
+        const streetIn = document.getElementById('loc-street-input');
+        const compIn = document.getElementById('loc-complement-input');
+        const hoursIn = document.getElementById('loc-hours-input');
+        const phoneIn = document.getElementById('loc-phone-input');
+        const mapIn = document.getElementById('loc-mapurl-input');
+        const instaIn = document.getElementById('loc-instagram-input');
+
+        if (streetIn && streetIn.value.trim()) SETTINGS.street = streetIn.value.trim();
+        if (compIn) SETTINGS.complement = compIn.value.trim();
+        if (hoursIn) SETTINGS.hours = hoursIn.value.trim();
+        if (phoneIn) SETTINGS.phone = phoneIn.value.trim();
+        if (mapIn && mapIn.value.trim()) SETTINGS.mapUrl = mapIn.value.trim();
+        if (instaIn) SETTINGS.instagram = instaIn.value.trim();
+
+        if (SETTINGS.street) SETTINGS.address = `📍 <strong>Endereço:</strong> ${SETTINGS.street}`;
+        if (SETTINGS.complement) SETTINGS.subAddress = SETTINGS.complement;
 
         const pin = prompt("Digite o PIN do Administrador para salvar as alterações globalmente (Padrão: 1234):");
         if (pin === null) return;
@@ -1806,9 +1858,269 @@ function toggleTimelineStep(rowElement) {
     rowElement.classList.toggle('step-completed');
 }
 
+// Render Overview Tab statistics
+function renderOverviewTab() {
+    let totalItems = 0;
+    if (MENU_DATA && MENU_DATA.categories) {
+        MENU_DATA.categories.forEach(cat => {
+            if (cat.items) totalItems += cat.items.length;
+        });
+    }
+
+    const totalCategories = (MENU_DATA && MENU_DATA.categories) ? MENU_DATA.categories.length : 0;
+    const totalSubmenus = (MENU_DATA && MENU_DATA.submenus) ? MENU_DATA.submenus.filter(s => s.id !== 'all').length : 0;
+    const totalUsers = (SETTINGS && SETTINGS.users) ? SETTINGS.users.length : 0;
+
+    const elItems = document.getElementById('stat-total-items');
+    const elCats = document.getElementById('stat-total-categories');
+    const elSubs = document.getElementById('stat-total-submenus');
+    const elUsers = document.getElementById('stat-total-users');
+
+    if (elItems) elItems.innerText = totalItems;
+    if (elCats) elCats.innerText = totalCategories;
+    if (elSubs) elSubs.innerText = totalSubmenus;
+    if (elUsers) elUsers.innerText = totalUsers;
+
+    const summaryEl = document.getElementById('overview-location-summary');
+    if (summaryEl) {
+        const street = SETTINGS.street || SETTINGS.address || 'Rua Zeferino Galvão, nº 508, 1º andar';
+        const hours = SETTINGS.hours || 'Segunda a Sábado: 10h às 22h';
+        const phone = SETTINGS.phone || '(81) 99999-9999';
+        const insta = SETTINGS.instagram || '@powershake.caruaru';
+
+        summaryEl.innerHTML = `
+            <div>📍 <strong>Endereço:</strong> ${street}</div>
+            <div>⏰ <strong>Horário:</strong> ${hours}</div>
+            <div>📱 <strong>WhatsApp:</strong> ${phone}</div>
+            <div>📸 <strong>Instagram:</strong> ${insta}</div>
+        `;
+    }
+}
+
+// User Management Functions
+function renderUsersTab() {
+    const grid = document.getElementById('users-list-grid');
+    if (!grid) return;
+
+    if (!SETTINGS.users) {
+        SETTINGS.users = [...DEFAULT_SETTINGS.users];
+    }
+
+    const usersBadge = document.getElementById('users-nav-badge');
+    if (usersBadge) usersBadge.innerText = SETTINGS.users.length;
+
+    grid.innerHTML = SETTINGS.users.map(u => {
+        const isCozinha = u.role === 'cozinha';
+        const roleLabel = isCozinha ? 'Operador de Cozinha' : 'Administrador';
+        const roleClass = isCozinha ? 'cozinha' : 'admin';
+        const initial = (u.name || u.username || 'U').charAt(0).toUpperCase();
+
+        return `
+            <div class="user-card">
+                <div style="display: flex; align-items: center; justify-content: space-between;">
+                    <div style="display: flex; align-items: center; gap: 12px;">
+                        <div class="user-avatar">${initial}</div>
+                        <div>
+                            <h4 style="font-size: 1.05rem; color: #fff; margin: 0;">${u.name}</h4>
+                            <span style="font-size: 0.8rem; color: var(--text-secondary);">@${u.username}</span>
+                        </div>
+                    </div>
+                    <span class="role-badge ${roleClass}">${roleLabel}</span>
+                </div>
+
+                <div style="background: rgba(0,0,0,0.25); padding: 10px 14px; border-radius: 10px; font-size: 0.88rem; display: flex; justify-content: space-between; align-items: center;">
+                    <span style="color: var(--text-secondary);">PIN / Senha:</span>
+                    <span style="font-family: monospace; font-weight: 700; color: var(--accent); letter-spacing: 1px;" id="user-pin-display-${u.id}">••••</span>
+                    <button type="button" onclick="togglePinDisplay('${u.id}', '${u.pin}')" style="background: transparent; border: none; color: var(--text-secondary); cursor: pointer; font-size: 1.1rem;" title="Mostrar/Ocultar PIN">
+                        <ion-icon name="eye-outline" id="eye-icon-${u.id}"></ion-icon>
+                    </button>
+                </div>
+
+                <div style="display: flex; gap: 8px; justify-content: flex-end; margin-top: auto; border-top: 1px solid rgba(255,255,255,0.06); padding-top: 12px;">
+                    <button type="button" onclick="openUserModal('${u.id}')" style="background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); color: #fff; padding: 6px 12px; border-radius: 6px; cursor: pointer; font-size: 0.82rem; display: inline-flex; align-items: center; gap: 4px;">
+                        <ion-icon name="create-outline"></ion-icon> Editar
+                    </button>
+                    <button type="button" onclick="deleteUser('${u.id}')" style="background: rgba(255, 77, 79, 0.12); border: 1px solid rgba(255, 77, 79, 0.25); color: var(--danger); padding: 6px 12px; border-radius: 6px; cursor: pointer; font-size: 0.82rem; display: inline-flex; align-items: center; gap: 4px;">
+                        <ion-icon name="trash-outline"></ion-icon> Excluir
+                    </button>
+                </div>
+            </div>
+        `;
+    }).join('');
+}
+
+window.togglePinDisplay = function(userId, realPin) {
+    const el = document.getElementById(`user-pin-display-${userId}`);
+    const icon = document.getElementById(`eye-icon-${userId}`);
+    if (el) {
+        if (el.innerText === '••••') {
+            el.innerText = realPin;
+            if (icon) icon.setAttribute('name', 'eye-off-outline');
+        } else {
+            el.innerText = '••••';
+            if (icon) icon.setAttribute('name', 'eye-outline');
+        }
+    }
+};
+
+window.openUserModal = function(userId = null) {
+    const modal = document.getElementById('user-editor-modal');
+    if (!modal) return;
+
+    const editId = document.getElementById('edit-user-id');
+    const nameIn = document.getElementById('user-name-input');
+    const usernameIn = document.getElementById('user-username-input');
+    const pinIn = document.getElementById('user-pin-input');
+    const roleSel = document.getElementById('user-role-select');
+    const titleEl = document.getElementById('user-modal-title');
+
+    if (!SETTINGS.users) SETTINGS.users = [...DEFAULT_SETTINGS.users];
+
+    if (userId) {
+        const u = SETTINGS.users.find(usr => usr.id === userId);
+        if (!u) return;
+        editId.value = u.id;
+        nameIn.value = u.name || '';
+        usernameIn.value = u.username || '';
+        pinIn.value = u.pin || '';
+        roleSel.value = u.role || 'cozinha';
+        titleEl.innerText = 'Editar Usuário: ' + u.name;
+    } else {
+        editId.value = '';
+        nameIn.value = '';
+        usernameIn.value = '';
+        pinIn.value = '';
+        roleSel.value = 'cozinha';
+        titleEl.innerText = 'Cadastrar Novo Usuário';
+    }
+
+    modal.style.display = 'flex';
+};
+
+window.closeUserModal = function() {
+    const modal = document.getElementById('user-editor-modal');
+    if (modal) modal.style.display = 'none';
+};
+
+window.saveUserFromModal = function() {
+    const id = document.getElementById('edit-user-id').value;
+    const name = document.getElementById('user-name-input').value.trim();
+    const username = document.getElementById('user-username-input').value.trim();
+    const pin = document.getElementById('user-pin-input').value.trim();
+    const role = document.getElementById('user-role-select').value;
+
+    if (!name || !username || !pin) {
+        showToast('Preencha todos os campos obrigatórios.', 'warning');
+        return;
+    }
+
+    if (!SETTINGS.users) SETTINGS.users = [...DEFAULT_SETTINGS.users];
+
+    if (id) {
+        const u = SETTINGS.users.find(usr => usr.id === id);
+        if (u) {
+            u.name = name;
+            u.username = username;
+            u.pin = pin;
+            u.role = role;
+        }
+        showToast(`Usuário "${name}" atualizado!`, 'success');
+    } else {
+        const newId = 'usr_' + Date.now();
+        SETTINGS.users.push({
+            id: newId,
+            name: name,
+            username: username,
+            pin: pin,
+            role: role
+        });
+        showToast(`Usuário "${name}" criado com sucesso!`, 'success');
+    }
+
+    localStorage.setItem('power_shake_settings', JSON.stringify(SETTINGS));
+    closeUserModal();
+    renderUsersTab();
+};
+
+window.deleteUser = function(userId) {
+    if (!SETTINGS.users) return;
+
+    if (SETTINGS.users.length <= 1) {
+        showToast('Você deve manter pelo menos um usuário no sistema!', 'warning');
+        return;
+    }
+
+    const u = SETTINGS.users.find(usr => usr.id === userId);
+    if (u && confirm(`Tem certeza que deseja excluir o usuário "${u.name}"?`)) {
+        SETTINGS.users = SETTINGS.users.filter(usr => usr.id !== userId);
+        localStorage.setItem('power_shake_settings', JSON.stringify(SETTINGS));
+        renderUsersTab();
+        showToast(`Usuário "${u.name}" foi removido.`, 'success');
+    }
+};
+
+// Location Settings Functions
+function loadLocationSettings() {
+    const elStreet = document.getElementById('loc-street-input');
+    const elComp = document.getElementById('loc-complement-input');
+    const elHours = document.getElementById('loc-hours-input');
+    const elPhone = document.getElementById('loc-phone-input');
+    const elMap = document.getElementById('loc-mapurl-input');
+    const elInsta = document.getElementById('loc-instagram-input');
+
+    if (elStreet) elStreet.value = SETTINGS.street || SETTINGS.address || '';
+    if (elComp) elComp.value = SETTINGS.complement || SETTINGS.subAddress || '';
+    if (elHours) elHours.value = SETTINGS.hours || 'Segunda a Sábado: 10h às 22h';
+    if (elPhone) elPhone.value = SETTINGS.phone || '(81) 99999-9999';
+    if (elMap) elMap.value = SETTINGS.mapUrl || '';
+    if (elInsta) elInsta.value = SETTINGS.instagram || '@powershake.caruaru';
+
+    updateLocationPreview();
+
+    // Bind real-time input preview updates
+    [elStreet, elComp, elHours, elPhone, elMap, elInsta].forEach(input => {
+        if (input) {
+            input.removeEventListener('input', updateLocationPreview);
+            input.addEventListener('input', updateLocationPreview);
+        }
+    });
+}
+
+function updateLocationPreview() {
+    const previewEl = document.getElementById('location-live-preview');
+    if (!previewEl) return;
+
+    const street = document.getElementById('loc-street-input')?.value || SETTINGS.street || SETTINGS.address || 'Rua Zeferino Galvão, 508';
+    const comp = document.getElementById('loc-complement-input')?.value || SETTINGS.complement || SETTINGS.subAddress || '';
+    const hours = document.getElementById('loc-hours-input')?.value || SETTINGS.hours || 'Segunda a Sábado: 10h às 22h';
+    const phone = document.getElementById('loc-phone-input')?.value || SETTINGS.phone || '(81) 99999-9999';
+    const insta = document.getElementById('loc-instagram-input')?.value || SETTINGS.instagram || '@powershake.caruaru';
+    const mapUrl = document.getElementById('loc-mapurl-input')?.value || SETTINGS.mapUrl || '#';
+
+    previewEl.innerHTML = `
+        <div style="font-weight: 700; color: #fff; font-size: 1.05rem;">📍 ${street}</div>
+        ${comp ? `<div style="font-size: 0.85rem; color: var(--text-secondary);">${comp}</div>` : ''}
+        <div style="display: flex; gap: 20px; flex-wrap: wrap; margin-top: 6px; font-size: 0.88rem; color: var(--text-secondary);">
+            <span>⏰ <strong>Horário:</strong> ${hours}</span>
+            <span>📱 <strong>WhatsApp:</strong> ${phone}</span>
+            <span>📸 <strong>Instagram:</strong> ${insta}</span>
+        </div>
+        <div style="margin-top: 10px;">
+            <a href="${mapUrl}" target="_blank" style="color: var(--accent); font-size: 0.85rem; font-weight: 600; text-decoration: underline; display: inline-flex; align-items: center; gap: 4px;">
+                <ion-icon name="map-outline"></ion-icon> Abrir no Google Maps
+            </a>
+        </div>
+    `;
+}
+
 // Bind to window for HTML inline onclick
 window.toggleTimelineStep = toggleTimelineStep;
 window.updateOrderStatus = updateOrderStatus;
+window.deleteOrder = deleteOrder;
+window.renderOverviewTab = renderOverviewTab;
+window.renderUsersTab = renderUsersTab;
+window.loadLocationSettings = loadLocationSettings;
+window.updateLocationPreview = updateLocationPreview;
 window.deleteOrder = deleteOrder;
 
 // Run initializations
