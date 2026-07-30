@@ -6,6 +6,11 @@ const QRCode = require('qrcode');
 const fs = require('fs');
 const path = require('path');
 
+function cleanText(str) {
+    if (!str) return '';
+    return str.replace(/[\u{1F600}-\u{1F64F}\u{1F300}-\u{1F5FF}\u{1F680}-\u{1F6FF}\u{1F1E0}-\u{1F1FF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}\u{1F900}-\u{1F9FF}\u{1F600}-\u{1F637}\u{1F680}-\u{1F6C5}\u{1F300}-\u{1F53D}]/gu, '').trim();
+}
+
 module.exports = async (req, res) => {
     let client;
     let menuData = null;
@@ -88,7 +93,6 @@ module.exports = async (req, res) => {
 
     const settingsToUse = settings || {};
 
-    // Helper to get image buffer
     async function getImageBuffer(imageUrl) {
         if (!imageUrl) return null;
         
@@ -125,21 +129,17 @@ module.exports = async (req, res) => {
         return null;
     }
 
-    // 3. Generate 1920x1080 Landscape PDF
     res.setHeader('Content-Type', 'application/pdf');
     res.setHeader('Content-Disposition', 'attachment; filename="Power_Shake_Cardapio.pdf"');
 
     const doc = new PDFDocument({ margin: 0, size: [1920, 1080] });
     doc.pipe(res);
 
-    // Dark Background
     doc.rect(0, 0, 1920, 1080).fill('#07090e');
 
-    // Preload Assets
     const logoBuffer = await getImageBuffer('assets/logo.png');
     const heroBuffer = await getImageBuffer('assets/hero.png');
     
-    // Generate QR Code Buffer
     let qrBuffer = null;
     try {
         qrBuffer = await QRCode.toBuffer('https://power-shake-menu.vercel.app', {
@@ -151,7 +151,6 @@ module.exports = async (req, res) => {
         console.error('Failed to generate QR Code:', e);
     }
 
-    // Helper: Draw Panel Container Card
     function drawPanelCard(x, y, w, h) {
         doc.save();
         doc.roundedRect(x, y, w, h, 16).fill('#0e121a');
@@ -162,18 +161,16 @@ module.exports = async (req, res) => {
         doc.restore();
     }
 
-    // Helper: Draw Price Pill
     function drawPricePill(text, x, y, width = 72, height = 22) {
         doc.save();
         doc.roundedRect(x, y, width, height, 6).fill('#8bfc03');
         doc.fillColor('#000000')
            .fontSize(11)
            .font('Helvetica-Bold')
-           .text(text, x, y + 5, { width: width, align: 'center' });
+           .text(cleanText(text), x, y + 5, { width: width, align: 'center' });
         doc.restore();
     }
 
-    // Grid Coordinates (3 Cols x 2 Rows)
     const colW = 605;
     const rowH = 500;
     const col1X = 30;
@@ -182,24 +179,20 @@ module.exports = async (req, res) => {
     const row1Y = 30;
     const row2Y = 550;
 
-    // ==========================================
-    // PANEL 1: HERO & BRAND (Top-Left)
-    // ==========================================
+    // PANEL 1
     drawPanelCard(col1X, row1Y, colW, rowH);
-
     if (logoBuffer) {
         try { doc.image(logoBuffer, col1X + 30, row1Y + 30, { width: 90 }); } catch (e) {}
     }
-
     doc.fillColor('#8bfc03').fontSize(32).font('Helvetica-Bold').text('POWER SHAKE', col1X + 135, row1Y + 35);
     doc.fillColor('#9aa0a6').fontSize(11).font('Helvetica-Bold').text('- SEU ALIADO NA SUA DIETA -', col1X + 135, row1Y + 72, { characterSpacing: 1.5 });
     doc.fillColor('#ffffff').fontSize(44).font('Helvetica-Bold').text('CARDÁPIO', col1X + 30, row1Y + 140);
     doc.fillColor('#8bfc03').fontSize(22).font('Helvetica-Bold').text('ENERGIA E SABOR EM CADA GOLE!', col1X + 30, row1Y + 192);
 
     const badges = [
-        { icon: '⚡', text: 'ENERGIA DE VERDADE' },
-        { icon: '🥗', text: 'SEU ALIADO NA SUA DIETA' },
-        { icon: '🎯', text: 'DESEMPENHO E FOCO' }
+        { text: 'ENERGIA DE VERDADE' },
+        { text: 'SEU ALIADO NA SUA DIETA' },
+        { text: 'DESEMPENHO E FOCO' }
     ];
 
     let badgeY = row1Y + 250;
@@ -207,8 +200,7 @@ module.exports = async (req, res) => {
         doc.save();
         doc.roundedRect(col1X + 30, badgeY, 260, 42, 10).fill('rgba(255,255,255,0.04)');
         doc.strokeColor('rgba(139, 252, 3, 0.3)').lineWidth(1).roundedRect(col1X + 30, badgeY, 260, 42, 10).stroke();
-        doc.fillColor('#8bfc03').fontSize(14).text(b.icon, col1X + 45, badgeY + 12);
-        doc.fillColor('#ffffff').fontSize(11).font('Helvetica-Bold').text(b.text, col1X + 72, badgeY + 14);
+        doc.fillColor('#ffffff').fontSize(11).font('Helvetica-Bold').text(b.text, col1X + 45, badgeY + 14);
         doc.restore();
         badgeY += 54;
     });
@@ -217,25 +209,22 @@ module.exports = async (req, res) => {
         try { doc.image(heroBuffer, col1X + 310, row1Y + 110, { width: 275 }); } catch (e) {}
     }
 
-    // ==========================================
-    // PANEL 2: SHAKES TRADICIONAIS (Top-Center)
-    // ==========================================
+    // PANEL 2
     drawPanelCard(col2X, row1Y, colW, rowH);
-
-    doc.fillColor('#8bfc03').fontSize(26).font('Helvetica-Bold').text('SHAKES TRADICIONAIS 🥤', col2X + 30, row1Y + 25);
+    doc.fillColor('#8bfc03').fontSize(26).font('Helvetica-Bold').text('SHAKES TRADICIONAIS', col2X + 30, row1Y + 25);
     doc.fillColor('#9aa0a6').fontSize(11).font('Helvetica-Bold').text('FEITOS COM MUITO SABOR E PROTEÍNA DE VERDADE!', col2X + 30, row1Y + 58);
 
     const shakesList = [
-        { name: 'CHOCOLATE', price: 'R$ 16,00', icon: '🍫' },
-        { name: 'PAÇOCA', price: 'R$ 17,00', icon: '🥜' },
-        { name: 'MORANGO', price: 'R$ 16,00', icon: '🍓' },
-        { name: 'LEITE NINHO', price: 'R$ 17,00', icon: '🥛' },
-        { name: 'BAUNILHA', price: 'R$ 16,00', icon: '🍦' },
-        { name: 'OVOMALTINE', price: 'R$ 17,00', icon: '🌾' },
-        { name: 'COOKIES', price: 'R$ 17,00', icon: '🍪' },
-        { name: 'CHOCOLATE BRANCO', price: 'R$ 17,00', icon: '🍫' },
-        { name: 'CAFÉ', price: 'R$ 16,00', icon: '☕' },
-        { name: 'DOCE DE LEITE', price: 'R$ 17,00', icon: '🍯' }
+        { name: 'CHOCOLATE', price: 'R$ 16,00' },
+        { name: 'PAÇOCA', price: 'R$ 17,00' },
+        { name: 'MORANGO', price: 'R$ 16,00' },
+        { name: 'LEITE NINHO', price: 'R$ 17,00' },
+        { name: 'BAUNILHA', price: 'R$ 16,00' },
+        { name: 'OVOMALTINE', price: 'R$ 17,00' },
+        { name: 'COOKIES', price: 'R$ 17,00' },
+        { name: 'CHOCOLATE BRANCO', price: 'R$ 17,00' },
+        { name: 'CAFÉ', price: 'R$ 16,00' },
+        { name: 'DOCE DE LEITE', price: 'R$ 17,00' }
     ];
 
     let itemY = row1Y + 95;
@@ -246,7 +235,7 @@ module.exports = async (req, res) => {
         if (item1) {
             doc.save();
             doc.roundedRect(col2X + 30, itemY, 260, 48, 8).fill('rgba(255,255,255,0.03)');
-            doc.fillColor('#ffffff').fontSize(11).font('Helvetica-Bold').text(`${item1.icon}  ${item1.name}`, col2X + 42, itemY + 16, { width: 140, ellipsis: true });
+            doc.fillColor('#ffffff').fontSize(11).font('Helvetica-Bold').text(item1.name, col2X + 42, itemY + 16, { width: 140, ellipsis: true });
             drawPricePill(item1.price, col2X + 210, itemY + 13, 70, 22);
             doc.restore();
         }
@@ -254,7 +243,7 @@ module.exports = async (req, res) => {
         if (item2) {
             doc.save();
             doc.roundedRect(col2X + 310, itemY, 260, 48, 8).fill('rgba(255,255,255,0.03)');
-            doc.fillColor('#ffffff').fontSize(11).font('Helvetica-Bold').text(`${item2.icon}  ${item2.name}`, col2X + 322, itemY + 16, { width: 140, ellipsis: true });
+            doc.fillColor('#ffffff').fontSize(11).font('Helvetica-Bold').text(item2.name, col2X + 322, itemY + 16, { width: 140, ellipsis: true });
             drawPricePill(item2.price, col2X + 490, itemY + 13, 70, 22);
             doc.restore();
         }
@@ -268,23 +257,20 @@ module.exports = async (req, res) => {
     doc.fillColor('#8bfc03').fontSize(14).font('Helvetica-Bold').text('+ PROTEÍNA     + SABOR     + ENERGIA', col2X + 30, row1Y + 443, { align: 'center', width: 540, characterSpacing: 2 });
     doc.restore();
 
-    // ==========================================
-    // PANEL 3: FRUTAS (Top-Right)
-    // ==========================================
+    // PANEL 3
     drawPanelCard(col3X, row1Y, colW, rowH);
-
-    doc.fillColor('#8bfc03').fontSize(26).font('Helvetica-Bold').text('FRUTAS 🍃', col3X + 30, row1Y + 25);
+    doc.fillColor('#8bfc03').fontSize(26).font('Helvetica-Bold').text('FRUTAS', col3X + 30, row1Y + 25);
     doc.fillColor('#9aa0a6').fontSize(11).font('Helvetica-Bold').text('MAIS FRESCOR PARA DEIXAR SEU SHAKE AINDA MELHOR!', col3X + 30, row1Y + 58);
 
     const fruitsList = [
-        { name: 'MORANGO', price: 'R$ 3,00', icon: '🍓' },
-        { name: 'BANANA', price: 'R$ 3,00', icon: '🍌' },
-        { name: 'KIWI', price: 'R$ 3,50', icon: '🥝' },
-        { name: 'MANGA', price: 'R$ 3,50', icon: '🥭' },
-        { name: 'ABACAXI', price: 'R$ 3,00', icon: '🍍' },
-        { name: 'UVA', price: 'R$ 3,00', icon: '🍇' },
-        { name: 'MAÇÃ', price: 'R$ 3,00', icon: '🍎' },
-        { name: 'FRUTAS VERMELHAS', price: 'R$ 4,00', icon: '🍒' }
+        { name: 'MORANGO', price: 'R$ 3,00' },
+        { name: 'BANANA', price: 'R$ 3,00' },
+        { name: 'KIWI', price: 'R$ 3,50' },
+        { name: 'MANGA', price: 'R$ 3,50' },
+        { name: 'ABACAXI', price: 'R$ 3,00' },
+        { name: 'UVA', price: 'R$ 3,00' },
+        { name: 'MAÇÃ', price: 'R$ 3,00' },
+        { name: 'FRUTAS VERMELHAS', price: 'R$ 4,00' }
     ];
 
     let fruitY = row1Y + 95;
@@ -296,8 +282,7 @@ module.exports = async (req, res) => {
             doc.save();
             doc.roundedRect(col3X + 30, fruitY, 260, 68, 10).fill('rgba(255,255,255,0.03)');
             doc.strokeColor('rgba(255,255,255,0.06)').lineWidth(1).roundedRect(col3X + 30, fruitY, 260, 68, 10).stroke();
-            doc.fillColor('#ffffff').fontSize(22).text(f1.icon, col3X + 45, fruitY + 18);
-            doc.fillColor('#ffffff').fontSize(11).font('Helvetica-Bold').text(f1.name, col3X + 85, fruitY + 26, { width: 100, ellipsis: true });
+            doc.fillColor('#ffffff').fontSize(11).font('Helvetica-Bold').text(f1.name, col3X + 45, fruitY + 26, { width: 140, ellipsis: true });
             drawPricePill(f1.price, col3X + 210, fruitY + 23, 70, 22);
             doc.restore();
         }
@@ -306,8 +291,7 @@ module.exports = async (req, res) => {
             doc.save();
             doc.roundedRect(col3X + 310, fruitY, 260, 68, 10).fill('rgba(255,255,255,0.03)');
             doc.strokeColor('rgba(255,255,255,0.06)').lineWidth(1).roundedRect(col3X + 310, fruitY, 260, 68, 10).stroke();
-            doc.fillColor('#ffffff').fontSize(22).text(f2.icon, col3X + 325, fruitY + 18);
-            doc.fillColor('#ffffff').fontSize(11).font('Helvetica-Bold').text(f2.name, col3X + 365, fruitY + 26, { width: 100, ellipsis: true });
+            doc.fillColor('#ffffff').fontSize(11).font('Helvetica-Bold').text(f2.name, col3X + 325, fruitY + 26, { width: 140, ellipsis: true });
             drawPricePill(f2.price, col3X + 490, fruitY + 23, 70, 22);
             doc.restore();
         }
@@ -315,27 +299,24 @@ module.exports = async (req, res) => {
         fruitY += 76;
     }
 
-    doc.fillColor('#8bfc03').fontSize(11).font('Helvetica-Bold').text('🍋 FRUTAS SELECIONADAS TODOS OS DIAS!', col3X + 30, row1Y + 445, { align: 'center', width: 545 });
+    doc.fillColor('#8bfc03').fontSize(11).font('Helvetica-Bold').text('FRUTAS SELECIONADAS TODOS OS DIAS!', col3X + 30, row1Y + 445, { align: 'center', width: 545 });
 
-    // ==========================================
-    // PANEL 4: COMPLEMENTOS (Bottom-Left)
-    // ==========================================
+    // PANEL 4
     drawPanelCard(col1X, row2Y, colW, rowH);
-
-    doc.fillColor('#8bfc03').fontSize(26).font('Helvetica-Bold').text('COMPLEMENTOS 🥣', col1X + 30, row2Y + 25);
+    doc.fillColor('#8bfc03').fontSize(26).font('Helvetica-Bold').text('COMPLEMENTOS', col1X + 30, row2Y + 25);
     doc.fillColor('#9aa0a6').fontSize(11).font('Helvetica-Bold').text('TURBINE SEU SHAKE DO SEU JEITO!', col1X + 30, row2Y + 58);
 
     const complementList = [
-        { name: 'NUTELLA', price: 'R$ 4,00', icon: '🍫' },
-        { name: 'CHOCOLATE 70%', price: 'R$ 3,00', icon: '🍫' },
-        { name: 'OREO', price: 'R$ 3,00', icon: '🍪' },
-        { name: 'FLOCOS DE ARROZ', price: 'R$ 2,00', icon: '🌾' },
-        { name: 'PASTA DE AMENDOIM', price: 'R$ 3,00', icon: '🥜' },
-        { name: 'COCO RALADO', price: 'R$ 2,00', icon: '🥥' },
-        { name: 'DOCE DE LEITE', price: 'R$ 3,00', icon: '🍯' },
-        { name: 'WHEY PROTEIN', price: 'R$ 5,00', icon: '⚡' },
-        { name: 'GRANOLA', price: 'R$ 3,00', icon: '🥣' },
-        { name: 'LEITE EM PÓ', price: 'R$ 2,00', icon: '🥛' }
+        { name: 'NUTELLA', price: 'R$ 4,00' },
+        { name: 'CHOCOLATE 70%', price: 'R$ 3,00' },
+        { name: 'OREO', price: 'R$ 3,00' },
+        { name: 'FLOCOS DE ARROZ', price: 'R$ 2,00' },
+        { name: 'PASTA DE AMENDOIM', price: 'R$ 3,00' },
+        { name: 'COCO RALADO', price: 'R$ 2,00' },
+        { name: 'DOCE DE LEITE', price: 'R$ 3,00' },
+        { name: 'WHEY PROTEIN', price: 'R$ 5,00' },
+        { name: 'GRANOLA', price: 'R$ 3,00' },
+        { name: 'LEITE EM PÓ', price: 'R$ 2,00' }
     ];
 
     let compY = row2Y + 95;
@@ -346,7 +327,7 @@ module.exports = async (req, res) => {
         if (c1) {
             doc.save();
             doc.roundedRect(col1X + 30, compY, 260, 48, 8).fill('rgba(255,255,255,0.03)');
-            doc.fillColor('#ffffff').fontSize(10.5).font('Helvetica-Bold').text(`${c1.icon} ${c1.name}`, col1X + 40, compY + 16, { width: 150, ellipsis: true });
+            doc.fillColor('#ffffff').fontSize(10.5).font('Helvetica-Bold').text(c1.name, col1X + 40, compY + 16, { width: 150, ellipsis: true });
             drawPricePill(c1.price, col1X + 210, compY + 13, 70, 22);
             doc.restore();
         }
@@ -354,7 +335,7 @@ module.exports = async (req, res) => {
         if (c2) {
             doc.save();
             doc.roundedRect(col1X + 310, compY, 260, 48, 8).fill('rgba(255,255,255,0.03)');
-            doc.fillColor('#ffffff').fontSize(10.5).font('Helvetica-Bold').text(`${c2.icon} ${c2.name}`, col1X + 320, compY + 16, { width: 150, ellipsis: true });
+            doc.fillColor('#ffffff').fontSize(10.5).font('Helvetica-Bold').text(c2.name, col1X + 320, compY + 16, { width: 150, ellipsis: true });
             drawPricePill(c2.price, col1X + 490, compY + 13, 70, 22);
             doc.restore();
         }
@@ -370,12 +351,9 @@ module.exports = async (req, res) => {
     drawPricePill('R$ 2,00', col1X + 480, row2Y + 431, 75, 24);
     doc.restore();
 
-    // ==========================================
-    // PANEL 5: COMBOS (Bottom-Center)
-    // ==========================================
+    // PANEL 5
     drawPanelCard(col2X, row2Y, colW, rowH);
-
-    doc.fillColor('#8bfc03').fontSize(26).font('Helvetica-Bold').text('COMBOS ⚡', col2X + 30, row2Y + 25);
+    doc.fillColor('#8bfc03').fontSize(26).font('Helvetica-Bold').text('COMBOS', col2X + 30, row2Y + 25);
     doc.fillColor('#9aa0a6').fontSize(11).font('Helvetica-Bold').text('MAIS SABOR, MAIS ENERGIA, MAIS ECONOMIA!', col2X + 30, row2Y + 58);
 
     doc.save();
@@ -414,24 +392,20 @@ module.exports = async (req, res) => {
         stepX += 135;
     });
 
-    doc.fillColor('#8bfc03').fontSize(13).font('Helvetica-Bold').text('⚡ E PRONTO! SEU SHAKE DO SEU JEITO! ⚡', col2X + 30, row2Y + 445, { align: 'center', width: 540 });
+    doc.fillColor('#8bfc03').fontSize(13).font('Helvetica-Bold').text('E PRONTO! SEU SHAKE DO SEU JEITO!', col2X + 30, row2Y + 445, { align: 'center', width: 540 });
 
-    // ==========================================
-    // PANEL 6: CONTATO, LOGO & QR CODE (Bottom-Right)
-    // ==========================================
+    // PANEL 6
     drawPanelCard(col3X, row2Y, colW, rowH);
-
     if (logoBuffer) {
         try { doc.image(logoBuffer, col3X + 30, row2Y + 30, { width: 75 }); } catch (e) {}
     }
-
     doc.fillColor('#8bfc03').fontSize(24).font('Helvetica-Bold').text('POWER SHAKE', col3X + 120, row2Y + 35);
     doc.fillColor('#9aa0a6').fontSize(9.5).font('Helvetica-Bold').text('- SEU ALIADO NA SUA DIETA -', col3X + 120, row2Y + 65, { characterSpacing: 1 });
 
     const contactInfo = [
-        { icon: '⏰', label: 'HORÁRIO DE FUNCIONAMENTO', val: settingsToUse.hours || 'SEGUNDA A DOMINGO 10H ÀS 22H' },
-        { icon: '📱', label: 'PEÇA PELO WHATSAPP', val: settingsToUse.phone || '(81) 99999-9999' },
-        { icon: '📸', label: 'SIGA NOSSO INSTAGRAM', val: settingsToUse.instagram || '@powershake.caruaru' }
+        { label: 'HORÁRIO DE FUNCIONAMENTO', val: cleanText(settingsToUse.hours || 'SEGUNDA A DOMINGO 10H ÀS 22H') },
+        { label: 'PEÇA PELO WHATSAPP', val: cleanText(settingsToUse.phone || '(81) 99999-9999') },
+        { label: 'SIGA NOSSO INSTAGRAM', val: cleanText(settingsToUse.instagram || '@powershake.caruaru') }
     ];
 
     let infoY = row2Y + 115;
@@ -439,9 +413,8 @@ module.exports = async (req, res) => {
         doc.save();
         doc.roundedRect(col3X + 30, infoY, 545, 52, 10).fill('rgba(255,255,255,0.03)');
         doc.strokeColor('rgba(255,255,255,0.06)').lineWidth(1).roundedRect(col3X + 30, infoY, 545, 52, 10).stroke();
-        doc.fillColor('#ffffff').fontSize(18).text(info.icon, col3X + 45, infoY + 15);
-        doc.fillColor('#9aa0a6').fontSize(8.5).font('Helvetica-Bold').text(info.label, col3X + 80, infoY + 12);
-        doc.fillColor('#8bfc03').fontSize(13).font('Helvetica-Bold').text(info.val, col3X + 80, infoY + 26);
+        doc.fillColor('#9aa0a6').fontSize(8.5).font('Helvetica-Bold').text(info.label, col3X + 45, infoY + 12);
+        doc.fillColor('#8bfc03').fontSize(13).font('Helvetica-Bold').text(info.val, col3X + 45, infoY + 26);
         doc.restore();
         infoY += 62;
     });
@@ -449,7 +422,6 @@ module.exports = async (req, res) => {
     doc.save();
     doc.roundedRect(col3X + 30, row2Y + 310, 545, 125, 12).fill('rgba(139, 252, 3, 0.08)');
     doc.strokeColor('rgba(139, 252, 3, 0.3)').lineWidth(1.5).roundedRect(col3X + 30, row2Y + 310, 545, 125, 12).stroke();
-    
     doc.fillColor('#ffffff').fontSize(14).font('Helvetica-Bold').text('ESCANEIE E PEÇA AGORA!', col3X + 50, row2Y + 355);
     doc.fillColor('#9aa0a6').fontSize(10).font('Helvetica').text('Acesse nosso cardápio digital\ndireto no seu celular.', col3X + 50, row2Y + 380, { lineGap: 4 });
 
@@ -458,7 +430,7 @@ module.exports = async (req, res) => {
     }
     doc.restore();
 
-    doc.fillColor('#9aa0a6').fontSize(11).font('Helvetica-Bold').text('❤️ OBRIGADO PELA PREFERÊNCIA! ❤️', col3X + 30, row2Y + 455, { align: 'center', width: 545 });
+    doc.fillColor('#9aa0a6').fontSize(11).font('Helvetica-Bold').text('OBRIGADO PELA PREFERÊNCIA!', col3X + 30, row2Y + 455, { align: 'center', width: 545 });
 
     doc.end();
 };

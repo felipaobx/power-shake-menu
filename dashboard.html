@@ -8,6 +8,8 @@
     <link rel="manifest" href="manifest.json">
     <script type="module" src="https://unpkg.com/ionicons@7.1.0/dist/ionicons/ionicons.esm.js"></script>
     <script nomodule src="https://unpkg.com/ionicons@7.1.0/dist/ionicons/ionicons.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 </head>
 <body>
 
@@ -448,29 +450,63 @@
                 </div>
             </section>
 
-            <!-- TAB 8: EXPORTAR PDF -->
+            <!-- TAB 8: CRIADOR DE CARDÁPIO DIGITAL 1920x1080 -->
             <section id="tab-export" class="tab-content">
-                <div class="form-section export-section">
-                    <h3 class="form-section-title">Gerar PDF do Cardápio</h3>
-                    <p class="export-description">
-                        Gere e faça o download de um cardápio em PDF completo e atualizado com todos os itens, preços e informações nutricionais que estão atualmente no site.
-                    </p>
-                    
-                    <div class="pdf-preview-box">
-                        <div class="pdf-preview-icon">
-                            <ion-icon name="document-text-outline"></ion-icon>
+                <div class="form-section">
+                    <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 15px; margin-bottom: 20px;">
+                        <div>
+                            <h3 class="form-section-title" style="margin-bottom: 5px;">Criador de Painel Digital & Exportador 1920x1080</h3>
+                            <p style="color: var(--text-secondary); font-size: 0.95rem; margin: 0;">
+                                Monte e baixe o cardápio no formato exato 1920x1080 (16:9 Landscape) com 6 painéis profissionais, fotos personalizadas e sem erros de codificação.
+                            </p>
                         </div>
-                        <div class="pdf-preview-info">
-                            <h4>Power_Shake_Cardapio.pdf</h4>
-                            <p>Formatado para impressão em A4 vertical</p>
+                        <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+                            <button class="add-item-btn" onclick="exportBoardToPng()" style="background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.15); color: #fff; margin: 0;">
+                                <ion-icon name="image-outline"></ion-icon>
+                                Baixar Imagem PNG (1920x1080)
+                            </button>
+                            <button class="add-item-btn" onclick="exportBoardToPdf()" style="background: var(--accent); color: #000; font-weight: 700; margin: 0; box-shadow: 0 0 15px rgba(139, 252, 3, 0.3);">
+                                <ion-icon name="download-outline"></ion-icon>
+                                Baixar PDF HD (1920x1080)
+                            </button>
                         </div>
                     </div>
 
-                    <div class="export-actions">
-                        <a href="/api/generate-pdf" download class="export-pdf-btn">
-                            <ion-icon name="download-outline"></ion-icon>
-                            Baixar PDF do Cardápio
-                        </a>
+                    <!-- Customizer Controls Toolbar -->
+                    <div style="background: rgba(0,0,0,0.3); border: 1px solid var(--border-card); padding: 18px; border-radius: 12px; margin-bottom: 25px;">
+                        <h4 style="font-size: 0.95rem; color: var(--accent); margin-bottom: 12px; display: flex; align-items: center; gap: 8px;">
+                            <ion-icon name="options-outline"></ion-icon> Personalizar Painéis & Fotos
+                        </h4>
+                        <div class="grid-2" style="gap: 15px;">
+                            <div class="form-group" style="margin: 0;">
+                                <label style="font-size: 0.82rem;">Foto Principal do Shake (Hero)</label>
+                                <input type="file" id="board-hero-photo" accept="image/*" class="form-control" onchange="updateBoardHeroPhoto(this)">
+                            </div>
+                            <div class="form-group" style="margin: 0;">
+                                <label style="font-size: 0.82rem;">Preço Combo Power (R$)</label>
+                                <input type="text" id="board-combo-power-price" value="R$ 24,90" class="form-control" oninput="renderBoardPreview()">
+                            </div>
+                            <div class="form-group" style="margin: 0;">
+                                <label style="font-size: 0.82rem;">Preço Combo Turbo (R$)</label>
+                                <input type="text" id="board-combo-turbo-price" value="R$ 29,90" class="form-control" oninput="renderBoardPreview()">
+                            </div>
+                            <div class="form-group" style="margin: 0;">
+                                <label style="font-size: 0.82rem;">Sincronizar Produtos do Cardápio</label>
+                                <button type="button" class="add-item-btn" onclick="syncBoardFromMenuData()" style="width: 100%; margin: 0; background: rgba(139, 252, 3, 0.1); border: 1px solid rgba(139, 252, 3, 0.25); color: var(--accent); height: 42px;">
+                                    <ion-icon name="sync-outline"></ion-icon> Sincronizar Preços & Itens
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Live Scale Preview Container -->
+                    <div class="board-preview-wrapper">
+                        <div id="menu-board-scaler" style="transform-origin: top center; transition: transform 0.2s ease;">
+                            <!-- Full 1920x1080 Board Element -->
+                            <div id="menu-board-canvas" style="width: 1920px; height: 1080px; background: #07090e; color: #fff; font-family: 'Outfit', sans-serif; position: relative; box-sizing: border-box; padding: 25px; display: grid; grid-template-columns: 1fr 1fr 1fr; grid-template-rows: 1fr 1fr; gap: 20px;">
+                                <!-- Rendered dynamically by renderBoardPreview() in dashboard.js -->
+                            </div>
+                        </div>
                     </div>
                 </div>
             </section>

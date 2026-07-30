@@ -2113,6 +2113,418 @@ function updateLocationPreview() {
     `;
 }
 
+// 1920x1080 Digital Menu Board Customizer & Exporter
+let boardHeroImage = 'assets/hero.png';
+
+function updateBoardHeroPhoto(input) {
+    if (input.files && input.files[0]) {
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            boardHeroImage = e.target.result;
+            renderBoardPreview();
+        };
+        reader.readAsDataURL(input.files[0]);
+    }
+}
+
+function syncBoardFromMenuData() {
+    renderBoardPreview();
+    showToast('Cardápio sincronizado com os dados atuais do sistema!', 'success');
+}
+
+function renderBoardPreview() {
+    const canvas = document.getElementById('menu-board-canvas');
+    if (!canvas) return;
+
+    const comboPowerPrice = document.getElementById('board-combo-power-price')?.value || 'R$ 24,90';
+    const comboTurboPrice = document.getElementById('board-combo-turbo-price')?.value || 'R$ 29,90';
+
+    const hours = SETTINGS.hours || 'SEGUNDA A DOMINGO 10H ÀS 22H';
+    const phone = SETTINGS.phone || '(81) 99999-9999';
+    const instagram = SETTINGS.instagram || '@powershake.caruaru';
+
+    // Scale canvas to fit dashboard container width
+    const scaler = document.getElementById('menu-board-scaler');
+    if (scaler && scaler.parentElement) {
+        const parentW = scaler.parentElement.clientWidth - 20;
+        const scale = parentW / 1920;
+        scaler.style.transform = `scale(${scale})`;
+        scaler.parentElement.style.height = `${1080 * scale + 20}px`;
+    }
+
+    canvas.innerHTML = `
+        <!-- PANEL 1: HERO BRANDING -->
+        <div class="board-panel" style="position: relative;">
+            <div style="display: flex; align-items: center; gap: 18px; margin-bottom: 20px;">
+                <img src="assets/logo.png" style="width: 85px; height: 85px; object-fit: contain; filter: drop-shadow(0 4px 12px rgba(139, 252, 3, 0.4));">
+                <div>
+                    <h1 style="font-size: 34px; font-weight: 900; color: #8bfc03; margin: 0; line-height: 1;">POWER SHAKE</h1>
+                    <div style="font-size: 11px; font-weight: 700; color: #9aa0a6; letter-spacing: 1.5px; margin-top: 5px;">- SEU ALIADO NA SUA DIETA -</div>
+                </div>
+            </div>
+
+            <h2 style="font-size: 48px; font-weight: 900; color: #fff; margin: 25px 0 5px 0; line-height: 1.1;">CARDÁPIO</h2>
+            <div style="font-size: 22px; font-weight: 800; color: #8bfc03; margin-bottom: 25px;">ENERGIA E SABOR EM CADA GOLE!</div>
+
+            <div style="display: flex; flex-direction: column; gap: 12px; max-width: 280px; z-index: 2;">
+                <div style="background: rgba(255,255,255,0.04); border: 1px solid rgba(139,252,3,0.3); border-radius: 12px; padding: 12px 18px; font-size: 13px; font-weight: 700; color: #fff; display: flex; align-items: center; gap: 10px;">
+                    <span style="color: #8bfc03; font-size: 16px;">⚡</span> ENERGIA DE VERDADE
+                </div>
+                <div style="background: rgba(255,255,255,0.04); border: 1px solid rgba(139,252,3,0.3); border-radius: 12px; padding: 12px 18px; font-size: 13px; font-weight: 700; color: #fff; display: flex; align-items: center; gap: 10px;">
+                    <span style="color: #8bfc03; font-size: 16px;">🥗</span> SEU ALIADO NA SUA DIETA
+                </div>
+                <div style="background: rgba(255,255,255,0.04); border: 1px solid rgba(139,252,3,0.3); border-radius: 12px; padding: 12px 18px; font-size: 13px; font-weight: 700; color: #fff; display: flex; align-items: center; gap: 10px;">
+                    <span style="color: #8bfc03; font-size: 16px;">🎯</span> DESEMPENHO E FOCO
+                </div>
+            </div>
+
+            <img src="${boardHeroImage}" style="position: absolute; right: 10px; bottom: 10px; width: 280px; height: 380px; object-fit: contain; z-index: 1;">
+        </div>
+
+        <!-- PANEL 2: SHAKES TRADICIONAIS -->
+        <div class="board-panel">
+            <div class="board-panel-title">SHAKES TRADICIONAIS 🥤</div>
+            <div class="board-panel-subtitle">FEITOS COM MUITO SABOR E PROTEÍNA DE VERDADE!</div>
+
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px 16px; margin-bottom: 20px;">
+                <div style="background: rgba(255,255,255,0.03); border-radius: 10px; padding: 12px 16px; display: flex; justify-content: space-between; align-items: center;">
+                    <span style="font-weight: 700; font-size: 13px; color: #fff;">🍫 CHOCOLATE</span>
+                    <span class="board-price-pill">R$ 16,00</span>
+                </div>
+                <div style="background: rgba(255,255,255,0.03); border-radius: 10px; padding: 12px 16px; display: flex; justify-content: space-between; align-items: center;">
+                    <span style="font-weight: 700; font-size: 13px; color: #fff;">🥜 PAÇOCA</span>
+                    <span class="board-price-pill">R$ 17,00</span>
+                </div>
+                <div style="background: rgba(255,255,255,0.03); border-radius: 10px; padding: 12px 16px; display: flex; justify-content: space-between; align-items: center;">
+                    <span style="font-weight: 700; font-size: 13px; color: #fff;">🍓 MORANGO</span>
+                    <span class="board-price-pill">R$ 16,00</span>
+                </div>
+                <div style="background: rgba(255,255,255,0.03); border-radius: 10px; padding: 12px 16px; display: flex; justify-content: space-between; align-items: center;">
+                    <span style="font-weight: 700; font-size: 13px; color: #fff;">🥛 LEITE NINHO</span>
+                    <span class="board-price-pill">R$ 17,00</span>
+                </div>
+                <div style="background: rgba(255,255,255,0.03); border-radius: 10px; padding: 12px 16px; display: flex; justify-content: space-between; align-items: center;">
+                    <span style="font-weight: 700; font-size: 13px; color: #fff;">🍦 BAUNILHA</span>
+                    <span class="board-price-pill">R$ 16,00</span>
+                </div>
+                <div style="background: rgba(255,255,255,0.03); border-radius: 10px; padding: 12px 16px; display: flex; justify-content: space-between; align-items: center;">
+                    <span style="font-weight: 700; font-size: 13px; color: #fff;">🌾 OVOMALTINE</span>
+                    <span class="board-price-pill">R$ 17,00</span>
+                </div>
+                <div style="background: rgba(255,255,255,0.03); border-radius: 10px; padding: 12px 16px; display: flex; justify-content: space-between; align-items: center;">
+                    <span style="font-weight: 700; font-size: 13px; color: #fff;">🍪 COOKIES</span>
+                    <span class="board-price-pill">R$ 17,00</span>
+                </div>
+                <div style="background: rgba(255,255,255,0.03); border-radius: 10px; padding: 12px 16px; display: flex; justify-content: space-between; align-items: center;">
+                    <span style="font-weight: 700; font-size: 13px; color: #fff;">🍫 CHOC. BRANCO</span>
+                    <span class="board-price-pill">R$ 17,00</span>
+                </div>
+                <div style="background: rgba(255,255,255,0.03); border-radius: 10px; padding: 12px 16px; display: flex; justify-content: space-between; align-items: center;">
+                    <span style="font-weight: 700; font-size: 13px; color: #fff;">☕ CAFÉ</span>
+                    <span class="board-price-pill">R$ 16,00</span>
+                </div>
+                <div style="background: rgba(255,255,255,0.03); border-radius: 10px; padding: 12px 16px; display: flex; justify-content: space-between; align-items: center;">
+                    <span style="font-weight: 700; font-size: 13px; color: #fff;">🍯 DOCE DE LEITE</span>
+                    <span class="board-price-pill">R$ 17,00</span>
+                </div>
+            </div>
+
+            <div style="margin-top: auto; background: rgba(139, 252, 3, 0.1); border: 1px solid rgba(139, 252, 3, 0.4); border-radius: 12px; padding: 12px; text-align: center; color: #8bfc03; font-weight: 800; font-size: 14px; letter-spacing: 2px;">
+                + PROTEÍNA &nbsp;&nbsp;&nbsp; + SABOR &nbsp;&nbsp;&nbsp; + ENERGIA
+            </div>
+        </div>
+
+        <!-- PANEL 3: FRUTAS -->
+        <div class="board-panel">
+            <div class="board-panel-title">FRUTAS 🍃</div>
+            <div class="board-panel-subtitle">MAIS FRESCOR PARA DEIXAR SEU SHAKE AINDA MELHOR!</div>
+
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-bottom: 20px;">
+                <div style="background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.06); border-radius: 12px; padding: 16px; display: flex; align-items: center; justify-content: space-between;">
+                    <span style="font-size: 24px;">🍓</span>
+                    <span style="font-weight: 700; font-size: 13px; color: #fff;">MORANGO</span>
+                    <span class="board-price-pill">R$ 3,00</span>
+                </div>
+                <div style="background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.06); border-radius: 12px; padding: 16px; display: flex; align-items: center; justify-content: space-between;">
+                    <span style="font-size: 24px;">🍌</span>
+                    <span style="font-weight: 700; font-size: 13px; color: #fff;">BANANA</span>
+                    <span class="board-price-pill">R$ 3,00</span>
+                </div>
+                <div style="background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.06); border-radius: 12px; padding: 16px; display: flex; align-items: center; justify-content: space-between;">
+                    <span style="font-size: 24px;">🥝</span>
+                    <span style="font-weight: 700; font-size: 13px; color: #fff;">KIWI</span>
+                    <span class="board-price-pill">R$ 3,50</span>
+                </div>
+                <div style="background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.06); border-radius: 12px; padding: 16px; display: flex; align-items: center; justify-content: space-between;">
+                    <span style="font-size: 24px;">🥭</span>
+                    <span style="font-weight: 700; font-size: 13px; color: #fff;">MANGA</span>
+                    <span class="board-price-pill">R$ 3,50</span>
+                </div>
+                <div style="background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.06); border-radius: 12px; padding: 16px; display: flex; align-items: center; justify-content: space-between;">
+                    <span style="font-size: 24px;">🍍</span>
+                    <span style="font-weight: 700; font-size: 13px; color: #fff;">ABACAXI</span>
+                    <span class="board-price-pill">R$ 3,00</span>
+                </div>
+                <div style="background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.06); border-radius: 12px; padding: 16px; display: flex; align-items: center; justify-content: space-between;">
+                    <span style="font-size: 24px;">🍇</span>
+                    <span style="font-weight: 700; font-size: 13px; color: #fff;">UVA</span>
+                    <span class="board-price-pill">R$ 3,00</span>
+                </div>
+                <div style="background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.06); border-radius: 12px; padding: 16px; display: flex; align-items: center; justify-content: space-between;">
+                    <span style="font-size: 24px;">🍎</span>
+                    <span style="font-weight: 700; font-size: 13px; color: #fff;">MAÇÃ</span>
+                    <span class="board-price-pill">R$ 3,00</span>
+                </div>
+                <div style="background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.06); border-radius: 12px; padding: 16px; display: flex; align-items: center; justify-content: space-between;">
+                    <span style="font-size: 24px;">🍒</span>
+                    <span style="font-weight: 700; font-size: 11px; color: #fff;">FRUTAS VERMELHAS</span>
+                    <span class="board-price-pill">R$ 4,00</span>
+                </div>
+            </div>
+
+            <div style="margin-top: auto; text-align: center; color: #8bfc03; font-weight: 800; font-size: 13px;">
+                🍋 FRUTAS SELECIONADAS TODOS OS DIAS!
+            </div>
+        </div>
+
+        <!-- PANEL 4: COMPLEMENTOS -->
+        <div class="board-panel">
+            <div class="board-panel-title">COMPLEMENTOS 🥣</div>
+            <div class="board-panel-subtitle">TURBINE SEU SHAKE DO SEU JEITO!</div>
+
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px 16px; margin-bottom: 20px;">
+                <div style="background: rgba(255,255,255,0.03); border-radius: 10px; padding: 12px 16px; display: flex; justify-content: space-between; align-items: center;">
+                    <span style="font-weight: 700; font-size: 13px; color: #fff;">🍫 NUTELLA</span>
+                    <span class="board-price-pill">R$ 4,00</span>
+                </div>
+                <div style="background: rgba(255,255,255,0.03); border-radius: 10px; padding: 12px 16px; display: flex; justify-content: space-between; align-items: center;">
+                    <span style="font-weight: 700; font-size: 13px; color: #fff;">🍫 CHOC. 70%</span>
+                    <span class="board-price-pill">R$ 3,00</span>
+                </div>
+                <div style="background: rgba(255,255,255,0.03); border-radius: 10px; padding: 12px 16px; display: flex; justify-content: space-between; align-items: center;">
+                    <span style="font-weight: 700; font-size: 13px; color: #fff;">🍪 OREO</span>
+                    <span class="board-price-pill">R$ 3,00</span>
+                </div>
+                <div style="background: rgba(255,255,255,0.03); border-radius: 10px; padding: 12px 16px; display: flex; justify-content: space-between; align-items: center;">
+                    <span style="font-weight: 700; font-size: 13px; color: #fff;">🌾 FLOCOS ARROZ</span>
+                    <span class="board-price-pill">R$ 2,00</span>
+                </div>
+                <div style="background: rgba(255,255,255,0.03); border-radius: 10px; padding: 12px 16px; display: flex; justify-content: space-between; align-items: center;">
+                    <span style="font-weight: 700; font-size: 13px; color: #fff;">🥜 PASTA AMENDOIM</span>
+                    <span class="board-price-pill">R$ 3,00</span>
+                </div>
+                <div style="background: rgba(255,255,255,0.03); border-radius: 10px; padding: 12px 16px; display: flex; justify-content: space-between; align-items: center;">
+                    <span style="font-weight: 700; font-size: 13px; color: #fff;">🥥 COCO RALADO</span>
+                    <span class="board-price-pill">R$ 2,00</span>
+                </div>
+                <div style="background: rgba(255,255,255,0.03); border-radius: 10px; padding: 12px 16px; display: flex; justify-content: space-between; align-items: center;">
+                    <span style="font-weight: 700; font-size: 13px; color: #fff;">🍯 DOCE DE LEITE</span>
+                    <span class="board-price-pill">R$ 3,00</span>
+                </div>
+                <div style="background: rgba(255,255,255,0.03); border-radius: 10px; padding: 12px 16px; display: flex; justify-content: space-between; align-items: center;">
+                    <span style="font-weight: 700; font-size: 13px; color: #fff;">⚡ WHEY PROTEIN</span>
+                    <span class="board-price-pill">R$ 5,00</span>
+                </div>
+                <div style="background: rgba(255,255,255,0.03); border-radius: 10px; padding: 12px 16px; display: flex; justify-content: space-between; align-items: center;">
+                    <span style="font-weight: 700; font-size: 13px; color: #fff;">🥣 GRANOLA</span>
+                    <span class="board-price-pill">R$ 3,00</span>
+                </div>
+                <div style="background: rgba(255,255,255,0.03); border-radius: 10px; padding: 12px 16px; display: flex; justify-content: space-between; align-items: center;">
+                    <span style="font-weight: 700; font-size: 13px; color: #fff;">🥛 LEITE EM PÓ</span>
+                    <span class="board-price-pill">R$ 2,00</span>
+                </div>
+            </div>
+
+            <!-- Coberturas Bar -->
+            <div style="margin-top: auto; background: rgba(139, 252, 3, 0.08); border: 1px solid rgba(139, 252, 3, 0.3); border-radius: 12px; padding: 14px 20px; display: flex; align-items: center; justify-content: space-between;">
+                <div>
+                    <span style="color: #8bfc03; font-weight: 800; font-size: 14px; margin-right: 15px;">COBERTURAS</span>
+                    <span style="color: #fff; font-size: 12px; font-weight: 600;">CHOCOLATE &nbsp;•&nbsp; MORANGO &nbsp;•&nbsp; CARAMELO</span>
+                </div>
+                <span class="board-price-pill" style="font-size: 13px; padding: 6px 14px;">R$ 2,00</span>
+            </div>
+        </div>
+
+        <!-- PANEL 5: COMBOS -->
+        <div class="board-panel">
+            <div class="board-panel-title">COMBOS ⚡</div>
+            <div class="board-panel-subtitle">MAIS SABOR, MAIS ENERGIA, MAIS ECONOMIA!</div>
+
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 25px;">
+                <div style="background: rgba(255,255,255,0.03); border: 1.5px solid rgba(139, 252, 3, 0.3); border-radius: 14px; padding: 20px; display: flex; flex-direction: column; justify-content: space-between; height: 180px;">
+                    <div>
+                        <div style="color: #8bfc03; font-weight: 800; font-size: 18px; margin-bottom: 10px;">COMBO POWER</div>
+                        <div style="color: #9aa0a6; font-size: 12px; line-height: 1.6; font-weight: 600;">
+                            1 SHAKE TRADICIONAL<br>
+                            + 1 COMPLEMENTO<br>
+                            + 1 FRUTA
+                        </div>
+                    </div>
+                    <div style="color: #8bfc03; font-size: 32px; font-weight: 900;">${comboPowerPrice}</div>
+                </div>
+
+                <div style="background: rgba(255,255,255,0.03); border: 1.5px solid rgba(139, 252, 3, 0.3); border-radius: 14px; padding: 20px; display: flex; flex-direction: column; justify-content: space-between; height: 180px;">
+                    <div>
+                        <div style="color: #8bfc03; font-weight: 800; font-size: 18px; margin-bottom: 10px;">COMBO TURBO</div>
+                        <div style="color: #9aa0a6; font-size: 12px; line-height: 1.6; font-weight: 600;">
+                            1 SHAKE ESPECIAL<br>
+                            + 2 COMPLEMENTOS<br>
+                            + 1 FRUTA
+                        </div>
+                    </div>
+                    <div style="color: #8bfc03; font-size: 32px; font-weight: 900;">${comboTurboPrice}</div>
+                </div>
+            </div>
+
+            <!-- Steps Section -->
+            <div style="text-align: center; color: #fff; font-weight: 800; font-size: 15px; margin-bottom: 14px;">
+                MONTE SEU SHAKE DO SEU JEITO!
+            </div>
+
+            <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 15px;">
+                <div style="background: rgba(255,255,255,0.02); border: 1px solid rgba(139,252,3,0.2); border-radius: 10px; padding: 12px 10px; display: flex; align-items: center; gap: 10px;">
+                    <span style="background: #8bfc03; color: #000; width: 26px; height: 26px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 900; font-size: 13px; flex-shrink: 0;">1</span>
+                    <span style="font-size: 10px; font-weight: 800; color: #fff; line-height: 1.2;">ESCOLHA<br>SUA BASE</span>
+                </div>
+                <div style="background: rgba(255,255,255,0.02); border: 1px solid rgba(139,252,3,0.2); border-radius: 10px; padding: 12px 10px; display: flex; align-items: center; gap: 10px;">
+                    <span style="background: #8bfc03; color: #000; width: 26px; height: 26px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 900; font-size: 13px; flex-shrink: 0;">2</span>
+                    <span style="font-size: 10px; font-weight: 800; color: #fff; line-height: 1.2;">ESCOLHA<br>SUAS FRUTAS</span>
+                </div>
+                <div style="background: rgba(255,255,255,0.02); border: 1px solid rgba(139,252,3,0.2); border-radius: 10px; padding: 12px 10px; display: flex; align-items: center; gap: 10px;">
+                    <span style="background: #8bfc03; color: #000; width: 26px; height: 26px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 900; font-size: 13px; flex-shrink: 0;">3</span>
+                    <span style="font-size: 10px; font-weight: 800; color: #fff; line-height: 1.2;">ESCOLHA SEUS<br>COMPLEMENTOS</span>
+                </div>
+                <div style="background: rgba(255,255,255,0.02); border: 1px solid rgba(139,252,3,0.2); border-radius: 10px; padding: 12px 10px; display: flex; align-items: center; gap: 10px;">
+                    <span style="background: #8bfc03; color: #000; width: 26px; height: 26px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 900; font-size: 13px; flex-shrink: 0;">4</span>
+                    <span style="font-size: 10px; font-weight: 800; color: #fff; line-height: 1.2;">ESCOLHA<br>COBERTURA</span>
+                </div>
+            </div>
+
+            <div style="margin-top: auto; text-align: center; color: #8bfc03; font-weight: 800; font-size: 14px;">
+                ⚡ E PRONTO! SEU SHAKE DO SEU JEITO! ⚡
+            </div>
+        </div>
+
+        <!-- PANEL 6: CONTATO, LOGO & QR CODE -->
+        <div class="board-panel">
+            <div style="display: flex; align-items: center; gap: 16px; margin-bottom: 25px;">
+                <img src="assets/logo.png" style="width: 65px; height: 65px; object-fit: contain;">
+                <div>
+                    <h3 style="font-size: 26px; font-weight: 900; color: #8bfc03; margin: 0; line-height: 1;">POWER SHAKE</h3>
+                    <div style="font-size: 10px; font-weight: 700; color: #9aa0a6; letter-spacing: 1px; margin-top: 4px;">- SEU ALIADO NA SUA DIETA -</div>
+                </div>
+            </div>
+
+            <div style="display: flex; flex-direction: column; gap: 14px; margin-bottom: 25px;">
+                <div style="background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.06); border-radius: 12px; padding: 14px 18px; display: flex; align-items: center; gap: 14px;">
+                    <span style="font-size: 22px;">⏰</span>
+                    <div>
+                        <div style="font-size: 10px; font-weight: 800; color: #9aa0a6;">HORÁRIO DE FUNCIONAMENTO</div>
+                        <div style="font-size: 14px; font-weight: 800; color: #8bfc03; margin-top: 2px;">${hours}</div>
+                    </div>
+                </div>
+
+                <div style="background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.06); border-radius: 12px; padding: 14px 18px; display: flex; align-items: center; gap: 14px;">
+                    <span style="font-size: 22px;">📱</span>
+                    <div>
+                        <div style="font-size: 10px; font-weight: 800; color: #9aa0a6;">PEÇA PELO WHATSAPP</div>
+                        <div style="font-size: 14px; font-weight: 800; color: #8bfc03; margin-top: 2px;">${phone}</div>
+                    </div>
+                </div>
+
+                <div style="background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.06); border-radius: 12px; padding: 14px 18px; display: flex; align-items: center; gap: 14px;">
+                    <span style="font-size: 22px;">📸</span>
+                    <div>
+                        <div style="font-size: 10px; font-weight: 800; color: #9aa0a6;">SIGA NOSSO INSTAGRAM</div>
+                        <div style="font-size: 14px; font-weight: 800; color: #8bfc03; margin-top: 2px;">${instagram}</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- QR Code Card -->
+            <div style="background: rgba(139, 252, 3, 0.08); border: 1.5px solid rgba(139, 252, 3, 0.3); border-radius: 14px; padding: 16px 20px; display: flex; align-items: center; justify-content: space-between;">
+                <div>
+                    <div style="color: #fff; font-weight: 800; font-size: 16px;">ESCANEIE E PEÇA AGORA!</div>
+                    <div style="color: #9aa0a6; font-size: 11px; margin-top: 4px; font-weight: 600;">Acesse nosso cardápio digital<br>direto no seu celular.</div>
+                </div>
+                <div id="board-qr-code-box" style="background: #fff; padding: 6px; border-radius: 8px;">
+                    <img src="https://api.qrserver.com/v1/create-qr-code/?size=110x110&data=https://power-shake-menu.vercel.app" style="width: 90px; height: 90px; display: block;">
+                </div>
+            </div>
+
+            <div style="margin-top: auto; text-align: center; color: #9aa0a6; font-weight: 800; font-size: 13px;">
+                ❤️ OBRIGADO PELA PREFERÊNCIA! ❤️
+            </div>
+        </div>
+    `;
+}
+
+// Export Board to 1920x1080 High-Res PDF
+async function exportBoardToPdf() {
+    const target = document.getElementById('menu-board-canvas');
+    if (!target) return;
+
+    showToast('Gerando PDF HD 1920x1080...', 'info');
+
+    try {
+        const canvas = await html2canvas(target, {
+            scale: 2,
+            useCORS: true,
+            backgroundColor: '#07090e'
+        });
+
+        const imgData = canvas.toDataURL('image/png');
+        const { jsPDF } = window.jspdf;
+        const pdf = new jsPDF({
+            orientation: 'landscape',
+            unit: 'px',
+            format: [1920, 1080]
+        });
+
+        pdf.addImage(imgData, 'PNG', 0, 0, 1920, 1080);
+        pdf.save('Power_Shake_Cardapio_1920x1080.pdf');
+        showToast('PDF HD 1920x1080 baixado com sucesso!', 'success');
+    } catch (e) {
+        console.error('Export error:', e);
+        showToast('Erro ao exportar PDF: ' + e.message, 'danger');
+    }
+}
+
+// Export Board to 1920x1080 High-Res PNG Image
+async function exportBoardToPng() {
+    const target = document.getElementById('menu-board-canvas');
+    if (!target) return;
+
+    showToast('Gerando Imagem HD 1920x1080...', 'info');
+
+    try {
+        const canvas = await html2canvas(target, {
+            scale: 2,
+            useCORS: true,
+            backgroundColor: '#07090e'
+        });
+
+        const link = document.createElement('a');
+        link.download = 'Power_Shake_Cardapio_1920x1080.png';
+        link.href = canvas.toDataURL('image/png');
+        link.click();
+        showToast('Imagem PNG 1920x1080 baixada com sucesso!', 'success');
+    } catch (e) {
+        console.error('Export error:', e);
+        showToast('Erro ao exportar Imagem: ' + e.message, 'danger');
+    }
+}
+
+window.addEventListener('resize', () => {
+    const scaler = document.getElementById('menu-board-scaler');
+    if (scaler && scaler.parentElement) {
+        const parentW = scaler.parentElement.clientWidth - 20;
+        const scale = parentW / 1920;
+        scaler.style.transform = `scale(${scale})`;
+        scaler.parentElement.style.height = `${1080 * scale + 20}px`;
+    }
+});
+
 // Bind to window for HTML inline onclick
 window.toggleTimelineStep = toggleTimelineStep;
 window.updateOrderStatus = updateOrderStatus;
@@ -2121,7 +2533,14 @@ window.renderOverviewTab = renderOverviewTab;
 window.renderUsersTab = renderUsersTab;
 window.loadLocationSettings = loadLocationSettings;
 window.updateLocationPreview = updateLocationPreview;
-window.deleteOrder = deleteOrder;
+window.updateBoardHeroPhoto = updateBoardHeroPhoto;
+window.syncBoardFromMenuData = syncBoardFromMenuData;
+window.renderBoardPreview = renderBoardPreview;
+window.exportBoardToPdf = exportBoardToPdf;
+window.exportBoardToPng = exportBoardToPng;
 
 // Run initializations
-document.addEventListener('DOMContentLoaded', initDashboard);
+document.addEventListener('DOMContentLoaded', () => {
+    initDashboard();
+    renderBoardPreview();
+});
