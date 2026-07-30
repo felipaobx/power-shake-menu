@@ -20,6 +20,7 @@
   "homepage": "https://github.com/felipaobx/power-shake-menu#readme",
   "dependencies": {
     "pdfkit": "^0.19.1",
+    "qrcode": "^1.5.4",
     "redis": "^6.1.0"
   }
 }

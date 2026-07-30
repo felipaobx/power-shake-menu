@@ -1,7 +1,8 @@
-// Vercel Serverless Function: Generate Menu PDF
+// Vercel Serverless Function: Generate Menu Board PDF (1920x1080 Landscape)
 // URL: /api/generate-pdf
 const { createClient } = require('redis');
 const PDFDocument = require('pdfkit');
+const QRCode = require('qrcode');
 const fs = require('fs');
 const path = require('path');
 
@@ -38,9 +39,8 @@ module.exports = async (req, res) => {
     // 2. Fallback to default menu data defined in app.js
     if (!menuData || !settings) {
         try {
-            // Mock browser context for eval
             const mockContext = {
-                window: {},
+                window: { innerWidth: 1920 },
                 document: {
                     addEventListener: () => {},
                     getElementById: () => ({ href: '' }),
@@ -56,19 +56,15 @@ module.exports = async (req, res) => {
             const appPath = path.join(process.cwd(), 'app.js');
             let appCode = fs.readFileSync(appPath, 'utf8');
             
-            // Convert appCode to use var instead of const/let to allow hoisting & redeclaration
             appCode = appCode
                 .replace(/const /g, 'var ')
                 .replace(/let /g, 'var ');
 
-            // Wrap inside a function execution context to avoid leaking variables
             const sandbox = new Function('global', 'window', 'document', 'localStorage', `
                 var MENU_DATA;
                 var SETTINGS;
                 var DEFAULT_MENU_DATA;
                 var DEFAULT_SETTINGS;
-                var orderState = { selections: {} };
-                var elements = {};
 
                 ${appCode}
 
@@ -90,13 +86,9 @@ module.exports = async (req, res) => {
         }
     }
 
-    // Ensure menuData is valid
-    if (!menuData) {
-        res.status(500).send('Error: Could not retrieve menu data.');
-        return;
-    }
+    const settingsToUse = settings || {};
 
-    // Async function to load image to buffer
+    // Helper to get image buffer
     async function getImageBuffer(imageUrl) {
         if (!imageUrl) return null;
         
@@ -105,7 +97,6 @@ module.exports = async (req, res) => {
                 const base64Data = imageUrl.replace(/^data:image\/\w+;base64,/, "");
                 return Buffer.from(base64Data, 'base64');
             } catch (e) {
-                console.error('Failed to parse base64 image:', e.message);
                 return null;
             }
         }
@@ -115,268 +106,359 @@ module.exports = async (req, res) => {
             if (fs.existsSync(localPath)) {
                 try {
                     return fs.readFileSync(localPath);
-                } catch (e) {
-                    console.error('Failed to read local image file:', localPath, e.message);
-                }
+                } catch (e) {}
             }
         }
 
         if (imageUrl.startsWith('http://') || imageUrl.startsWith('https://')) {
             try {
                 const controller = new AbortController();
-                const timeoutId = setTimeout(() => controller.abort(), 3000); // 3 seconds timeout
-                const res = await fetch(imageUrl, { signal: controller.signal });
+                const timeoutId = setTimeout(() => controller.abort(), 3000);
+                const fetchRes = await fetch(imageUrl, { signal: controller.signal });
                 clearTimeout(timeoutId);
-                if (res.ok) {
-                    const arrayBuffer = await res.arrayBuffer();
+                if (fetchRes.ok) {
+                    const arrayBuffer = await fetchRes.arrayBuffer();
                     return Buffer.from(arrayBuffer);
                 }
-            } catch (e) {
-                console.error('Failed to fetch remote image URL:', imageUrl, e.message);
-            }
+            } catch (e) {}
         }
         return null;
     }
 
-    // 3. Generate PDF
+    // 3. Generate 1920x1080 Landscape PDF
     res.setHeader('Content-Type', 'application/pdf');
     res.setHeader('Content-Disposition', 'attachment; filename="Power_Shake_Cardapio.pdf"');
 
-    const doc = new PDFDocument({ margin: 40, size: 'A4' });
+    const doc = new PDFDocument({ margin: 0, size: [1920, 1080] });
     doc.pipe(res);
 
-    // Paint Background function
-    function drawBackground() {
+    // Dark Background
+    doc.rect(0, 0, 1920, 1080).fill('#07090e');
+
+    // Preload Assets
+    const logoBuffer = await getImageBuffer('assets/logo.png');
+    const heroBuffer = await getImageBuffer('assets/hero.png');
+    
+    // Generate QR Code Buffer
+    let qrBuffer = null;
+    try {
+        qrBuffer = await QRCode.toBuffer('https://power-shake-menu.vercel.app', {
+            width: 260,
+            margin: 1,
+            color: { dark: '#000000', light: '#ffffff' }
+        });
+    } catch (e) {
+        console.error('Failed to generate QR Code:', e);
+    }
+
+    // Helper: Draw Panel Container Card
+    function drawPanelCard(x, y, w, h) {
         doc.save();
-        doc.rect(0, 0, doc.page.width, doc.page.height).fill('#0c0d14');
+        doc.roundedRect(x, y, w, h, 16).fill('#0e121a');
+        doc.strokeColor('rgba(139, 252, 3, 0.25)')
+           .lineWidth(1.5)
+           .roundedRect(x, y, w, h, 16)
+           .stroke();
         doc.restore();
     }
 
-    // Paint background on subsequent pages automatically
-    doc.on('pageAdded', () => {
-        drawBackground();
+    // Helper: Draw Price Pill
+    function drawPricePill(text, x, y, width = 72, height = 22) {
+        doc.save();
+        doc.roundedRect(x, y, width, height, 6).fill('#8bfc03');
+        doc.fillColor('#000000')
+           .fontSize(11)
+           .font('Helvetica-Bold')
+           .text(text, x, y + 5, { width: width, align: 'center' });
+        doc.restore();
+    }
+
+    // Grid Coordinates (3 Cols x 2 Rows)
+    const colW = 605;
+    const rowH = 500;
+    const col1X = 30;
+    const col2X = 655;
+    const col3X = 1280;
+    const row1Y = 30;
+    const row2Y = 550;
+
+    // ==========================================
+    // PANEL 1: HERO & BRAND (Top-Left)
+    // ==========================================
+    drawPanelCard(col1X, row1Y, colW, rowH);
+
+    if (logoBuffer) {
+        try { doc.image(logoBuffer, col1X + 30, row1Y + 30, { width: 90 }); } catch (e) {}
+    }
+
+    doc.fillColor('#8bfc03').fontSize(32).font('Helvetica-Bold').text('POWER SHAKE', col1X + 135, row1Y + 35);
+    doc.fillColor('#9aa0a6').fontSize(11).font('Helvetica-Bold').text('- SEU ALIADO NA SUA DIETA -', col1X + 135, row1Y + 72, { characterSpacing: 1.5 });
+    doc.fillColor('#ffffff').fontSize(44).font('Helvetica-Bold').text('CARDÁPIO', col1X + 30, row1Y + 140);
+    doc.fillColor('#8bfc03').fontSize(22).font('Helvetica-Bold').text('ENERGIA E SABOR EM CADA GOLE!', col1X + 30, row1Y + 192);
+
+    const badges = [
+        { icon: '⚡', text: 'ENERGIA DE VERDADE' },
+        { icon: '🥗', text: 'SEU ALIADO NA SUA DIETA' },
+        { icon: '🎯', text: 'DESEMPENHO E FOCO' }
+    ];
+
+    let badgeY = row1Y + 250;
+    badges.forEach(b => {
+        doc.save();
+        doc.roundedRect(col1X + 30, badgeY, 260, 42, 10).fill('rgba(255,255,255,0.04)');
+        doc.strokeColor('rgba(139, 252, 3, 0.3)').lineWidth(1).roundedRect(col1X + 30, badgeY, 260, 42, 10).stroke();
+        doc.fillColor('#8bfc03').fontSize(14).text(b.icon, col1X + 45, badgeY + 12);
+        doc.fillColor('#ffffff').fontSize(11).font('Helvetica-Bold').text(b.text, col1X + 72, badgeY + 14);
+        doc.restore();
+        badgeY += 54;
     });
 
-    // Paint background on first page
-    drawBackground();
-
-    // Draw Header
-    doc.moveDown(1.5);
-    doc.fillColor('#8bfc03')
-       .fontSize(26)
-       .font('Helvetica-Bold')
-       .text('POWER SHAKE', { align: 'center', characterSpacing: 1 });
-
-    doc.moveDown(0.15);
-
-    doc.fillColor('#ffffff')
-       .fontSize(9)
-       .font('Helvetica')
-       .text('CARDÁPIO OFICIAL E TABELA NUTRICIONAL', { align: 'center', characterSpacing: 2 });
-
-    doc.moveDown(0.6);
-
-    // Draw a neon green divider line
-    doc.strokeColor('#8bfc03')
-       .lineWidth(1.5)
-       .moveTo(40, doc.y)
-       .lineTo(doc.page.width - 40, doc.y)
-       .stroke();
-
-    doc.moveDown(1.2);
-
-    // Helper to check if page break is needed
-    function checkPageBreak(neededHeight) {
-        if (doc.y + neededHeight > doc.page.height - 70) {
-            doc.addPage();
-            doc.y = 50; // top padding on new pages
-        }
+    if (heroBuffer) {
+        try { doc.image(heroBuffer, col1X + 310, row1Y + 110, { width: 275 }); } catch (e) {}
     }
 
-    const cardWidth = 250;
-    const cardHeight = 55;
-    const gapX = 15;
-    const gapY = 10;
-    let col = 0;
-    let rowY = doc.y;
+    // ==========================================
+    // PANEL 2: SHAKES TRADICIONAIS (Top-Center)
+    // ==========================================
+    drawPanelCard(col2X, row1Y, colW, rowH);
 
-    for (const category of menuData.categories) {
-        const items = category.items || [];
-        if (items.length === 0) continue;
+    doc.fillColor('#8bfc03').fontSize(26).font('Helvetica-Bold').text('SHAKES TRADICIONAIS 🥤', col2X + 30, row1Y + 25);
+    doc.fillColor('#9aa0a6').fontSize(11).font('Helvetica-Bold').text('FEITOS COM MUITO SABOR E PROTEÍNA DE VERDADE!', col2X + 30, row1Y + 58);
 
-        // If currently in the middle of a row, complete the row before printing a new header
-        if (col === 1) {
-            rowY += cardHeight + gapY;
-            col = 0;
-        }
+    const shakesList = [
+        { name: 'CHOCOLATE', price: 'R$ 16,00', icon: '🍫' },
+        { name: 'PAÇOCA', price: 'R$ 17,00', icon: '🥜' },
+        { name: 'MORANGO', price: 'R$ 16,00', icon: '🍓' },
+        { name: 'LEITE NINHO', price: 'R$ 17,00', icon: '🥛' },
+        { name: 'BAUNILHA', price: 'R$ 16,00', icon: '🍦' },
+        { name: 'OVOMALTINE', price: 'R$ 17,00', icon: '🌾' },
+        { name: 'COOKIES', price: 'R$ 17,00', icon: '🍪' },
+        { name: 'CHOCOLATE BRANCO', price: 'R$ 17,00', icon: '🍫' },
+        { name: 'CAFÉ', price: 'R$ 16,00', icon: '☕' },
+        { name: 'DOCE DE LEITE', price: 'R$ 17,00', icon: '🍯' }
+    ];
 
-        doc.y = rowY;
-        
-        // Category header height (roughly 45 points)
-        checkPageBreak(45);
+    let itemY = row1Y + 95;
+    for (let i = 0; i < shakesList.length; i += 2) {
+        const item1 = shakesList[i];
+        const item2 = shakesList[i + 1];
 
-        // Section title
-        doc.fillColor('#8bfc03')
-           .fontSize(12)
-           .font('Helvetica-Bold')
-           .text(category.name.toUpperCase(), 50, doc.y);
-        
-        doc.fillColor('#9aa0a6')
-           .fontSize(8)
-           .font('Helvetica-Oblique')
-           .text(category.subtitle || '', 50, doc.y, { paragraphGap: 10 });
-
-        doc.moveDown(0.1);
-        rowY = doc.y;
-
-        for (const item of items) {
-            // Check if we need a page break for the next row of cards
-            if (col === 0) {
-                if (rowY + cardHeight > doc.page.height - 70) {
-                    doc.addPage();
-                    rowY = 50; // reset to top of page
-                }
-            }
-
-            let cardX = col === 0 ? 50 : 50 + cardWidth + gapX;
-            let cardY = rowY;
-
-            // Fetch image buffer
-            let imageBuffer = null;
-            if (item.image) {
-                imageBuffer = await getImageBuffer(item.image);
-            }
-
-            // Draw Card background & Image (clipped)
+        if (item1) {
             doc.save();
-            doc.roundedRect(cardX, cardY, cardWidth, cardHeight, 8).clip();
-            doc.rect(cardX, cardY, cardWidth, cardHeight).fill('#13141f');
-            
-            // Draw image inside a neat left square
-            const imgSize = 43;
-            const imgPadding = 6;
-            
-            doc.save();
-            doc.roundedRect(cardX + imgPadding, cardY + imgPadding, imgSize, imgSize, 6).clip();
-            if (imageBuffer) {
-                try {
-                    doc.image(imageBuffer, cardX + imgPadding, cardY + imgPadding, {
-                        width: imgSize,
-                        height: imgSize,
-                        fit: [imgSize, imgSize],
-                        align: 'center',
-                        valign: 'center'
-                    });
-                } catch (err) {
-                    console.error('Error drawing image inside PDF:', err);
-                    doc.fillColor('#8bfc03')
-                       .fontSize(16)
-                       .text(item.icon || '🥤', cardX + imgPadding, cardY + imgPadding + 6, { align: 'center', width: imgSize });
-                }
-            } else {
-                doc.fillColor('#8bfc03')
-                   .fontSize(16)
-                   .text(item.icon || '🥤', cardX + imgPadding, cardY + imgPadding + 6, { align: 'center', width: imgSize });
-            }
+            doc.roundedRect(col2X + 30, itemY, 260, 48, 8).fill('rgba(255,255,255,0.03)');
+            doc.fillColor('#ffffff').fontSize(11).font('Helvetica-Bold').text(`${item1.icon}  ${item1.name}`, col2X + 42, itemY + 16, { width: 140, ellipsis: true });
+            drawPricePill(item1.price, col2X + 210, itemY + 13, 70, 22);
             doc.restore();
-            doc.restore();
-
-            // Draw card border
-            doc.strokeColor('rgba(255,255,255,0.03)')
-               .lineWidth(1)
-               .roundedRect(cardX, cardY, cardWidth, cardHeight, 8)
-               .stroke();
-
-            // Text coordinates
-            const textX = cardX + 58;
-            
-            // Item Name
-            doc.fillColor('#ffffff')
-               .fontSize(9.5)
-               .font('Helvetica-Bold')
-               .text(item.name, textX, cardY + 8, { width: 125, height: 11, ellipsis: true });
-
-            // Item Price
-            let priceText = '';
-            if (category.id === 'whey') {
-                const price1 = (item.price || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
-                const price2Val = item.price2 || (item.price * 2);
-                const price2 = price2Val.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
-                priceText = `${price1} / ${price2}`;
-            } else {
-                priceText = item.price > 0 
-                    ? item.price.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
-                    : 'Incluso';
-            }
-                
-            doc.fillColor('#8bfc03')
-               .fontSize(7.5) // slightly smaller font for longer whey price text
-               .font('Helvetica-Bold')
-               .text(priceText, cardX + 175, cardY + 8, { align: 'right', width: 64 });
-
-            // Item Description
-            let descText = item.description || '';
-            if (descText) {
-                doc.fillColor('#9aa0a6')
-                   .fontSize(7.5)
-                   .font('Helvetica')
-                   .text(descText, textX, cardY + 22, { width: 180, height: 18, ellipsis: true });
-            }
-
-            // Macros Info
-            const kcalVal = item.kcal || 0;
-            const proteinVal = item.protein || 0;
-            let macrosText = '';
-            if (kcalVal > 0 && proteinVal > 0) {
-                macrosText = `${kcalVal} kcal · ${proteinVal}g P`;
-            } else if (kcalVal > 0) {
-                macrosText = `${kcalVal} kcal`;
-            } else if (proteinVal > 0) {
-                macrosText = `${proteinVal}g P`;
-            }
-
-            if (macrosText) {
-                doc.fillColor('rgba(139, 252, 3, 0.75)')
-                   .fontSize(7)
-                   .font('Helvetica-Bold')
-                   .text(macrosText, textX, cardY + 41);
-            }
-
-            // Toggle column pointer
-            if (col === 0) {
-                col = 1;
-            } else {
-                col = 0;
-                rowY += cardHeight + gapY; // advance to next row
-            }
         }
 
-        doc.moveDown(0.5);
+        if (item2) {
+            doc.save();
+            doc.roundedRect(col2X + 310, itemY, 260, 48, 8).fill('rgba(255,255,255,0.03)');
+            doc.fillColor('#ffffff').fontSize(11).font('Helvetica-Bold').text(`${item2.icon}  ${item2.name}`, col2X + 322, itemY + 16, { width: 140, ellipsis: true });
+            drawPricePill(item2.price, col2X + 490, itemY + 13, 70, 22);
+            doc.restore();
+        }
+
+        itemY += 56;
     }
 
-    if (col === 1) {
-        rowY += cardHeight + gapY;
+    doc.save();
+    doc.roundedRect(col2X + 30, row1Y + 430, 540, 42, 10).fill('rgba(139, 252, 3, 0.1)');
+    doc.strokeColor('rgba(139, 252, 3, 0.4)').lineWidth(1).roundedRect(col2X + 30, row1Y + 430, 540, 42, 10).stroke();
+    doc.fillColor('#8bfc03').fontSize(14).font('Helvetica-Bold').text('+ PROTEÍNA     + SABOR     + ENERGIA', col2X + 30, row1Y + 443, { align: 'center', width: 540, characterSpacing: 2 });
+    doc.restore();
+
+    // ==========================================
+    // PANEL 3: FRUTAS (Top-Right)
+    // ==========================================
+    drawPanelCard(col3X, row1Y, colW, rowH);
+
+    doc.fillColor('#8bfc03').fontSize(26).font('Helvetica-Bold').text('FRUTAS 🍃', col3X + 30, row1Y + 25);
+    doc.fillColor('#9aa0a6').fontSize(11).font('Helvetica-Bold').text('MAIS FRESCOR PARA DEIXAR SEU SHAKE AINDA MELHOR!', col3X + 30, row1Y + 58);
+
+    const fruitsList = [
+        { name: 'MORANGO', price: 'R$ 3,00', icon: '🍓' },
+        { name: 'BANANA', price: 'R$ 3,00', icon: '🍌' },
+        { name: 'KIWI', price: 'R$ 3,50', icon: '🥝' },
+        { name: 'MANGA', price: 'R$ 3,50', icon: '🥭' },
+        { name: 'ABACAXI', price: 'R$ 3,00', icon: '🍍' },
+        { name: 'UVA', price: 'R$ 3,00', icon: '🍇' },
+        { name: 'MAÇÃ', price: 'R$ 3,00', icon: '🍎' },
+        { name: 'FRUTAS VERMELHAS', price: 'R$ 4,00', icon: '🍒' }
+    ];
+
+    let fruitY = row1Y + 95;
+    for (let i = 0; i < fruitsList.length; i += 2) {
+        const f1 = fruitsList[i];
+        const f2 = fruitsList[i + 1];
+
+        if (f1) {
+            doc.save();
+            doc.roundedRect(col3X + 30, fruitY, 260, 68, 10).fill('rgba(255,255,255,0.03)');
+            doc.strokeColor('rgba(255,255,255,0.06)').lineWidth(1).roundedRect(col3X + 30, fruitY, 260, 68, 10).stroke();
+            doc.fillColor('#ffffff').fontSize(22).text(f1.icon, col3X + 45, fruitY + 18);
+            doc.fillColor('#ffffff').fontSize(11).font('Helvetica-Bold').text(f1.name, col3X + 85, fruitY + 26, { width: 100, ellipsis: true });
+            drawPricePill(f1.price, col3X + 210, fruitY + 23, 70, 22);
+            doc.restore();
+        }
+
+        if (f2) {
+            doc.save();
+            doc.roundedRect(col3X + 310, fruitY, 260, 68, 10).fill('rgba(255,255,255,0.03)');
+            doc.strokeColor('rgba(255,255,255,0.06)').lineWidth(1).roundedRect(col3X + 310, fruitY, 260, 68, 10).stroke();
+            doc.fillColor('#ffffff').fontSize(22).text(f2.icon, col3X + 325, fruitY + 18);
+            doc.fillColor('#ffffff').fontSize(11).font('Helvetica-Bold').text(f2.name, col3X + 365, fruitY + 26, { width: 100, ellipsis: true });
+            drawPricePill(f2.price, col3X + 490, fruitY + 23, 70, 22);
+            doc.restore();
+        }
+
+        fruitY += 76;
     }
 
-    doc.y = rowY;
+    doc.fillColor('#8bfc03').fontSize(11).font('Helvetica-Bold').text('🍋 FRUTAS SELECIONADAS TODOS OS DIAS!', col3X + 30, row1Y + 445, { align: 'center', width: 545 });
 
-    // Footer Address
-    checkPageBreak(65);
-    doc.moveDown(1);
-    doc.strokeColor('#8bfc03')
-       .lineWidth(1)
-       .moveTo(40, doc.y)
-       .lineTo(doc.page.width - 40, doc.y)
-       .stroke();
+    // ==========================================
+    // PANEL 4: COMPLEMENTOS (Bottom-Left)
+    // ==========================================
+    drawPanelCard(col1X, row2Y, colW, rowH);
 
-    doc.moveDown(1);
-    doc.fillColor('#ffffff')
-       .fontSize(8.5)
-       .font('Helvetica')
-       .text('Rua Zeferino Galvão, nº 508, 1º andar, sala 01 - Caruaru / PE', { align: 'center' });
-    doc.fillColor('#9aa0a6')
-       .fontSize(8)
-       .text('Em frente ao receptivo de lotação (Acima da Medic Center)', { align: 'center' });
+    doc.fillColor('#8bfc03').fontSize(26).font('Helvetica-Bold').text('COMPLEMENTOS 🥣', col1X + 30, row2Y + 25);
+    doc.fillColor('#9aa0a6').fontSize(11).font('Helvetica-Bold').text('TURBINE SEU SHAKE DO SEU JEITO!', col1X + 30, row2Y + 58);
+
+    const complementList = [
+        { name: 'NUTELLA', price: 'R$ 4,00', icon: '🍫' },
+        { name: 'CHOCOLATE 70%', price: 'R$ 3,00', icon: '🍫' },
+        { name: 'OREO', price: 'R$ 3,00', icon: '🍪' },
+        { name: 'FLOCOS DE ARROZ', price: 'R$ 2,00', icon: '🌾' },
+        { name: 'PASTA DE AMENDOIM', price: 'R$ 3,00', icon: '🥜' },
+        { name: 'COCO RALADO', price: 'R$ 2,00', icon: '🥥' },
+        { name: 'DOCE DE LEITE', price: 'R$ 3,00', icon: '🍯' },
+        { name: 'WHEY PROTEIN', price: 'R$ 5,00', icon: '⚡' },
+        { name: 'GRANOLA', price: 'R$ 3,00', icon: '🥣' },
+        { name: 'LEITE EM PÓ', price: 'R$ 2,00', icon: '🥛' }
+    ];
+
+    let compY = row2Y + 95;
+    for (let i = 0; i < complementList.length; i += 2) {
+        const c1 = complementList[i];
+        const c2 = complementList[i + 1];
+
+        if (c1) {
+            doc.save();
+            doc.roundedRect(col1X + 30, compY, 260, 48, 8).fill('rgba(255,255,255,0.03)');
+            doc.fillColor('#ffffff').fontSize(10.5).font('Helvetica-Bold').text(`${c1.icon} ${c1.name}`, col1X + 40, compY + 16, { width: 150, ellipsis: true });
+            drawPricePill(c1.price, col1X + 210, compY + 13, 70, 22);
+            doc.restore();
+        }
+
+        if (c2) {
+            doc.save();
+            doc.roundedRect(col1X + 310, compY, 260, 48, 8).fill('rgba(255,255,255,0.03)');
+            doc.fillColor('#ffffff').fontSize(10.5).font('Helvetica-Bold').text(`${c2.icon} ${c2.name}`, col1X + 320, compY + 16, { width: 150, ellipsis: true });
+            drawPricePill(c2.price, col1X + 490, compY + 13, 70, 22);
+            doc.restore();
+        }
+
+        compY += 56;
+    }
+
+    doc.save();
+    doc.roundedRect(col1X + 30, row2Y + 415, 540, 56, 10).fill('rgba(139, 252, 3, 0.08)');
+    doc.strokeColor('rgba(139, 252, 3, 0.3)').lineWidth(1).roundedRect(col1X + 30, row2Y + 415, 540, 56, 10).stroke();
+    doc.fillColor('#8bfc03').fontSize(13).font('Helvetica-Bold').text('COBERTURAS', col1X + 45, row2Y + 433);
+    doc.fillColor('#ffffff').fontSize(11).font('Helvetica').text('CHOCOLATE  •  MORANGO  •  CARAMELO', col1X + 165, row2Y + 435);
+    drawPricePill('R$ 2,00', col1X + 480, row2Y + 431, 75, 24);
+    doc.restore();
+
+    // ==========================================
+    // PANEL 5: COMBOS (Bottom-Center)
+    // ==========================================
+    drawPanelCard(col2X, row2Y, colW, rowH);
+
+    doc.fillColor('#8bfc03').fontSize(26).font('Helvetica-Bold').text('COMBOS ⚡', col2X + 30, row2Y + 25);
+    doc.fillColor('#9aa0a6').fontSize(11).font('Helvetica-Bold').text('MAIS SABOR, MAIS ENERGIA, MAIS ECONOMIA!', col2X + 30, row2Y + 58);
+
+    doc.save();
+    doc.roundedRect(col2X + 30, row2Y + 95, 260, 190, 12).fill('rgba(255,255,255,0.03)');
+    doc.strokeColor('rgba(139, 252, 3, 0.3)').lineWidth(1.5).roundedRect(col2X + 30, row2Y + 95, 260, 190, 12).stroke();
+    doc.fillColor('#8bfc03').fontSize(16).font('Helvetica-Bold').text('COMBO POWER', col2X + 45, row2Y + 112);
+    doc.fillColor('#9aa0a6').fontSize(10).font('Helvetica').text('1 SHAKE TRADICIONAL\n+ 1 COMPLEMENTO\n+ 1 FRUTA', col2X + 45, row2Y + 138, { lineGap: 5 });
+    doc.fillColor('#8bfc03').fontSize(26).font('Helvetica-Bold').text('R$ 24,90', col2X + 45, row2Y + 240);
+    doc.restore();
+
+    doc.save();
+    doc.roundedRect(col2X + 310, row2Y + 95, 260, 190, 12).fill('rgba(255,255,255,0.03)');
+    doc.strokeColor('rgba(139, 252, 3, 0.3)').lineWidth(1.5).roundedRect(col2X + 310, row2Y + 95, 260, 190, 12).stroke();
+    doc.fillColor('#8bfc03').fontSize(16).font('Helvetica-Bold').text('COMBO TURBO', col2X + 325, row2Y + 112);
+    doc.fillColor('#9aa0a6').fontSize(10).font('Helvetica').text('1 SHAKE ESPECIAL\n+ 2 COMPLEMENTOS\n+ 1 FRUTA', col2X + 325, row2Y + 138, { lineGap: 5 });
+    doc.fillColor('#8bfc03').fontSize(26).font('Helvetica-Bold').text('R$ 29,90', col2X + 325, row2Y + 240);
+    doc.restore();
+
+    doc.fillColor('#ffffff').fontSize(15).font('Helvetica-Bold').text('MONTE SEU SHAKE DO SEU JEITO!', col2X + 30, row2Y + 310, { align: 'center', width: 540 });
+
+    const steps = [
+        { num: '1', title: 'ESCOLHA\nSUA BASE' },
+        { num: '2', title: 'ESCOLHA\nSUAS FRUTAS' },
+        { num: '3', title: 'ESCOLHA SEUS\nCOMPLEMENTOS' },
+        { num: '4', title: 'ESCOLHA\nCOBERTURA' }
+    ];
+
+    let stepX = col2X + 35;
+    steps.forEach(s => {
+        doc.save();
+        doc.roundedRect(stepX, row2Y + 345, 120, 75, 10).fill('rgba(255,255,255,0.02)');
+        doc.strokeColor('rgba(139, 252, 3, 0.2)').lineWidth(1).roundedRect(stepX, row2Y + 345, 120, 75, 10).stroke();
+        doc.fillColor('#8bfc03').fontSize(14).font('Helvetica-Bold').text(s.num, stepX + 10, row2Y + 355);
+        doc.fillColor('#ffffff').fontSize(8.5).font('Helvetica-Bold').text(s.title, stepX + 30, row2Y + 360, { lineGap: 2 });
+        doc.restore();
+        stepX += 135;
+    });
+
+    doc.fillColor('#8bfc03').fontSize(13).font('Helvetica-Bold').text('⚡ E PRONTO! SEU SHAKE DO SEU JEITO! ⚡', col2X + 30, row2Y + 445, { align: 'center', width: 540 });
+
+    // ==========================================
+    // PANEL 6: CONTATO, LOGO & QR CODE (Bottom-Right)
+    // ==========================================
+    drawPanelCard(col3X, row2Y, colW, rowH);
+
+    if (logoBuffer) {
+        try { doc.image(logoBuffer, col3X + 30, row2Y + 30, { width: 75 }); } catch (e) {}
+    }
+
+    doc.fillColor('#8bfc03').fontSize(24).font('Helvetica-Bold').text('POWER SHAKE', col3X + 120, row2Y + 35);
+    doc.fillColor('#9aa0a6').fontSize(9.5).font('Helvetica-Bold').text('- SEU ALIADO NA SUA DIETA -', col3X + 120, row2Y + 65, { characterSpacing: 1 });
+
+    const contactInfo = [
+        { icon: '⏰', label: 'HORÁRIO DE FUNCIONAMENTO', val: settingsToUse.hours || 'SEGUNDA A DOMINGO 10H ÀS 22H' },
+        { icon: '📱', label: 'PEÇA PELO WHATSAPP', val: settingsToUse.phone || '(81) 99999-9999' },
+        { icon: '📸', label: 'SIGA NOSSO INSTAGRAM', val: settingsToUse.instagram || '@powershake.caruaru' }
+    ];
+
+    let infoY = row2Y + 115;
+    contactInfo.forEach(info => {
+        doc.save();
+        doc.roundedRect(col3X + 30, infoY, 545, 52, 10).fill('rgba(255,255,255,0.03)');
+        doc.strokeColor('rgba(255,255,255,0.06)').lineWidth(1).roundedRect(col3X + 30, infoY, 545, 52, 10).stroke();
+        doc.fillColor('#ffffff').fontSize(18).text(info.icon, col3X + 45, infoY + 15);
+        doc.fillColor('#9aa0a6').fontSize(8.5).font('Helvetica-Bold').text(info.label, col3X + 80, infoY + 12);
+        doc.fillColor('#8bfc03').fontSize(13).font('Helvetica-Bold').text(info.val, col3X + 80, infoY + 26);
+        doc.restore();
+        infoY += 62;
+    });
+
+    doc.save();
+    doc.roundedRect(col3X + 30, row2Y + 310, 545, 125, 12).fill('rgba(139, 252, 3, 0.08)');
+    doc.strokeColor('rgba(139, 252, 3, 0.3)').lineWidth(1.5).roundedRect(col3X + 30, row2Y + 310, 545, 125, 12).stroke();
+    
+    doc.fillColor('#ffffff').fontSize(14).font('Helvetica-Bold').text('ESCANEIE E PEÇA AGORA!', col3X + 50, row2Y + 355);
+    doc.fillColor('#9aa0a6').fontSize(10).font('Helvetica').text('Acesse nosso cardápio digital\ndireto no seu celular.', col3X + 50, row2Y + 380, { lineGap: 4 });
+
+    if (qrBuffer) {
+        try { doc.image(qrBuffer, col3X + 440, row2Y + 320, { width: 105 }); } catch (e) {}
+    }
+    doc.restore();
+
+    doc.fillColor('#9aa0a6').fontSize(11).font('Helvetica-Bold').text('❤️ OBRIGADO PELA PREFERÊNCIA! ❤️', col3X + 30, row2Y + 455, { align: 'center', width: 545 });
 
     doc.end();
 };
