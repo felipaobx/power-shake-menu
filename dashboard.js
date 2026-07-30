@@ -2459,19 +2459,54 @@ function renderBoardPreview() {
     `;
 }
 
+// Helper: Capture unscaled 1920x1080 canvas without CSS transform distortion
+async function captureBoardCanvas() {
+    const target = document.getElementById('menu-board-canvas');
+    const scaler = document.getElementById('menu-board-scaler');
+    if (!target || !scaler) return null;
+
+    // Save current screen transform & height
+    const originalTransform = scaler.style.transform;
+    const originalHeight = scaler.parentElement ? scaler.parentElement.style.height : '';
+
+    // Reset transform to 1:1 unscaled 1920x1080 HD native resolution
+    scaler.style.transform = 'none';
+    if (scaler.parentElement) scaler.parentElement.style.height = '1080px';
+
+    // Wait 60ms for browser layout reflow
+    await new Promise(resolve => setTimeout(resolve, 60));
+
+    let capturedCanvas = null;
+    try {
+        capturedCanvas = await html2canvas(target, {
+            width: 1920,
+            height: 1080,
+            scale: 1,
+            useCORS: true,
+            backgroundColor: '#07090e',
+            logging: false
+        });
+    } catch (err) {
+        console.error('html2canvas capture error:', err);
+    } finally {
+        // Instantly restore screen transform scaling
+        scaler.style.transform = originalTransform;
+        if (scaler.parentElement) scaler.parentElement.style.height = originalHeight;
+    }
+
+    return capturedCanvas;
+}
+
 // Export Board to 1920x1080 High-Res PDF
 async function exportBoardToPdf() {
-    const target = document.getElementById('menu-board-canvas');
-    if (!target) return;
-
     showToast('Gerando PDF HD 1920x1080...', 'info');
 
     try {
-        const canvas = await html2canvas(target, {
-            scale: 2,
-            useCORS: true,
-            backgroundColor: '#07090e'
-        });
+        const canvas = await captureBoardCanvas();
+        if (!canvas) {
+            showToast('Erro ao capturar painel digital.', 'danger');
+            return;
+        }
 
         const imgData = canvas.toDataURL('image/png');
         const { jsPDF } = window.jspdf;
@@ -2483,7 +2518,7 @@ async function exportBoardToPdf() {
 
         pdf.addImage(imgData, 'PNG', 0, 0, 1920, 1080);
         pdf.save('Power_Shake_Cardapio_1920x1080.pdf');
-        showToast('PDF HD 1920x1080 baixado com sucesso!', 'success');
+        showToast('PDF HD 1920x1080 gerado com sucesso!', 'success');
     } catch (e) {
         console.error('Export error:', e);
         showToast('Erro ao exportar PDF: ' + e.message, 'danger');
@@ -2492,17 +2527,14 @@ async function exportBoardToPdf() {
 
 // Export Board to 1920x1080 High-Res PNG Image
 async function exportBoardToPng() {
-    const target = document.getElementById('menu-board-canvas');
-    if (!target) return;
-
     showToast('Gerando Imagem HD 1920x1080...', 'info');
 
     try {
-        const canvas = await html2canvas(target, {
-            scale: 2,
-            useCORS: true,
-            backgroundColor: '#07090e'
-        });
+        const canvas = await captureBoardCanvas();
+        if (!canvas) {
+            showToast('Erro ao capturar painel digital.', 'danger');
+            return;
+        }
 
         const link = document.createElement('a');
         link.download = 'Power_Shake_Cardapio_1920x1080.png';

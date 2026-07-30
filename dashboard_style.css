@@ -1673,6 +1673,18 @@ textarea.form-control {
     padding: 10px;
 }
 
+#menu-board-canvas * {
+    box-sizing: border-box !important;
+}
+
+#menu-board-canvas h1,
+#menu-board-canvas h2,
+#menu-board-canvas h3,
+#menu-board-canvas h4 {
+    margin: 0;
+    line-height: 1.15;
+}
+
 .board-panel {
     background: #0e121a;
     border: 1.5px solid rgba(139, 252, 3, 0.25);
@@ -1686,10 +1698,11 @@ textarea.form-control {
 }
 
 .board-panel-title {
-    font-size: 26px;
+    font-size: 24px;
     font-weight: 800;
     color: #8bfc03;
     margin-bottom: 4px;
+    line-height: 1.2;
     display: flex;
     align-items: center;
     gap: 10px;
@@ -1700,7 +1713,7 @@ textarea.form-control {
     font-weight: 700;
     color: #9aa0a6;
     margin-bottom: 16px;
-    letter-spacing: 0.5px;
+    line-height: 1.2;
 }
 
 .board-price-pill {
@@ -1713,4 +1726,5 @@ textarea.form-control {
     display: inline-flex;
     align-items: center;
     justify-content: center;
+    line-height: 1;
 }
