@@ -1403,9 +1403,34 @@ function setupSubmenuManagerActions() {
         });
     }
 
-    const closeModal = () => {
-        if (modal) modal.style.display = 'none';
-    };
+    const addSubForm = document.getElementById('add-submenu-form');
+    if (addSubForm) {
+        addSubForm.addEventListener('submit', (e) => {
+            e.preventDefault();
+            const nameIn = document.getElementById('new-submenu-name');
+            const iconIn = document.getElementById('new-submenu-icon');
+            if (!nameIn || !nameIn.value.trim()) {
+                showToast('Informe o nome do submenu.', 'warning');
+                return;
+            }
+            const name = nameIn.value.trim();
+            const icon = iconIn ? iconIn.value.trim() : '';
+            const newSubId = 'sub_' + Date.now();
+            if (!MENU_DATA.submenus) MENU_DATA.submenus = [...DEFAULT_MENU_DATA.submenus];
+            MENU_DATA.submenus.push({
+                id: newSubId,
+                name: name,
+                subtitle: 'Submenu prioritário',
+                icon: icon || '📁'
+            });
+            localStorage.setItem('power_shake_menu_data', JSON.stringify(MENU_DATA));
+            renderSubmenusTab();
+            populateCategoryDropdown();
+            showToast(`Submenu "${name}" criado com sucesso!`, 'success');
+            nameIn.value = '';
+            if (iconIn) iconIn.value = '';
+        });
+    }
 
     if (closeBtn) closeBtn.addEventListener('click', closeModal);
     if (cancelBtn) cancelBtn.addEventListener('click', closeModal);
@@ -2245,10 +2270,93 @@ function addItemDirectToCategory(catId) {
     switchTab('tab-items');
     if (dom.categorySelect) {
         dom.categorySelect.value = catId;
-        onCategorySelectChange();
+        populateCategoryDropdown(catId);
+        renderItemsTable();
     }
     openItemEditor();
 }
+
+// Item Editor Modal Submit Save
+dom.modalForm.addEventListener('submit', function(e) {
+    e.preventDefault();
+    const catId = dom.categorySelect.value;
+    const category = MENU_DATA.categories.find(c => c.id === catId);
+    
+    if (!category) {
+        showToast('Selecione uma categoria válida para adicionar ou editar o item.', 'error');
+        return;
+    }
+    
+    const id = dom.editItemId.value;
+    const name = dom.itemName.value.trim();
+    const mediaType = dom.itemMediaType.value;
+    
+    if (!name) {
+        showToast('Informe o nome do item.', 'warning');
+        return;
+    }
+
+    const existingItem = id ? category.items.find(i => i.id === id) : null;
+    const icon = mediaType === 'icon' ? dom.itemIcon.value.trim() : '';
+    const image = mediaType === 'image' ? (uploadedProductImageBase64 || (existingItem ? existingItem.image : '') || '') : '';
+
+    const kcal = parseFloat(dom.itemKcal.value) || 0;
+    const protein = parseFloat(dom.itemProtein.value) || 0;
+    const price = parseFloat(dom.itemPrice.value) || 0;
+    const price2 = dom.itemPrice2 ? (parseFloat(dom.itemPrice2.value) || 0) : 0;
+    const description = dom.itemDesc.value.trim();
+    const rawVersions = dom.itemVersions.value.trim();
+
+    let versions = undefined;
+    if (catId === 'milks' && rawVersions) {
+        versions = rawVersions.split(',').map(v => v.trim()).filter(v => v.length > 0);
+    }
+
+    const outOfStock = dom.itemAvailableCheckbox ? !dom.itemAvailableCheckbox.checked : false;
+
+    if (id) {
+        // EDIT MODE
+        const index = category.items.findIndex(i => i.id === id);
+        if (index !== -1) {
+            category.items[index] = {
+                ...category.items[index],
+                name, icon, image, kcal, protein, price, price2, description, versions, outOfStock
+            };
+        }
+        showToast(`Item "${name}" atualizado com sucesso!`, 'success');
+    } else {
+        // ADD NEW ITEM MODE
+        const newItem = {
+            id: 'item_' + Date.now(),
+            name, icon, image, kcal, protein, price, price2, description, versions, outOfStock
+        };
+        category.items.push(newItem);
+        showToast(`Novo item "${name}" adicionado com sucesso!`, 'success');
+    }
+
+    localStorage.setItem('power_shake_menu_data', JSON.stringify(MENU_DATA));
+
+    dom.itemModal.style.display = 'none';
+    renderItemsTable();
+    renderBoardPreview();
+});
+
+// Delete Menu Item
+window.deleteMenuItem = function(id) {
+    const catId = dom.categorySelect.value;
+    const category = MENU_DATA.categories.find(c => c.id === catId);
+    if (!category) return;
+
+    if (confirm('Tem certeza que deseja remover este item de forma permanente?')) {
+        const item = category.items.find(i => i.id === id);
+        const name = item ? item.name : '';
+        category.items = category.items.filter(i => i.id !== id);
+        localStorage.setItem('power_shake_menu_data', JSON.stringify(MENU_DATA));
+        renderItemsTable();
+        renderBoardPreview();
+        showToast(`Item ${name ? '"' + name + '" ' : ''}removido com sucesso.`, 'success');
+    }
+};
 
 function formatPricePill(val) {
     if (typeof val === 'number') {
