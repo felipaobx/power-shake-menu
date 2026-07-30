@@ -2250,12 +2250,114 @@ function addItemDirectToCategory(catId) {
     openItemEditor();
 }
 
+function formatPricePill(val) {
+    if (typeof val === 'number') {
+        return `R$ ${val.toFixed(2).replace('.', ',')}`;
+    }
+    if (typeof val === 'string' && val.trim()) {
+        if (val.includes('R$')) return val;
+        const parsed = parseFloat(val.replace(',', '.'));
+        if (!isNaN(parsed)) return `R$ ${parsed.toFixed(2).replace('.', ',')}`;
+        return val;
+    }
+    return 'R$ 0,00';
+}
+
+function getCategoryItemsForBoard(categoryIds) {
+    if (!MENU_DATA || !MENU_DATA.categories) return [];
+    let items = [];
+    const catList = Array.isArray(categoryIds) ? categoryIds : [categoryIds];
+    
+    MENU_DATA.categories.forEach(cat => {
+        if (catList.includes(cat.id) || catList.includes(cat.submenu)) {
+            if (cat.items) {
+                cat.items.forEach(item => {
+                    if (!item.outOfStock) {
+                        items.push({
+                            name: item.name.toUpperCase(),
+                            price: formatPricePill(item.price)
+                        });
+                    }
+                });
+            }
+        }
+    });
+    return items;
+}
+
 function renderBoardPreview() {
     const container = document.getElementById('board-preview-container');
     if (!container) return;
 
     const accent = boardData.accentColor || '#8bfc03';
     const bgColor = boardData.bgColor || '#07090e';
+
+    // Page 2 items (Shakes & Bases)
+    const dbPage2Items = getCategoryItemsForBoard(['estilo_shakes', 'milks', 'whey']);
+    const defaultPage2Items = [
+        { name: 'CHOCOLATE', price: 'R$ 16,00' },
+        { name: 'PAÇOCA', price: 'R$ 17,00' },
+        { name: 'MORANGO', price: 'R$ 16,00' },
+        { name: 'LEITE NINHO', price: 'R$ 17,00' },
+        { name: 'BAUNILHA', price: 'R$ 16,00' },
+        { name: 'OVOMALTINE', price: 'R$ 17,00' },
+        { name: 'COOKIES', price: 'R$ 17,00' },
+        { name: 'CHOCOLATE BRANCO', price: 'R$ 17,00' },
+        { name: 'CAFÉ', price: 'R$ 16,00' },
+        { name: 'DOCE DE LEITE', price: 'R$ 17,00' }
+    ];
+    const page2List = (dbPage2Items.length > 0 ? dbPage2Items : defaultPage2Items).slice(0, 10);
+
+    const page2GridHtml = page2List.map(i => `
+        <div style="background: #0e121a; border: 1px solid ${accent}33; border-radius: 14px; padding: 18px 22px; display: flex; justify-content: space-between; align-items: center;">
+            <span style="font-weight: 800; font-size: 18px; color: #fff;">${i.name}</span>
+            <span class="board-price-pill" style="background: ${accent}; font-size: 16px; padding: 6px 14px;">${i.price}</span>
+        </div>
+    `).join('');
+
+    // Page 3 items (Frutas)
+    const dbPage3Items = getCategoryItemsForBoard(['fruits']);
+    const defaultPage3Items = [
+        { name: 'MORANGO', price: 'R$ 4,50' },
+        { name: 'BANANA', price: 'R$ 3,00' },
+        { name: 'MAMÃO', price: 'R$ 3,50' },
+        { name: 'MANGA', price: 'R$ 3,50' },
+        { name: 'GOIABA', price: 'R$ 4,00' },
+        { name: 'ABACATE', price: 'R$ 5,00' },
+        { name: 'MARACUJÁ', price: 'R$ 4,50' },
+        { name: 'FRUTAS VERMELHAS', price: 'R$ 6,00' }
+    ];
+    const page3List = (dbPage3Items.length > 0 ? dbPage3Items : defaultPage3Items).slice(0, 10);
+
+    const page3GridHtml = page3List.map(i => `
+        <div style="background: #0e121a; border: 1px solid rgba(255,255,255,0.08); border-radius: 16px; padding: 22px; display: flex; justify-content: space-between; align-items: center;">
+            <span style="font-weight: 800; font-size: 20px; color: #fff;">${i.name}</span>
+            <span class="board-price-pill" style="background: ${accent}; font-size: 16px; padding: 6px 14px;">${i.price}</span>
+        </div>
+    `).join('');
+
+    // Page 4 items (Complementos)
+    const dbPage4Items = getCategoryItemsForBoard(['toppings', 'peanutButters', 'supplements']);
+    const defaultPage4Items = [
+        { name: 'NUTELLA', price: 'R$ 4,00' },
+        { name: 'CHOCOLATE 70%', price: 'R$ 3,00' },
+        { name: 'OREO', price: 'R$ 3,00' },
+        { name: 'PASTA DR. PEANUT', price: 'R$ 5,90' },
+        { name: 'PASTA DE AMENDOIM', price: 'R$ 3,00' },
+        { name: 'COCO RALADO', price: 'R$ 2,00' },
+        { name: 'DOCE DE LEITE', price: 'R$ 3,00' },
+        { name: 'WHEY PROTEIN', price: 'R$ 15,90' },
+        { name: 'GRANOLA', price: 'R$ 3,00' },
+        { name: 'LEITE EM PÓ', price: 'R$ 2,00' }
+    ];
+    const page4List = (dbPage4Items.length > 0 ? dbPage4Items : defaultPage4Items).slice(0, 10);
+
+    const page4GridHtml = page4List.map(i => `
+        <div style="background: #0e121a; border: 1px solid ${accent}33; border-radius: 14px; padding: 18px 22px; display: flex; justify-content: space-between; align-items: center;">
+            <span style="font-weight: 800; font-size: 18px; color: #fff;">${i.name}</span>
+            <span class="board-price-pill" style="background: ${accent}; font-size: 16px; padding: 6px 14px;">${i.price}</span>
+        </div>
+    `).join('');
 
     container.innerHTML = `
         <!-- PAGE 1: CAPA & HERÓI (1920x1080) -->
@@ -2305,46 +2407,7 @@ function renderBoardPreview() {
                         </div>
 
                         <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 30px;">
-                            <div style="background: #0e121a; border: 1px solid ${accent}33; border-radius: 14px; padding: 18px 22px; display: flex; justify-content: space-between; align-items: center;">
-                                <span style="font-weight: 800; font-size: 18px; color: #fff;">CHOCOLATE</span>
-                                <span class="board-price-pill" style="background: ${accent}; font-size: 16px; padding: 6px 14px;">R$ 16,00</span>
-                            </div>
-                            <div style="background: #0e121a; border: 1px solid ${accent}33; border-radius: 14px; padding: 18px 22px; display: flex; justify-content: space-between; align-items: center;">
-                                <span style="font-weight: 800; font-size: 18px; color: #fff;">PAÇOCA</span>
-                                <span class="board-price-pill" style="background: ${accent}; font-size: 16px; padding: 6px 14px;">R$ 17,00</span>
-                            </div>
-                            <div style="background: #0e121a; border: 1px solid ${accent}33; border-radius: 14px; padding: 18px 22px; display: flex; justify-content: space-between; align-items: center;">
-                                <span style="font-weight: 800; font-size: 18px; color: #fff;">MORANGO</span>
-                                <span class="board-price-pill" style="background: ${accent}; font-size: 16px; padding: 6px 14px;">R$ 16,00</span>
-                            </div>
-                            <div style="background: #0e121a; border: 1px solid ${accent}33; border-radius: 14px; padding: 18px 22px; display: flex; justify-content: space-between; align-items: center;">
-                                <span style="font-weight: 800; font-size: 18px; color: #fff;">LEITE NINHO</span>
-                                <span class="board-price-pill" style="background: ${accent}; font-size: 16px; padding: 6px 14px;">R$ 17,00</span>
-                            </div>
-                            <div style="background: #0e121a; border: 1px solid ${accent}33; border-radius: 14px; padding: 18px 22px; display: flex; justify-content: space-between; align-items: center;">
-                                <span style="font-weight: 800; font-size: 18px; color: #fff;">BAUNILHA</span>
-                                <span class="board-price-pill" style="background: ${accent}; font-size: 16px; padding: 6px 14px;">R$ 16,00</span>
-                            </div>
-                            <div style="background: #0e121a; border: 1px solid ${accent}33; border-radius: 14px; padding: 18px 22px; display: flex; justify-content: space-between; align-items: center;">
-                                <span style="font-weight: 800; font-size: 18px; color: #fff;">OVOMALTINE</span>
-                                <span class="board-price-pill" style="background: ${accent}; font-size: 16px; padding: 6px 14px;">R$ 17,00</span>
-                            </div>
-                            <div style="background: #0e121a; border: 1px solid ${accent}33; border-radius: 14px; padding: 18px 22px; display: flex; justify-content: space-between; align-items: center;">
-                                <span style="font-weight: 800; font-size: 18px; color: #fff;">COOKIES</span>
-                                <span class="board-price-pill" style="background: ${accent}; font-size: 16px; padding: 6px 14px;">R$ 17,00</span>
-                            </div>
-                            <div style="background: #0e121a; border: 1px solid ${accent}33; border-radius: 14px; padding: 18px 22px; display: flex; justify-content: space-between; align-items: center;">
-                                <span style="font-weight: 800; font-size: 18px; color: #fff;">CHOCOLATE BRANCO</span>
-                                <span class="board-price-pill" style="background: ${accent}; font-size: 16px; padding: 6px 14px;">R$ 17,00</span>
-                            </div>
-                            <div style="background: #0e121a; border: 1px solid ${accent}33; border-radius: 14px; padding: 18px 22px; display: flex; justify-content: space-between; align-items: center;">
-                                <span style="font-weight: 800; font-size: 18px; color: #fff;">CAFÉ</span>
-                                <span class="board-price-pill" style="background: ${accent}; font-size: 16px; padding: 6px 14px;">R$ 16,00</span>
-                            </div>
-                            <div style="background: #0e121a; border: 1px solid ${accent}33; border-radius: 14px; padding: 18px 22px; display: flex; justify-content: space-between; align-items: center;">
-                                <span style="font-weight: 800; font-size: 18px; color: #fff;">DOCE DE LEITE</span>
-                                <span class="board-price-pill" style="background: ${accent}; font-size: 16px; padding: 6px 14px;">R$ 17,00</span>
-                            </div>
+                            ${page2GridHtml}
                         </div>
 
                         <div style="margin-top: auto; background: ${accent}18; border: 1.5px solid ${accent}66; border-radius: 16px; padding: 20px; text-align: center; color: ${accent}; font-weight: 900; font-size: 20px; letter-spacing: 3px;">
@@ -2370,38 +2433,7 @@ function renderBoardPreview() {
                         </div>
 
                         <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 30px;">
-                            <div style="background: #0e121a; border: 1px solid rgba(255,255,255,0.08); border-radius: 16px; padding: 22px; display: flex; justify-content: space-between; align-items: center;">
-                                <span style="font-weight: 800; font-size: 20px; color: #fff;">MORANGO</span>
-                                <span class="board-price-pill" style="background: ${accent}; font-size: 16px; padding: 6px 14px;">R$ 3,00</span>
-                            </div>
-                            <div style="background: #0e121a; border: 1px solid rgba(255,255,255,0.08); border-radius: 16px; padding: 22px; display: flex; justify-content: space-between; align-items: center;">
-                                <span style="font-weight: 800; font-size: 20px; color: #fff;">BANANA</span>
-                                <span class="board-price-pill" style="background: ${accent}; font-size: 16px; padding: 6px 14px;">R$ 3,00</span>
-                            </div>
-                            <div style="background: #0e121a; border: 1px solid rgba(255,255,255,0.08); border-radius: 16px; padding: 22px; display: flex; justify-content: space-between; align-items: center;">
-                                <span style="font-weight: 800; font-size: 20px; color: #fff;">KIWI</span>
-                                <span class="board-price-pill" style="background: ${accent}; font-size: 16px; padding: 6px 14px;">R$ 3,50</span>
-                            </div>
-                            <div style="background: #0e121a; border: 1px solid rgba(255,255,255,0.08); border-radius: 16px; padding: 22px; display: flex; justify-content: space-between; align-items: center;">
-                                <span style="font-weight: 800; font-size: 20px; color: #fff;">MANGA</span>
-                                <span class="board-price-pill" style="background: ${accent}; font-size: 16px; padding: 6px 14px;">R$ 3,50</span>
-                            </div>
-                            <div style="background: #0e121a; border: 1px solid rgba(255,255,255,0.08); border-radius: 16px; padding: 22px; display: flex; justify-content: space-between; align-items: center;">
-                                <span style="font-weight: 800; font-size: 20px; color: #fff;">ABACAXI</span>
-                                <span class="board-price-pill" style="background: ${accent}; font-size: 16px; padding: 6px 14px;">R$ 3,00</span>
-                            </div>
-                            <div style="background: #0e121a; border: 1px solid rgba(255,255,255,0.08); border-radius: 16px; padding: 22px; display: flex; justify-content: space-between; align-items: center;">
-                                <span style="font-weight: 800; font-size: 20px; color: #fff;">UVA</span>
-                                <span class="board-price-pill" style="background: ${accent}; font-size: 16px; padding: 6px 14px;">R$ 3,00</span>
-                            </div>
-                            <div style="background: #0e121a; border: 1px solid rgba(255,255,255,0.08); border-radius: 16px; padding: 22px; display: flex; justify-content: space-between; align-items: center;">
-                                <span style="font-weight: 800; font-size: 20px; color: #fff;">MAÇÃ</span>
-                                <span class="board-price-pill" style="background: ${accent}; font-size: 16px; padding: 6px 14px;">R$ 3,00</span>
-                            </div>
-                            <div style="background: #0e121a; border: 1px solid rgba(255,255,255,0.08); border-radius: 16px; padding: 22px; display: flex; justify-content: space-between; align-items: center;">
-                                <span style="font-weight: 800; font-size: 17px; color: #fff;">FRUTAS VERMELHAS</span>
-                                <span class="board-price-pill" style="background: ${accent}; font-size: 16px; padding: 6px 14px;">R$ 4,00</span>
-                            </div>
+                            ${page3GridHtml}
                         </div>
 
                         <div style="margin-top: auto; background: ${accent}18; border: 1.5px solid ${accent}66; border-radius: 16px; padding: 20px; text-align: center; color: ${accent}; font-weight: 900; font-size: 20px;">
@@ -2427,46 +2459,7 @@ function renderBoardPreview() {
                         </div>
 
                         <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 25px;">
-                            <div style="background: #0e121a; border: 1px solid ${accent}33; border-radius: 14px; padding: 18px 22px; display: flex; justify-content: space-between; align-items: center;">
-                                <span style="font-weight: 800; font-size: 18px; color: #fff;">NUTELLA</span>
-                                <span class="board-price-pill" style="background: ${accent}; font-size: 16px; padding: 6px 14px;">R$ 4,00</span>
-                            </div>
-                            <div style="background: #0e121a; border: 1px solid ${accent}33; border-radius: 14px; padding: 18px 22px; display: flex; justify-content: space-between; align-items: center;">
-                                <span style="font-weight: 800; font-size: 18px; color: #fff;">CHOCOLATE 70%</span>
-                                <span class="board-price-pill" style="background: ${accent}; font-size: 16px; padding: 6px 14px;">R$ 3,00</span>
-                            </div>
-                            <div style="background: #0e121a; border: 1px solid ${accent}33; border-radius: 14px; padding: 18px 22px; display: flex; justify-content: space-between; align-items: center;">
-                                <span style="font-weight: 800; font-size: 18px; color: #fff;">OREO</span>
-                                <span class="board-price-pill" style="background: ${accent}; font-size: 16px; padding: 6px 14px;">R$ 3,00</span>
-                            </div>
-                            <div style="background: #0e121a; border: 1px solid ${accent}33; border-radius: 14px; padding: 18px 22px; display: flex; justify-content: space-between; align-items: center;">
-                                <span style="font-weight: 800; font-size: 18px; color: #fff;">FLOCOS DE ARROZ</span>
-                                <span class="board-price-pill" style="background: ${accent}; font-size: 16px; padding: 6px 14px;">R$ 2,00</span>
-                            </div>
-                            <div style="background: #0e121a; border: 1px solid ${accent}33; border-radius: 14px; padding: 18px 22px; display: flex; justify-content: space-between; align-items: center;">
-                                <span style="font-weight: 800; font-size: 18px; color: #fff;">PASTA DE AMENDOIM</span>
-                                <span class="board-price-pill" style="background: ${accent}; font-size: 16px; padding: 6px 14px;">R$ 3,00</span>
-                            </div>
-                            <div style="background: #0e121a; border: 1px solid ${accent}33; border-radius: 14px; padding: 18px 22px; display: flex; justify-content: space-between; align-items: center;">
-                                <span style="font-weight: 800; font-size: 18px; color: #fff;">COCO RALADO</span>
-                                <span class="board-price-pill" style="background: ${accent}; font-size: 16px; padding: 6px 14px;">R$ 2,00</span>
-                            </div>
-                            <div style="background: #0e121a; border: 1px solid ${accent}33; border-radius: 14px; padding: 18px 22px; display: flex; justify-content: space-between; align-items: center;">
-                                <span style="font-weight: 800; font-size: 18px; color: #fff;">DOCE DE LEITE</span>
-                                <span class="board-price-pill" style="background: ${accent}; font-size: 16px; padding: 6px 14px;">R$ 3,00</span>
-                            </div>
-                            <div style="background: #0e121a; border: 1px solid ${accent}33; border-radius: 14px; padding: 18px 22px; display: flex; justify-content: space-between; align-items: center;">
-                                <span style="font-weight: 800; font-size: 18px; color: #fff;">WHEY PROTEIN</span>
-                                <span class="board-price-pill" style="background: ${accent}; font-size: 16px; padding: 6px 14px;">R$ 5,00</span>
-                            </div>
-                            <div style="background: #0e121a; border: 1px solid ${accent}33; border-radius: 14px; padding: 18px 22px; display: flex; justify-content: space-between; align-items: center;">
-                                <span style="font-weight: 800; font-size: 18px; color: #fff;">GRANOLA</span>
-                                <span class="board-price-pill" style="background: ${accent}; font-size: 16px; padding: 6px 14px;">R$ 3,00</span>
-                            </div>
-                            <div style="background: #0e121a; border: 1px solid ${accent}33; border-radius: 14px; padding: 18px 22px; display: flex; justify-content: space-between; align-items: center;">
-                                <span style="font-weight: 800; font-size: 18px; color: #fff;">LEITE EM PÓ</span>
-                                <span class="board-price-pill" style="background: ${accent}; font-size: 16px; padding: 6px 14px;">R$ 2,00</span>
-                            </div>
+                            ${page4GridHtml}
                         </div>
 
                         <div style="margin-top: auto; background: ${accent}14; border: 1.5px solid ${accent}55; border-radius: 16px; padding: 22px; display: flex; align-items: center; justify-content: space-between;">

@@ -57,7 +57,44 @@ async function getImageBuffer(imageUrl) {
     return null;
 }
 
+function formatPricePill(val) {
+    if (typeof val === 'number') {
+        return `R$ ${val.toFixed(2).replace('.', ',')}`;
+    }
+    if (typeof val === 'string' && val.trim()) {
+        if (val.includes('R$')) return val;
+        const parsed = parseFloat(val.replace(',', '.'));
+        if (!isNaN(parsed)) return `R$ ${parsed.toFixed(2).replace('.', ',')}`;
+        return val;
+    }
+    return 'R$ 0,00';
+}
+
+function getCategoryItemsForPdf(menuDataObj, categoryIds) {
+    if (!menuDataObj || !menuDataObj.categories) return [];
+    let items = [];
+    const catList = Array.isArray(categoryIds) ? categoryIds : [categoryIds];
+    
+    menuDataObj.categories.forEach(cat => {
+        if (catList.includes(cat.id) || catList.includes(cat.submenu)) {
+            if (cat.items) {
+                cat.items.forEach(item => {
+                    if (!item.outOfStock) {
+                        items.push({
+                            name: item.name.toUpperCase(),
+                            price: formatPricePill(item.price)
+                        });
+                    }
+                });
+            }
+        }
+    });
+    return items;
+}
+
 async function startPdfGeneration() {
+    const dataToUse = (typeof MENU_DATA !== 'undefined' && MENU_DATA) ? MENU_DATA : DEFAULT_MENU_DATA;
+
     // Create 6-Page 1920x1080 Landscape PDF
     const doc = new PDFDocument({ margin: 0, size: [1920, 1080], autoFirstPage: false });
     const outputFilePath = './Power_Shake_Cardapio.pdf';
@@ -118,9 +155,9 @@ async function startPdfGeneration() {
     let badgeY = 410;
     badges.forEach(b => {
         doc.save();
-        doc.roundedRect(80, badgeY, 440, 56, 14).fill('rgba(255,255,255,0.04)');
-        doc.strokeColor('rgba(139, 252, 3, 0.35)').lineWidth(1.5).roundedRect(80, badgeY, 440, 56, 14).stroke();
-        doc.fillColor('#ffffff').fontSize(16).font('Helvetica-Bold').text(b, 110, badgeY + 20);
+        doc.roundedRect(80, badgeY, 440, 58, 14).fill('rgba(255,255,255,0.04)');
+        doc.strokeColor('rgba(139, 252, 3, 0.35)').lineWidth(1.5).roundedRect(80, badgeY, 440, 58, 14).stroke();
+        doc.fillColor('#ffffff').fontSize(18).font('Helvetica-Bold').text(b, 104, badgeY + 19);
         doc.restore();
         badgeY += 76;
     });
@@ -136,7 +173,8 @@ async function startPdfGeneration() {
     doc.fillColor('#8bfc03').fontSize(44).font('Helvetica-Bold').text('SHAKES TRADICIONAIS', 80, 60);
     doc.fillColor('#9aa0a6').fontSize(16).font('Helvetica-Bold').text('FEITOS COM MUITO SABOR E PROTEÍNA DE VERDADE!', 80, 115);
 
-    const shakesList = [
+    const dbPage2Shakes = getCategoryItemsForPdf(dataToUse, ['estilo_shakes', 'milks', 'whey']);
+    const defaultShakes = [
         { name: 'CHOCOLATE', price: 'R$ 16,00' },
         { name: 'PAÇOCA', price: 'R$ 17,00' },
         { name: 'MORANGO', price: 'R$ 16,00' },
@@ -148,6 +186,7 @@ async function startPdfGeneration() {
         { name: 'CAFÉ', price: 'R$ 16,00' },
         { name: 'DOCE DE LEITE', price: 'R$ 17,00' }
     ];
+    const shakesList = (dbPage2Shakes.length > 0 ? dbPage2Shakes : defaultShakes).slice(0, 10);
 
     let shakeY = 175;
     for (let i = 0; i < shakesList.length; i += 2) {
@@ -158,7 +197,7 @@ async function startPdfGeneration() {
             doc.save();
             doc.roundedRect(80, shakeY, 440, 64, 12).fill('#0e121a');
             doc.strokeColor('rgba(139, 252, 3, 0.2)').lineWidth(1).roundedRect(80, shakeY, 440, 64, 12).stroke();
-            doc.fillColor('#ffffff').fontSize(18).font('Helvetica-Bold').text(s1.name, 105, shakeY + 23, { width: 240 });
+            doc.fillColor('#ffffff').fontSize(18).font('Helvetica-Bold').text(cleanText(s1.name), 105, shakeY + 23, { width: 240 });
             drawPricePill(s1.price, 410, shakeY + 18, 90, 28);
             doc.restore();
         }
@@ -167,7 +206,7 @@ async function startPdfGeneration() {
             doc.save();
             doc.roundedRect(550, shakeY, 440, 64, 12).fill('#0e121a');
             doc.strokeColor('rgba(139, 252, 3, 0.2)').lineWidth(1).roundedRect(550, shakeY, 440, 64, 12).stroke();
-            doc.fillColor('#ffffff').fontSize(18).font('Helvetica-Bold').text(s2.name, 575, shakeY + 23, { width: 240 });
+            doc.fillColor('#ffffff').fontSize(18).font('Helvetica-Bold').text(cleanText(s2.name), 575, shakeY + 23, { width: 240 });
             drawPricePill(s2.price, 880, shakeY + 18, 90, 28);
             doc.restore();
         }
@@ -192,16 +231,18 @@ async function startPdfGeneration() {
     doc.fillColor('#8bfc03').fontSize(44).font('Helvetica-Bold').text('FRUTAS SELECIONADAS', 80, 60);
     doc.fillColor('#9aa0a6').fontSize(16).font('Helvetica-Bold').text('MAIS FRESCOR PARA DEIXAR SEU SHAKE AINDA MELHOR!', 80, 115);
 
-    const fruitsList = [
-        { name: 'MORANGO', price: 'R$ 3,00' },
+    const dbPage3Fruits = getCategoryItemsForPdf(dataToUse, ['fruits']);
+    const defaultFruits = [
+        { name: 'MORANGO', price: 'R$ 4,50' },
         { name: 'BANANA', price: 'R$ 3,00' },
-        { name: 'KIWI', price: 'R$ 3,50' },
+        { name: 'MAMÃO', price: 'R$ 3,50' },
         { name: 'MANGA', price: 'R$ 3,50' },
-        { name: 'ABACAXI', price: 'R$ 3,00' },
-        { name: 'UVA', price: 'R$ 3,00' },
-        { name: 'MAÇÃ', price: 'R$ 3,00' },
-        { name: 'FRUTAS VERMELHAS', price: 'R$ 4,00' }
+        { name: 'GOIABA', price: 'R$ 4,00' },
+        { name: 'ABACATE', price: 'R$ 5,00' },
+        { name: 'MARACUJÁ', price: 'R$ 4,50' },
+        { name: 'FRUTAS VERMELHAS', price: 'R$ 6,00' }
     ];
+    const fruitsList = (dbPage3Fruits.length > 0 ? dbPage3Fruits : defaultFruits).slice(0, 10);
 
     let fruitY = 180;
     for (let i = 0; i < fruitsList.length; i += 2) {
@@ -212,7 +253,7 @@ async function startPdfGeneration() {
             doc.save();
             doc.roundedRect(80, fruitY, 440, 80, 14).fill('#0e121a');
             doc.strokeColor('rgba(255,255,255,0.08)').lineWidth(1).roundedRect(80, fruitY, 440, 80, 14).stroke();
-            doc.fillColor('#ffffff').fontSize(20).font('Helvetica-Bold').text(f1.name, 110, fruitY + 30, { width: 240 });
+            doc.fillColor('#ffffff').fontSize(20).font('Helvetica-Bold').text(cleanText(f1.name), 110, fruitY + 30, { width: 240 });
             drawPricePill(f1.price, 410, fruitY + 26, 90, 28);
             doc.restore();
         }
@@ -221,7 +262,7 @@ async function startPdfGeneration() {
             doc.save();
             doc.roundedRect(550, fruitY, 440, 80, 14).fill('#0e121a');
             doc.strokeColor('rgba(255,255,255,0.08)').lineWidth(1).roundedRect(550, fruitY, 440, 80, 14).stroke();
-            doc.fillColor('#ffffff').fontSize(20).font('Helvetica-Bold').text(f2.name, 580, fruitY + 30, { width: 240 });
+            doc.fillColor('#ffffff').fontSize(20).font('Helvetica-Bold').text(cleanText(f2.name), 580, fruitY + 30, { width: 240 });
             drawPricePill(f2.price, 880, fruitY + 26, 90, 28);
             doc.restore();
         }
@@ -246,18 +287,20 @@ async function startPdfGeneration() {
     doc.fillColor('#8bfc03').fontSize(44).font('Helvetica-Bold').text('COMPLEMENTOS & ADICIONAIS', 80, 60);
     doc.fillColor('#9aa0a6').fontSize(16).font('Helvetica-Bold').text('TURBINE SEU SHAKE DO SEU JEITO!', 80, 115);
 
-    const complementList = [
+    const dbPage4Complements = getCategoryItemsForPdf(dataToUse, ['toppings', 'peanutButters', 'supplements']);
+    const defaultComplements = [
         { name: 'NUTELLA', price: 'R$ 4,00' },
         { name: 'CHOCOLATE 70%', price: 'R$ 3,00' },
         { name: 'OREO', price: 'R$ 3,00' },
-        { name: 'FLOCOS DE ARROZ', price: 'R$ 2,00' },
+        { name: 'PASTA DR. PEANUT', price: 'R$ 5,90' },
         { name: 'PASTA DE AMENDOIM', price: 'R$ 3,00' },
         { name: 'COCO RALADO', price: 'R$ 2,00' },
         { name: 'DOCE DE LEITE', price: 'R$ 3,00' },
-        { name: 'WHEY PROTEIN', price: 'R$ 5,00' },
+        { name: 'WHEY PROTEIN', price: 'R$ 15,90' },
         { name: 'GRANOLA', price: 'R$ 3,00' },
         { name: 'LEITE EM PÓ', price: 'R$ 2,00' }
     ];
+    const complementList = (dbPage4Complements.length > 0 ? dbPage4Complements : defaultComplements).slice(0, 10);
 
     let compY = 175;
     for (let i = 0; i < complementList.length; i += 2) {
