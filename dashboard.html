@@ -455,9 +455,12 @@
                 <div class="form-section">
                     <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 15px; margin-bottom: 20px;">
                         <div>
-                            <h3 class="form-section-title" style="margin-bottom: 5px;">Exportador & Criador de Painel Digital 1920x1080 (6 Páginas)</h3>
+                            <h3 class="form-section-title" style="margin-bottom: 5px; display: flex; align-items: center; gap: 10px;">
+                                <ion-icon name="color-palette-outline" style="color: var(--accent);"></ion-icon>
+                                Studio de Personalização do Painel Digital (1920x1080)
+                            </h3>
                             <p style="color: var(--text-secondary); font-size: 0.95rem; margin: 0;">
-                                Cada seção possui sua própria página 1920x1080 completa com fotos HD em alta definição, layout limpo e <strong>sem nenhum emoji</strong>.
+                                Personalize cores, imagens, preços e textos de cada uma das 6 páginas do cardápio em tempo real com exportação HD.
                             </p>
                         </div>
                         <div style="display: flex; gap: 10px; flex-wrap: wrap;">
@@ -467,33 +470,93 @@
                             </button>
                             <button class="add-item-btn" onclick="exportBoardToPdf()" style="background: var(--accent); color: #000; font-weight: 700; margin: 0; box-shadow: 0 0 15px rgba(139, 252, 3, 0.3);">
                                 <ion-icon name="download-outline"></ion-icon>
-                                Baixar PDF HD (6 Páginas Completa)
+                                Baixar PDF HD (6 Páginas)
                             </button>
                         </div>
                     </div>
 
-                    <!-- Customizer Controls Toolbar -->
-                    <div style="background: rgba(0,0,0,0.3); border: 1px solid var(--border-card); padding: 18px; border-radius: 12px; margin-bottom: 25px;">
-                        <h4 style="font-size: 0.95rem; color: var(--accent); margin-bottom: 12px; display: flex; align-items: center; gap: 8px;">
-                            <ion-icon name="options-outline"></ion-icon> Personalizar Páginas & Fotos
-                        </h4>
-                        <div class="grid-2" style="gap: 15px;">
-                            <div class="form-group" style="margin: 0;">
-                                <label style="font-size: 0.82rem;">Foto Destaque do Shake (Hero)</label>
-                                <input type="file" id="board-hero-photo" accept="image/*" class="form-control" onchange="updateBoardHeroPhoto(this)">
+                    <!-- ADVANCED CUSTOMIZER STUDIO TOOLBAR -->
+                    <div style="background: rgba(0,0,0,0.4); border: 1px solid var(--border-card); padding: 22px; border-radius: 16px; margin-bottom: 25px; box-shadow: 0 8px 24px rgba(0,0,0,0.3);">
+                        
+                        <!-- Filter Page Tabs -->
+                        <div style="display: flex; align-items: center; gap: 10px; overflow-x: auto; padding-bottom: 12px; margin-bottom: 20px; border-bottom: 1px solid rgba(255,255,255,0.08);">
+                            <span style="font-size: 0.85rem; font-weight: 700; color: var(--text-muted); white-space: nowrap; margin-right: 5px;">Filtrar Página:</span>
+                            <button type="button" class="board-filter-btn active" onclick="filterBoardPage('all', this)">Todas as 6 Páginas</button>
+                            <button type="button" class="board-filter-btn" onclick="filterBoardPage('1', this)">Pág 1: Capa</button>
+                            <button type="button" class="board-filter-btn" onclick="filterBoardPage('2', this)">Pág 2: Shakes</button>
+                            <button type="button" class="board-filter-btn" onclick="filterBoardPage('3', this)">Pág 3: Frutas</button>
+                            <button type="button" class="board-filter-btn" onclick="filterBoardPage('4', this)">Pág 4: Complementos</button>
+                            <button type="button" class="board-filter-btn" onclick="filterBoardPage('5', this)">Pág 5: Combos</button>
+                            <button type="button" class="board-filter-btn" onclick="filterBoardPage('6', this)">Pág 6: Contato</button>
+                        </div>
+
+                        <!-- 3-Column Customization Options -->
+                        <div class="grid-3" style="gap: 20px;">
+                            <!-- Column 1: Cores & Tema -->
+                            <div style="background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.05); padding: 16px; border-radius: 12px;">
+                                <h5 style="color: var(--accent); font-size: 0.9rem; margin-bottom: 14px; display: flex; align-items: center; gap: 8px;">
+                                    <ion-icon name="color-fill-outline"></ion-icon> Cores & Estilo Visual
+                                </h5>
+                                <div class="form-group" style="margin-bottom: 12px;">
+                                    <label style="font-size: 0.8rem;">Cor Neon de Destaque</label>
+                                    <div style="display: flex; gap: 8px; margin-top: 6px;">
+                                        <button type="button" onclick="setBoardAccentColor('#8bfc03', this)" class="color-dot active" style="background: #8bfc03;" title="Verde Neon"></button>
+                                        <button type="button" onclick="setBoardAccentColor('#00f3ff', this)" class="color-dot" style="background: #00f3ff;" title="Azul Ciano"></button>
+                                        <button type="button" onclick="setBoardAccentColor('#ffd700', this)" class="color-dot" style="background: #ffd700;" title="Amarelo Ouro"></button>
+                                        <button type="button" onclick="setBoardAccentColor('#ff6b00', this)" class="color-dot" style="background: #ff6b00;" title="Laranja Turbo"></button>
+                                        <button type="button" onclick="setBoardAccentColor('#ff007f', this)" class="color-dot" style="background: #ff007f;" title="Rosa Choque"></button>
+                                    </div>
+                                </div>
+                                <div class="form-group" style="margin: 0;">
+                                    <label style="font-size: 0.8rem;">Fundo do Painel</label>
+                                    <select id="board-bg-style" class="form-control" style="font-size: 0.85rem;" onchange="renderBoardPreview()">
+                                        <option value="#07090e">Dark Obsidian (#07090e)</option>
+                                        <option value="#000000">Black Carbon (#000000)</option>
+                                        <option value="#0b132b">Deep Navy (#0b132b)</option>
+                                    </select>
+                                </div>
                             </div>
-                            <div class="form-group" style="margin: 0;">
-                                <label style="font-size: 0.82rem;">Preço Combo Power (R$)</label>
-                                <input type="text" id="board-combo-power-price" value="R$ 24,90" class="form-control" oninput="renderBoardPreview()">
+
+                            <!-- Column 2: Fotos Personalizadas das Páginas -->
+                            <div style="background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.05); padding: 16px; border-radius: 12px;">
+                                <h5 style="color: var(--accent); font-size: 0.9rem; margin-bottom: 14px; display: flex; align-items: center; gap: 8px;">
+                                    <ion-icon name="images-outline"></ion-icon> Upload de Fotos por Página
+                                </h5>
+                                <div class="form-group" style="margin-bottom: 10px;">
+                                    <label style="font-size: 0.78rem;">Foto Pág 1 & 6 (Capa/Contato)</label>
+                                    <input type="file" accept="image/*" class="form-control" style="font-size: 0.78rem; padding: 6px;" onchange="updateBoardPhoto('hero', this)">
+                                </div>
+                                <div class="form-group" style="margin-bottom: 10px;">
+                                    <label style="font-size: 0.78rem;">Foto Pág 3 (Frutas Selecionadas)</label>
+                                    <input type="file" accept="image/*" class="form-control" style="font-size: 0.78rem; padding: 6px;" onchange="updateBoardPhoto('fruits', this)">
+                                </div>
+                                <div class="form-group" style="margin: 0;">
+                                    <label style="font-size: 0.78rem;">Foto Pág 4 & 5 (Complementos/Combos)</label>
+                                    <input type="file" accept="image/*" class="form-control" style="font-size: 0.78rem; padding: 6px;" onchange="updateBoardPhoto('combos', this)">
+                                </div>
                             </div>
-                            <div class="form-group" style="margin: 0;">
-                                <label style="font-size: 0.82rem;">Preço Combo Turbo (R$)</label>
-                                <input type="text" id="board-combo-turbo-price" value="R$ 29,90" class="form-control" oninput="renderBoardPreview()">
-                            </div>
-                            <div class="form-group" style="margin: 0;">
-                                <label style="font-size: 0.82rem;">Sincronizar Produtos do Cardápio</label>
-                                <button type="button" class="add-item-btn" onclick="syncBoardFromMenuData()" style="width: 100%; margin: 0; background: rgba(139, 252, 3, 0.1); border: 1px solid rgba(139, 252, 3, 0.25); color: var(--accent); height: 42px;">
-                                    <ion-icon name="sync-outline"></ion-icon> Sincronizar Preços & Itens
+
+                            <!-- Column 3: Preços & Textos Promocionais -->
+                            <div style="background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.05); padding: 16px; border-radius: 12px;">
+                                <h5 style="color: var(--accent); font-size: 0.9rem; margin-bottom: 14px; display: flex; align-items: center; gap: 8px;">
+                                    <ion-icon name="create-outline"></ion-icon> Preços & Informações
+                                </h5>
+                                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 10px;">
+                                    <div class="form-group" style="margin: 0;">
+                                        <label style="font-size: 0.78rem;">Combo Power</label>
+                                        <input type="text" id="board-combo-power-price" value="R$ 24,90" class="form-control" style="font-size: 0.82rem;" oninput="renderBoardPreview()">
+                                    </div>
+                                    <div class="form-group" style="margin: 0;">
+                                        <label style="font-size: 0.78rem;">Combo Turbo</label>
+                                        <input type="text" id="board-combo-turbo-price" value="R$ 29,90" class="form-control" style="font-size: 0.82rem;" oninput="renderBoardPreview()">
+                                    </div>
+                                </div>
+                                <div class="form-group" style="margin-bottom: 10px;">
+                                    <label style="font-size: 0.78rem;">Link do QR Code (Cardápio Digital)</label>
+                                    <input type="text" id="board-qr-url" value="https://power-shake-menu.vercel.app" class="form-control" style="font-size: 0.82rem;" oninput="renderBoardPreview()">
+                                </div>
+                                <button type="button" class="add-item-btn" onclick="syncBoardFromMenuData()" style="width: 100%; margin: 0; background: rgba(139, 252, 3, 0.1); border: 1px solid rgba(139, 252, 3, 0.25); color: var(--accent); height: 38px; font-size: 0.82rem;">
+                                    <ion-icon name="sync-outline"></ion-icon> Sincronizar Preços do Cardápio
                                 </button>
                             </div>
                         </div>
