@@ -61,6 +61,37 @@ async function handleAdminLogout() {
     stopOrdersPolling();
     showAdminAuth(true, 'Sessão encerrada.');
 }
+
+function readStoredJson(key, fallback) {
+    try {
+        const saved = localStorage.getItem(key);
+        if (!saved) return fallback;
+        return JSON.parse(saved);
+    } catch (error) {
+        console.warn(`Dados locais inválidos em "${key}" foram ignorados.`, error);
+        try { localStorage.removeItem(key); } catch {}
+        return fallback;
+    }
+}
+
+function bindAdminAuth() {
+    const form = document.getElementById('admin-auth-form');
+    const logoutButton = document.getElementById('admin-logout-btn');
+
+    if (form && form.dataset.authBound !== 'true') {
+        form.dataset.authBound = 'true';
+        form.addEventListener('submit', handleAdminLogin);
+    }
+
+    if (logoutButton && logoutButton.dataset.authBound !== 'true') {
+        logoutButton.dataset.authBound = 'true';
+        logoutButton.addEventListener('click', handleAdminLogout);
+    }
+}
+
+// The script is loaded at the end of the page, so the login can be bound
+// before the heavier dashboard initialization runs.
+bindAdminAuth();
 // Power Shake Default Database (List of Categories Schema)
 const DEFAULT_MENU_DATA = {
     submenus: [
@@ -310,8 +341,8 @@ function sanitizeMenuData(data) {
 }
 
 // Database State
-let MENU_DATA = sanitizeMenuData(JSON.parse(localStorage.getItem('power_shake_menu_data')));
-let SETTINGS = JSON.parse(localStorage.getItem('power_shake_settings')) || DEFAULT_SETTINGS;
+let MENU_DATA = sanitizeMenuData(readStoredJson('power_shake_menu_data', null));
+let SETTINGS = readStoredJson('power_shake_settings', null) || DEFAULT_SETTINGS;
 
 MENU_DATA.categories.forEach(cat => {
     if (!cat.submenu) {
@@ -3342,8 +3373,7 @@ window.exportBoardToPng = exportBoardToPng;
 
 // Run initializations
 document.addEventListener('DOMContentLoaded', async () => {
-    document.getElementById('admin-auth-form')?.addEventListener('submit', handleAdminLogin);
-    document.getElementById('admin-logout-btn')?.addEventListener('click', handleAdminLogout);
+    bindAdminAuth();
     if (await checkAdminSession()) {
         dashboardInitialized = true;
         await initDashboard();
