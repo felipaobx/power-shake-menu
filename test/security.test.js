@@ -1,7 +1,7 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
 
-const { hashPin, mergeAuthUsers, verifyPin } = require('../api/_auth');
+const { SESSION_TTL_SECONDS, hashPin, mergeAuthUsers, setSessionCookie, verifyPin } = require('../api/_auth');
 const { requireMethod, requireSameOrigin } = require('../api/_security');
 const { normalizeOrder, normalizeStatus } = require('../api/_validation');
 
@@ -16,6 +16,14 @@ function responseMock() {
     };
 }
 
+test('sessão administrativa permanece válida por 30 dias', () => {
+    const res = responseMock();
+    setSessionCookie({ headers: { 'x-forwarded-proto': 'https' } }, res, 'token-seguro');
+    assert.equal(SESSION_TTL_SECONDS, 30 * 24 * 60 * 60);
+    assert.match(res.headers['Set-Cookie'], /Max-Age=2592000/);
+    assert.match(res.headers['Set-Cookie'], /HttpOnly/);
+    assert.match(res.headers['Set-Cookie'], /Secure/);
+});
 test('PINs são armazenados com salt e hash', () => {
     const stored = hashPin('739184');
     assert.notEqual(stored.hash, '739184');

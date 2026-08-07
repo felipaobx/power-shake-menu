@@ -32,15 +32,20 @@ async function handleAdminLogin(event) {
     event.preventDefault();
     const input = document.getElementById('admin-pin-input');
     const button = event.currentTarget.querySelector('button[type="submit"]');
+    const buttonLabel = button?.querySelector('span');
+    const originalLabel = buttonLabel?.textContent || 'Entrar no painel';
     button.disabled = true;
+    if (buttonLabel) buttonLabel.textContent = 'Entrando...';
     showAdminAuth(true, '');
     try {
         const response = await fetch('/api/auth-login', {
             method: 'POST',
+            credentials: 'same-origin',
+            cache: 'no-store',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ pin: input.value })
         });
-        const data = await response.json();
+        const data = await response.json().catch(() => ({}));
         if (!response.ok || data.user?.role !== 'admin') throw new Error(data.error || 'Acesso não autorizado.');
         input.value = '';
         showAdminAuth(false);
@@ -53,6 +58,7 @@ async function handleAdminLogin(event) {
         showAdminAuth(true, error.message || 'Não foi possível entrar.');
     } finally {
         button.disabled = false;
+        if (buttonLabel) buttonLabel.textContent = originalLabel;
     }
 }
 
@@ -77,10 +83,24 @@ function readStoredJson(key, fallback) {
 function bindAdminAuth() {
     const form = document.getElementById('admin-auth-form');
     const logoutButton = document.getElementById('admin-logout-btn');
+    const pinInput = document.getElementById('admin-pin-input');
+    const pinToggle = document.getElementById('admin-pin-toggle');
 
     if (form && form.dataset.authBound !== 'true') {
         form.dataset.authBound = 'true';
         form.addEventListener('submit', handleAdminLogin);
+    }
+
+    if (pinToggle && pinToggle.dataset.authBound !== 'true') {
+        pinToggle.dataset.authBound = 'true';
+        pinToggle.addEventListener('click', () => {
+            const showing = pinInput?.type === 'text';
+            if (pinInput) pinInput.type = showing ? 'password' : 'text';
+            pinToggle.setAttribute('aria-label', showing ? 'Mostrar PIN' : 'Ocultar PIN');
+            pinToggle.setAttribute('title', showing ? 'Mostrar PIN' : 'Ocultar PIN');
+            pinToggle.innerHTML = `<ion-icon name="${showing ? 'eye-outline' : 'eye-off-outline'}"></ion-icon>`;
+            pinInput?.focus();
+        });
     }
 
     if (logoutButton && logoutButton.dataset.authBound !== 'true') {
@@ -357,39 +377,58 @@ MENU_DATA.categories.forEach(cat => {
 let uploadedProductImageBase64 = '';
 let uploadedCategoryImageBase64 = '';
 
-// Centralized save function for MENU_DATA and SETTINGS
-async function saveMenuDataAndSettings(showNotification = false) {
-    const { users, ...publicSettings } = SETTINGS;
-    localStorage.setItem('power_shake_menu_data', JSON.stringify(MENU_DATA));
-    localStorage.setItem('power_shake_settings', JSON.stringify(publicSettings));
+// Centralized, serialized save function for MENU_DATA and SETTINGS.
+// Local cache and open menu tabs are updated only after the cloud confirms the write.
+let menuSaveQueue = Promise.resolve();
 
-    try {
-        if ('BroadcastChannel' in window) {
-            const channel = new BroadcastChannel('power_shake_channel');
-            channel.postMessage({ type: 'MENU_UPDATED', menuData: MENU_DATA, settings: publicSettings });
-            channel.close();
-        }
-    } catch {}
+function cloneSerializable(value) {
+    return JSON.parse(JSON.stringify(value));
+}
 
+async function performMenuSave(menuSnapshot, settingsSnapshot, showNotification) {
     try {
         const res = await fetch('/api/save-menu', {
             method: 'POST',
+            credentials: 'same-origin',
+            cache: 'no-store',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ menuData: MENU_DATA, settings: SETTINGS })
+            body: JSON.stringify({ menuData: menuSnapshot, settings: settingsSnapshot })
         });
-        const data = await res.json();
+        const data = await res.json().catch(() => ({}));
         if (res.status === 401) {
-            showAdminAuth(true, 'Sua sessão expirou. Entre novamente.');
+            showAdminAuth(true, 'Sua sessão expirou. Entre novamente para salvar.');
+            if (showNotification) showToast('Alteração não salva. Entre novamente e repita a ação.', 'error');
             return false;
         }
         if (!res.ok || !data.success) throw new Error(data.error || 'Falha ao salvar.');
+
         if (Array.isArray(data.users)) SETTINGS.users = data.users;
-        if (showNotification) showToast('Alterações salvas com segurança na nuvem.', 'success');
+        const { users, ...publicSettings } = settingsSnapshot;
+        localStorage.setItem('power_shake_menu_data', JSON.stringify(menuSnapshot));
+        localStorage.setItem('power_shake_settings', JSON.stringify(publicSettings));
+
+        try {
+            if ('BroadcastChannel' in window) {
+                const channel = new BroadcastChannel('power_shake_channel');
+                channel.postMessage({ type: 'MENU_UPDATED', menuData: menuSnapshot, settings: publicSettings });
+                channel.close();
+            }
+        } catch {}
+
+        if (showNotification) showToast('Alterações salvas na nuvem e publicadas no cardápio.', 'success');
         return true;
     } catch (error) {
-        if (showNotification) showToast(error.message || 'Não foi possível salvar.', 'error');
+        showToast(error.message || 'Não foi possível salvar. A alteração não foi publicada.', 'error');
         return false;
     }
+}
+
+function saveMenuDataAndSettings(showNotification = false) {
+    const menuSnapshot = cloneSerializable(MENU_DATA);
+    const settingsSnapshot = cloneSerializable(SETTINGS);
+    const operation = () => performMenuSave(menuSnapshot, settingsSnapshot, showNotification);
+    menuSaveQueue = menuSaveQueue.then(operation, operation);
+    return menuSaveQueue;
 }
 window.saveMenuDataAndSettings = saveMenuDataAndSettings;
 
@@ -900,7 +939,7 @@ window.startInlineEdit = function(element, categoryId, itemId, field) {
     input.focus();
     input.select();
 
-    const saveChanges = () => {
+    const saveChanges = async () => {
         let newVal = input.value.trim();
         if (field === 'price') {
             newVal = parseFloat(newVal) || 0;
@@ -923,7 +962,7 @@ window.startInlineEdit = function(element, categoryId, itemId, field) {
             item.name = newVal;
             element.innerHTML = newVal;
         }
-        localStorage.setItem('power_shake_menu_data', JSON.stringify(MENU_DATA));
+        await saveMenuDataAndSettings(true);
     };
 
     input.addEventListener('blur', saveChanges);
@@ -946,17 +985,23 @@ window.startInlineEdit = function(element, categoryId, itemId, field) {
     });
 };
 
-window.toggleItemAvailability = function(categoryId, itemId, checkbox) {
+window.toggleItemAvailability = async function(categoryId, itemId, checkbox) {
     const category = MENU_DATA.categories.find(c => c.id === categoryId);
     if (!category) return;
     const item = category.items.find(i => i.id === itemId);
     if (!item) return;
 
+    const previousValue = Boolean(item.outOfStock);
     item.outOfStock = !checkbox.checked;
-    localStorage.setItem('power_shake_menu_data', JSON.stringify(MENU_DATA));
-    
+    const saved = await saveMenuDataAndSettings(false);
+    if (!saved) {
+        item.outOfStock = previousValue;
+        checkbox.checked = !previousValue;
+        return;
+    }
+
     const statusText = checkbox.checked ? 'disponível' : 'indisponível (oculto no menu)';
-    showToast(`O produto "${item.name}" foi marcado como ${statusText}.`, 'success');
+    showToast(`O produto "${item.name}" foi marcado como ${statusText} e publicado.`, 'success');
 };
 
 // Media type filter handler inside product form modal
@@ -1271,7 +1316,7 @@ function setupCategoryActions() {
     
     // Save category (Create or Edit)
     if (dom.catForm) {
-        dom.catForm.addEventListener('submit', function(e) {
+        dom.catForm.addEventListener('submit', async function(e) {
             e.preventDefault();
             const id = dom.editCategoryId ? dom.editCategoryId.value : '';
             const name = dom.catName ? dom.catName.value.trim() : '';
@@ -1286,59 +1331,49 @@ function setupCategoryActions() {
             const hidden = dom.catHiddenInput ? (dom.catHiddenInput.value === 'true') : false;
             const submenu = document.getElementById('cat-submenu-input')?.value || '';
             const mediaType = dom.catMediaType ? dom.catMediaType.value : 'icon';
-            
             const icon = mediaType === 'icon' && dom.catIcon ? dom.catIcon.value.trim() : '';
             const image = mediaType === 'image' ? uploadedCategoryImageBase64 : '';
+            const previousMenu = cloneSerializable(MENU_DATA);
+            const submitButton = dom.catForm.querySelector('button[type="submit"]');
+            if (submitButton) submitButton.disabled = true;
 
+            let savedCategoryId = id;
             if (id) {
-                // EDIT CATEGORY
                 const category = MENU_DATA.categories.find(c => c.id === id);
-                if (category) {
-                    category.name = name;
-                    category.subtitle = subtitle;
-                    category.isStep = position === 'step';
-                    category.selectionType = selection;
-                    category.required = required;
-                    category.hidden = hidden;
-                    category.submenu = submenu;
-                    category.icon = icon;
-                    category.image = image;
+                if (!category) {
+                    showToast('Categoria não encontrada.', 'warning');
+                    if (submitButton) submitButton.disabled = false;
+                    return;
                 }
-                closeCatModal();
-                populateCategoryDropdown(id);
-                renderItemsTable();
-                showToast(`Categoria "${name}" atualizada com sucesso!`, 'success');
+                Object.assign(category, {
+                    name, subtitle, isStep: position === 'step', selectionType: selection,
+                    required, hidden, submenu, icon, image
+                });
             } else {
-                // CREATE CATEGORY
-                const newCatId = 'cat_' + Date.now();
-                const newCategoryObj = {
-                    id: newCatId,
-                    name,
-                    subtitle,
-                    isStep: position === 'step',
-                    selectionType: selection,
-                    required,
-                    hidden,
-                    submenu,
-                    icon,
-                    image,
-                    items: []
-                };
-
-                MENU_DATA.categories.push(newCategoryObj);
-                closeCatModal();
-                populateCategoryDropdown(newCatId);
-                renderItemsTable();
-                showToast(`Categoria "${name}" criada com sucesso!`, 'success');
+                savedCategoryId = 'cat_' + Date.now();
+                MENU_DATA.categories.push({
+                    id: savedCategoryId, name, subtitle, isStep: position === 'step',
+                    selectionType: selection, required, hidden, submenu, icon, image, items: []
+                });
             }
-            saveMenuDataAndSettings(true);
+
+            const saved = await saveMenuDataAndSettings(false);
+            if (submitButton) submitButton.disabled = false;
+            if (!saved) {
+                MENU_DATA = previousMenu;
+                return;
+            }
+
+            closeCatModal();
+            populateCategoryDropdown(savedCategoryId);
+            renderItemsTable();
             renderCardapioTab();
+            showToast(`Categoria "${name}" ${id ? 'atualizada' : 'criada'} e publicada com sucesso!`, 'success');
         });
     }
-
     // Delete category action
     if (dom.deleteCategoryBtn) {
-        dom.deleteCategoryBtn.addEventListener('click', function() {
+        dom.deleteCategoryBtn.addEventListener('click', async function() {
             const catId = dom.categorySelect ? dom.categorySelect.value : null;
             if (!catId) {
                 showToast('Nenhuma categoria selecionada para excluir.', 'warning');
@@ -1352,12 +1387,22 @@ function setupCategoryActions() {
             }
 
             if (confirm(`Tem certeza que deseja excluir permanentemente a categoria "${category.name}" e todos os seus produtos cadastrados?`)) {
+                const previousMenu = cloneSerializable(MENU_DATA);
                 MENU_DATA.categories = MENU_DATA.categories.filter(c => c.id !== catId);
+                dom.deleteCategoryBtn.disabled = true;
+                const saved = await saveMenuDataAndSettings(false);
+                dom.deleteCategoryBtn.disabled = false;
+                if (!saved) {
+                    MENU_DATA = previousMenu;
+                    populateCategoryDropdown(catId);
+                    renderItemsTable();
+                    return;
+                }
                 const nextCatId = MENU_DATA.categories.length > 0 ? MENU_DATA.categories[0].id : '';
                 populateCategoryDropdown(nextCatId);
                 renderItemsTable();
-                saveMenuDataAndSettings(true);
-                showToast(`Categoria "${category.name}" foi excluída com sucesso!`, 'success');
+                renderCardapioTab();
+                showToast(`Categoria "${category.name}" foi excluída da nuvem e do cardápio.`, 'success');
             }
         });
     }
@@ -1407,7 +1452,7 @@ window.closeSubmenuEditor = function() {
     if (modal) modal.style.display = 'none';
 };
 
-window.saveSubmenuFromModal = function() {
+window.saveSubmenuFromModal = async function() {
     const id = document.getElementById('edit-sub-id').value;
     const name = document.getElementById('sub-name-field').value.trim();
     const subtitle = document.getElementById('sub-subtitle-field').value.trim();
@@ -1421,7 +1466,7 @@ window.saveSubmenuFromModal = function() {
     }
 
     if (!MENU_DATA.submenus) MENU_DATA.submenus = [...DEFAULT_MENU_DATA.submenus];
-
+    const previousMenu = cloneSerializable(MENU_DATA);
     if (id) {
         const sub = MENU_DATA.submenus.find(s => s.id === id);
         if (sub) {
@@ -1431,32 +1476,35 @@ window.saveSubmenuFromModal = function() {
             sub.hidden = hidden;
             if (uploadedSubmenuImageBase64) sub.image = uploadedSubmenuImageBase64;
         }
-        showToast(`Submenu "${name}" atualizado com sucesso!`, 'success');
     } else {
-        const newSubId = 'sub_' + Date.now();
         MENU_DATA.submenus.push({
-            id: newSubId,
-            name: name,
-            subtitle: subtitle,
-            icon: icon || '📁',
-            hidden: hidden,
-            image: uploadedSubmenuImageBase64 || ''
+            id: 'sub_' + Date.now(), name, subtitle, icon: icon || '📁',
+            hidden, image: uploadedSubmenuImageBase64 || ''
         });
-        showToast(`Submenu "${name}" criado com sucesso!`, 'success');
     }
 
-    saveMenuDataAndSettings();
+    const saved = await saveMenuDataAndSettings(false);
+    if (!saved) {
+        MENU_DATA = previousMenu;
+        return;
+    }
     closeSubmenuEditor();
     renderSubmenusTab();
     renderCardapioTab();
     populateCategoryDropdown();
+    showToast(`Submenu "${name}" ${id ? 'atualizado' : 'criado'} e publicado com sucesso!`, 'success');
 };
-
-window.toggleSubmenuVisibility = function(subId) {
+window.toggleSubmenuVisibility = async function(subId) {
     const sub = MENU_DATA.submenus.find(s => s.id === subId);
     if (sub) {
+        const previousHidden = Boolean(sub.hidden);
         sub.hidden = !sub.hidden;
-        saveMenuDataAndSettings();
+        const saved = await saveMenuDataAndSettings(false);
+        if (!saved) {
+            sub.hidden = previousHidden;
+            renderSubmenusTab();
+            return;
+        }
         renderSubmenusTab();
         renderCardapioTab();
         populateCategoryDropdown();
@@ -1464,44 +1512,50 @@ window.toggleSubmenuVisibility = function(subId) {
         showToast(`Submenu "${sub.name}" foi marcado como ${statusText}.`, 'success');
     }
 };
-
 window.editSubmenu = function(subId) {
     openSubmenuEditor(subId);
 };
 
-window.deleteSubmenu = function(subId) {
+window.deleteSubmenu = async function(subId) {
     const sub = MENU_DATA.submenus.find(s => s.id === subId);
     if (!sub) return;
 
-    if (confirm(`Tem certeza que deseja excluir o Submenu "${sub.name}"? As categorias pertencentes a ele serão desvinculadas.`)) {
-        const fallbackSub = MENU_DATA.submenus.find(s => s.id !== 'all' && s.id !== subId)?.id || '';
+    if (confirm(`Tem certeza que deseja excluir o Submenu "${sub.name}"? As categorias pertencentes a ele serão movidas para a página principal.`)) {
+        const previousMenu = cloneSerializable(MENU_DATA);
         MENU_DATA.categories.forEach(c => {
-            if (c.submenu === subId) {
-                c.submenu = fallbackSub;
-            }
+            if (c.submenu === subId) c.submenu = '';
         });
         MENU_DATA.submenus = MENU_DATA.submenus.filter(s => s.id !== subId);
+        const saved = await saveMenuDataAndSettings(false);
+        if (!saved) {
+            MENU_DATA = previousMenu;
+            renderSubmenusTab();
+            renderCardapioTab();
+            return;
+        }
         closeSubmenuEditor();
         renderSubmenusTab();
         renderCardapioTab();
         populateCategoryDropdown();
-        saveMenuDataAndSettings(true);
-        showToast(`Submenu "${sub.name}" foi excluído com sucesso.`, 'success');
+        showToast(`Submenu "${sub.name}" foi excluído da nuvem. As categorias continuam na página principal.`, 'success');
     }
 };
-
-window.assignCategoryToSubmenu = function(catId, targetSubmenuId) {
+window.assignCategoryToSubmenu = async function(catId, targetSubmenuId) {
     const category = MENU_DATA.categories.find(c => c.id === catId);
     if (category) {
+        const previousSubmenu = category.submenu;
         category.submenu = targetSubmenuId;
-        saveMenuDataAndSettings();
+        const saved = await saveMenuDataAndSettings(false);
+        if (!saved) {
+            category.submenu = previousSubmenu;
+            return;
+        }
         renderSubmenusTab();
         renderCardapioTab();
         populateCategoryDropdown();
-        showToast(`Categoria "${category.name}" vinculada ao submenu.`, 'success');
+        showToast(`Categoria "${category.name}" vinculada e publicada.`, 'success');
     }
 };
-
 function renderSubmenusTab() {
     const grid = document.getElementById('submenus-dashboard-grid');
     if (!grid) return;
@@ -1840,36 +1894,47 @@ window.openCategoryModalDirect = function(submenuId = null, catId = null) {
     }
 };
 
-window.deleteCategoryDirect = function(catId) {
+window.deleteCategoryDirect = async function(catId) {
     const category = MENU_DATA.categories.find(c => c.id === catId);
     if (!category) return;
 
     if (confirm(`Tem certeza que deseja excluir permanentemente a categoria "${category.name}" e todos os seus produtos cadastrados?`)) {
+        const previousMenu = cloneSerializable(MENU_DATA);
         MENU_DATA.categories = MENU_DATA.categories.filter(c => c.id !== catId);
-        saveMenuDataAndSettings(true);
+        const saved = await saveMenuDataAndSettings(false);
+        if (!saved) {
+            MENU_DATA = previousMenu;
+            renderCardapioTab();
+            return;
+        }
         renderCardapioTab();
-        showToast(`Categoria "${category.name}" foi excluída com sucesso!`, 'success');
+        populateCategoryDropdown();
+        showToast(`Categoria "${category.name}" foi excluída da nuvem e do cardápio.`, 'success');
     }
 };
-
 window.openItemEditorDirect = function(catId = null, itemId = null) {
     openItemEditor(itemId, catId);
 };
 
-window.deleteMenuItemDirect = function(catId, itemId) {
+window.deleteMenuItemDirect = async function(catId, itemId) {
     const category = MENU_DATA.categories.find(c => c.id === catId);
     if (!category) return;
 
     if (confirm('Tem certeza que deseja remover este produto de forma permanente?')) {
+        const previousItems = cloneSerializable(category.items || []);
         const item = category.items ? category.items.find(i => i.id === itemId) : null;
         const name = item ? item.name : '';
-        category.items = category.items.filter(i => i.id !== itemId);
-        saveMenuDataAndSettings(true);
+        category.items = (category.items || []).filter(i => i.id !== itemId);
+        const saved = await saveMenuDataAndSettings(false);
+        if (!saved) {
+            category.items = previousItems;
+            renderCardapioTab();
+            return;
+        }
         renderCardapioTab();
-        showToast(`Item ${name ? '"' + name + '" ' : ''}removido com sucesso.`, 'success');
+        showToast(`Item ${name ? '"' + name + '" ' : ''}removido da nuvem e do cardápio.`, 'success');
     }
 };
-
 window.moveItemUpDirect = function(catId, itemId) {
     const category = MENU_DATA.categories.find(c => c.id === catId);
     if (!category || !category.items) return;
@@ -1926,7 +1991,7 @@ function setupSubmenuManagerActions() {
 
     const addSubForm = document.getElementById('add-submenu-form');
     if (addSubForm) {
-        addSubForm.addEventListener('submit', (e) => {
+        addSubForm.addEventListener('submit', async (e) => {
             e.preventDefault();
             const nameIn = document.getElementById('new-submenu-name');
             const iconIn = document.getElementById('new-submenu-icon');
@@ -1936,18 +2001,20 @@ function setupSubmenuManagerActions() {
             }
             const name = nameIn.value.trim();
             const icon = iconIn ? iconIn.value.trim() : '';
-            const newSubId = 'sub_' + Date.now();
+            const previousMenu = cloneSerializable(MENU_DATA);
             if (!MENU_DATA.submenus) MENU_DATA.submenus = [...DEFAULT_MENU_DATA.submenus];
             MENU_DATA.submenus.push({
-                id: newSubId,
-                name: name,
-                subtitle: 'Submenu prioritário',
-                icon: icon || '📁'
+                id: 'sub_' + Date.now(), name, subtitle: 'Submenu prioritário', icon: icon || '📁'
             });
-            localStorage.setItem('power_shake_menu_data', JSON.stringify(MENU_DATA));
+            const saved = await saveMenuDataAndSettings(false);
+            if (!saved) {
+                MENU_DATA = previousMenu;
+                return;
+            }
             renderSubmenusTab();
+            renderCardapioTab();
             populateCategoryDropdown();
-            showToast(`Submenu "${name}" criado com sucesso!`, 'success');
+            showToast(`Submenu "${name}" criado e publicado com sucesso!`, 'success');
             nameIn.value = '';
             if (iconIn) iconIn.value = '';
         });
@@ -2092,7 +2159,7 @@ function setupDashboardActions() {
 // Initializer: load menu database from Vercel API
 async function initDashboard() {
     try {
-        const response = await fetch('/api/get-menu');
+        const response = await fetch(`/api/get-menu?t=${Date.now()}`, { cache: 'no-store' });
         const data = await response.json();
         if (data && data.success && data.menuData) {
             MENU_DATA = sanitizeMenuData(data.menuData);
@@ -2780,20 +2847,18 @@ function addItemDirectToCategory(catId) {
 
 // Item Editor Modal Submit Save
 if (dom.modalForm) {
-    dom.modalForm.addEventListener('submit', function(e) {
+    dom.modalForm.addEventListener('submit', async function(e) {
         e.preventDefault();
         const catId = (dom.itemCategorySelect ? dom.itemCategorySelect.value : null) || (dom.categorySelect ? dom.categorySelect.value : null);
         const category = MENU_DATA.categories ? MENU_DATA.categories.find(c => c.id === catId) : null;
-        
         if (!category) {
             showToast('Selecione uma categoria válida para adicionar ou editar o item.', 'error');
             return;
         }
-        
+
         const id = dom.editItemId ? dom.editItemId.value : '';
         const name = dom.itemName ? dom.itemName.value.trim() : '';
         const mediaType = dom.itemMediaType ? dom.itemMediaType.value : 'icon';
-        
         if (!name) {
             showToast('Informe o nome do item.', 'warning');
             return;
@@ -2802,7 +2867,6 @@ if (dom.modalForm) {
         const existingItem = id ? category.items.find(i => i.id === id) : null;
         const icon = mediaType === 'icon' && dom.itemIcon ? dom.itemIcon.value.trim() : '';
         const image = mediaType === 'image' ? (uploadedProductImageBase64 || (existingItem ? existingItem.image : '') || '') : '';
-
         const kcal = dom.itemKcal ? (parseFloat(dom.itemKcal.value) || 0) : 0;
         const carbs = dom.itemCarbs ? (parseFloat(dom.itemCarbs.value) || 0) : 0;
         const protein = dom.itemProtein ? (parseFloat(dom.itemProtein.value) || 0) : 0;
@@ -2810,60 +2874,67 @@ if (dom.modalForm) {
         const price2 = dom.itemPrice2 ? (parseFloat(dom.itemPrice2.value) || 0) : 0;
         const description = dom.itemDesc ? dom.itemDesc.value.trim() : '';
         const rawVersions = dom.itemVersions ? dom.itemVersions.value.trim() : '';
-
-        let versions = undefined;
-        if (catId === 'milks' && rawVersions) {
-            versions = rawVersions.split(',').map(v => v.trim()).filter(v => v.length > 0);
-        }
-
+        const versions = catId === 'milks' && rawVersions
+            ? rawVersions.split(',').map(v => v.trim()).filter(Boolean)
+            : undefined;
         const outOfStock = dom.itemAvailableCheckbox ? !dom.itemAvailableCheckbox.checked : false;
+        const previousItems = cloneSerializable(category.items || []);
+        const submitButton = dom.modalForm.querySelector('button[type="submit"]');
+        if (submitButton) submitButton.disabled = true;
 
         if (id) {
-            // EDIT MODE
             const index = category.items.findIndex(i => i.id === id);
             if (index !== -1) {
                 category.items[index] = {
-                    ...category.items[index],
-                    name, icon, image, kcal, carbs, protein, price, price2, description, versions, outOfStock
+                    ...category.items[index], name, icon, image, kcal, carbs, protein,
+                    price, price2, description, versions, outOfStock
                 };
             }
-            showToast(`Item "${name}" atualizado com sucesso!`, 'success');
         } else {
-            // ADD NEW ITEM MODE
-            const newItem = {
-                id: 'item_' + Date.now(),
-                name, icon, image, kcal, carbs, protein, price, price2, description, versions, outOfStock
-            };
-            if (!category.items) category.items = [];
-            category.items.push(newItem);
-            showToast(`Novo item "${name}" adicionado com sucesso!`, 'success');
+            category.items.push({
+                id: 'item_' + Date.now(), name, icon, image, kcal, carbs, protein,
+                price, price2, description, versions, outOfStock
+            });
         }
 
-        saveMenuDataAndSettings(true);
-        renderCardapioTab();
+        const saved = await saveMenuDataAndSettings(false);
+        if (submitButton) submitButton.disabled = false;
+        if (!saved) {
+            category.items = previousItems;
+            return;
+        }
 
+        renderCardapioTab();
+        renderItemsTable();
         if (dom.itemModal) dom.itemModal.style.display = 'none';
         if (typeof renderBoardPreview === 'function') renderBoardPreview();
+        showToast(`Item "${name}" ${id ? 'atualizado' : 'adicionado'} e publicado com sucesso!`, 'success');
     });
 }
-
 // Delete Menu Item
-window.deleteMenuItem = function(id) {
+window.deleteMenuItem = async function(id) {
     const catId = dom.categorySelect.value;
     const category = MENU_DATA.categories.find(c => c.id === catId);
     if (!category) return;
 
     if (confirm('Tem certeza que deseja remover este item de forma permanente?')) {
+        const previousItems = cloneSerializable(category.items || []);
         const item = category.items.find(i => i.id === id);
         const name = item ? item.name : '';
         category.items = category.items.filter(i => i.id !== id);
+        const saved = await saveMenuDataAndSettings(false);
+        if (!saved) {
+            category.items = previousItems;
+            renderItemsTable();
+            renderBoardPreview();
+            return;
+        }
         renderItemsTable();
         renderBoardPreview();
-        saveMenuDataAndSettings(true);
-        showToast(`Item ${name ? '"' + name + '" ' : ''}removido com sucesso.`, 'success');
+        renderCardapioTab();
+        showToast(`Item ${name ? '"' + name + '" ' : ''}removido da nuvem e do cardápio.`, 'success');
     }
 };
-
 function formatPricePill(val) {
     if (typeof val === 'number') {
         return `R$ ${val.toFixed(2).replace('.', ',')}`;

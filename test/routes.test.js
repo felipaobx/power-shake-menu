@@ -32,5 +32,7 @@ test('get-menu sem banco não expõe configurações privadas', async () => {
     await handler({ method: 'GET', headers: {} }, res);
     assert.equal(res.statusCode, 200);
     assert.equal(res.payload.settings, null);
+    assert.match(res.headers['Cache-Control'], /no-store/);
+    assert.equal(res.headers['Vercel-CDN-Cache-Control'], 'no-store');
     if (previous) process.env.REDIS_URL = previous;
 });

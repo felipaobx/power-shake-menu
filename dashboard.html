@@ -13,17 +13,45 @@
 </head>
 <body class="auth-locked">
     <div id="admin-auth-modal" class="admin-auth-overlay" role="dialog" aria-modal="true" aria-labelledby="admin-auth-title">
-        <form id="admin-auth-form" class="admin-auth-card">
-            <img src="assets/logo.png" alt="Power Shake" class="admin-auth-logo">
-            <h1 id="admin-auth-title">Painel Power Shake</h1>
-            <p>Entre com seu PIN administrativo.</p>
-            <label for="admin-pin-input">PIN de acesso</label>
-            <input type="password" id="admin-pin-input" minlength="4" maxlength="64" autocomplete="current-password" required>
-            <button type="submit">Entrar</button>
-            <p id="admin-auth-error" class="admin-auth-error" aria-live="polite"></p>
-        </form>
+        <div class="admin-auth-shell">
+            <aside class="admin-auth-showcase" aria-hidden="true">
+                <span class="admin-auth-badge"><ion-icon name="shield-checkmark-outline"></ion-icon> Área segura</span>
+                <div>
+                    <span class="admin-auth-kicker">POWER SHAKE</span>
+                    <h2>Seu cardápio, sempre sincronizado.</h2>
+                    <p>Gerencie categorias, produtos e disponibilidade em um só lugar.</p>
+                </div>
+                <div class="admin-auth-benefits">
+                    <span><ion-icon name="cloud-done-outline"></ion-icon> Alterações salvas na nuvem</span>
+                    <span><ion-icon name="refresh-outline"></ion-icon> Cardápio atualizado imediatamente</span>
+                </div>
+            </aside>
+            <form id="admin-auth-form" class="admin-auth-card">
+                <div class="admin-auth-brand">
+                    <img src="assets/logo.png" alt="Power Shake" class="admin-auth-logo">
+                    <div>
+                        <span>ADMINISTRAÇÃO</span>
+                        <h1 id="admin-auth-title">Bem-vindo</h1>
+                    </div>
+                </div>
+                <p class="admin-auth-intro">Digite seu PIN para acessar o painel.</p>
+                <label for="admin-pin-input">PIN administrativo</label>
+                <div class="admin-pin-field">
+                    <ion-icon name="keypad-outline"></ion-icon>
+                    <input type="password" id="admin-pin-input" minlength="4" maxlength="64" inputmode="numeric" autocomplete="current-password" placeholder="Digite seu PIN" required>
+                    <button type="button" id="admin-pin-toggle" class="admin-pin-toggle" aria-label="Mostrar PIN" title="Mostrar PIN">
+                        <ion-icon name="eye-outline"></ion-icon>
+                    </button>
+                </div>
+                <button type="submit" class="admin-auth-submit">
+                    <span>Entrar no painel</span>
+                    <ion-icon name="arrow-forward-outline"></ion-icon>
+                </button>
+                <p class="admin-session-hint"><ion-icon name="lock-closed-outline"></ion-icon> Você continuará conectado neste dispositivo por até 30 dias.</p>
+                <p id="admin-auth-error" class="admin-auth-error" aria-live="polite"></p>
+            </form>
+        </div>
     </div>
-
     <!-- MOBILE TOP BAR HEADER (SHOWN ONLY ON MOBILE SCREENS <= 900px) -->
     <header class="mobile-top-bar" id="mobile-top-bar">
         <div class="mobile-brand">

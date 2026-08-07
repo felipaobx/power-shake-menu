@@ -9,7 +9,10 @@ function publicSettings(settings) {
 
 module.exports = async (req, res) => {
     setSecurityHeaders(res);
-    res.setHeader('Cache-Control', 'public, max-age=30, stale-while-revalidate=120');
+    // Menu changes made in the dashboard must be visible immediately.
+    res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate');
+    res.setHeader('CDN-Cache-Control', 'no-store');
+    res.setHeader('Vercel-CDN-Cache-Control', 'no-store');
     if (!requireMethod(req, res, 'GET')) return;
 
     const { REDIS_URL } = process.env;

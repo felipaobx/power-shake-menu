@@ -1180,7 +1180,7 @@ function loadSettings() {
 // Fetch global settings and menu data asynchronously from Vercel API
 async function loadMenuDataAndSettings() {
     try {
-        const response = await fetch('/api/get-menu');
+        const response = await fetch(`/api/get-menu?t=${Date.now()}`, { cache: 'no-store' });
         const data = await response.json();
         
         if (data && data.success && data.menuData) {

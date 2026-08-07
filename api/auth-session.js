@@ -1,5 +1,5 @@
 const { createClient } = require('redis');
-const { getSession } = require('./_auth');
+const { getSession, setSessionCookie } = require('./_auth');
 const { requireMethod, setSecurityHeaders } = require('./_security');
 
 module.exports = async (req, res) => {
@@ -20,6 +20,9 @@ module.exports = async (req, res) => {
             res.status(401).json({ success: false, authenticated: false });
             return;
         }
+        // Refresh both the Redis TTL and the persistent browser cookie whenever
+        // an authenticated administrator returns to the dashboard.
+        setSessionCookie(req, res, session.token);
         res.status(200).json({ success: true, authenticated: true, user: session.user });
     } catch (error) {
         console.error('auth-session error:', error.message);

@@ -1,7 +1,7 @@
 const crypto = require('crypto');
 
 const COOKIE_NAME = 'powershake_session';
-const SESSION_TTL_SECONDS = 8 * 60 * 60;
+const SESSION_TTL_SECONDS = 30 * 24 * 60 * 60;
 
 function getConfiguredAdminPin() {
     if (process.env.ADMIN_PIN) return String(process.env.ADMIN_PIN);
@@ -111,7 +111,7 @@ async function createSession(client, user) {
 
 function setSessionCookie(req, res, token) {
     const secure = process.env.NODE_ENV === 'production' || (req.headers && req.headers['x-forwarded-proto'] === 'https');
-    res.setHeader('Set-Cookie', `${COOKIE_NAME}=${encodeURIComponent(token)}; Path=/; HttpOnly; SameSite=Strict; Max-Age=${SESSION_TTL_SECONDS}${secure ? '; Secure' : ''}`);
+    res.setHeader('Set-Cookie', `${COOKIE_NAME}=${encodeURIComponent(token)}; Path=/; HttpOnly; SameSite=Strict; Max-Age=${SESSION_TTL_SECONDS}; Priority=High${secure ? '; Secure' : ''}`);
 }
 
 function clearSessionCookie(req, res) {
