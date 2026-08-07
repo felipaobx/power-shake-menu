@@ -208,20 +208,32 @@
 
                 <!-- Quick Action Cards Grid -->
                 <div class="grid-2" style="margin-bottom: 25px;">
-                    <div class="form-section" style="margin-bottom: 0;">
-                        <h3 class="form-section-title">Ações Rápidas do Cardápio</h3>
-                        <div style="display: flex; flex-direction: column; gap: 12px;">
-                            <button class="add-item-btn" onclick="switchTab('tab-items')" style="background: rgba(255,255,255,0.03); border: 1px solid var(--border-card); color: #fff; width: 100%; justify-content: flex-start; padding: 14px;">
-                                <ion-icon name="add-circle-outline" style="color: var(--accent); font-size: 1.3rem;"></ion-icon>
-                                <span>Cadastrar Novo Produto ou Ingrediente</span>
+                    <div class="form-section creation-hub" style="margin-bottom: 0;">
+                        <div class="creation-hub-header">
+                            <div>
+                                <span class="creation-hub-kicker">CRIAÇÃO RÁPIDA</span>
+                                <h3 class="form-section-title">O que você deseja adicionar?</h3>
+                                <p>Crie direto na página principal ou organize em submenus quando precisar.</p>
+                            </div>
+                            <button type="button" class="creation-manage-btn" onclick="switchTab('tab-menu')">
+                                Ver cardápio <ion-icon name="arrow-forward-outline"></ion-icon>
                             </button>
-                            <button class="add-item-btn" onclick="switchTab('tab-submenus')" style="background: rgba(255,255,255,0.03); border: 1px solid var(--border-card); color: #fff; width: 100%; justify-content: flex-start; padding: 14px;">
-                                <ion-icon name="layers-outline" style="color: #faad14; font-size: 1.3rem;"></ion-icon>
-                                <span>Organizar Agrupamento de Submenus</span>
+                        </div>
+                        <div class="creation-actions-grid">
+                            <button type="button" class="creation-action-card primary" onclick="openCategoryModalDirect('')">
+                                <span class="creation-action-icon"><ion-icon name="folder-open-outline"></ion-icon></span>
+                                <span class="creation-action-copy"><strong>Nova categoria</strong><small>Aparece direto na página principal</small></span>
+                                <ion-icon class="creation-action-arrow" name="chevron-forward-outline"></ion-icon>
                             </button>
-                            <button class="add-item-btn" onclick="switchTab('tab-users')" style="background: rgba(255,255,255,0.03); border: 1px solid var(--border-card); color: #fff; width: 100%; justify-content: flex-start; padding: 14px;">
-                                <ion-icon name="key-outline" style="color: #1890ff; font-size: 1.3rem;"></ion-icon>
-                                <span>Gerenciar Senhas & Usuários da Cozinha</span>
+                            <button type="button" class="creation-action-card" onclick="openSubmenuEditor()">
+                                <span class="creation-action-icon amber"><ion-icon name="layers-outline"></ion-icon></span>
+                                <span class="creation-action-copy"><strong>Novo submenu</strong><small>Agrupe várias categorias</small></span>
+                                <ion-icon class="creation-action-arrow" name="chevron-forward-outline"></ion-icon>
+                            </button>
+                            <button type="button" class="creation-action-card" onclick="openItemEditorDirect()">
+                                <span class="creation-action-icon blue"><ion-icon name="add-circle-outline"></ion-icon></span>
+                                <span class="creation-action-copy"><strong>Novo produto</strong><small>Escolha a categoria no formulário</small></span>
+                                <ion-icon class="creation-action-arrow" name="chevron-forward-outline"></ion-icon>
                             </button>
                         </div>
                     </div>
@@ -833,10 +845,11 @@
                 </div>
                 <div class="grid-2">
                     <div class="form-group">
-                        <label for="cat-submenu-input">Submenu / Agrupamento</label>
+                        <label for="cat-submenu-input">Onde exibir a categoria</label>
                         <select id="cat-submenu-input" class="form-control">
                             <!-- Populated dynamically by dashboard.js -->
                         </select>
+                        <small class="form-help">Escolha Página principal para criar sem submenu.</small>
                     </div>
                     <div class="form-group">
                         <label for="cat-required-input">Preenchimento</label>

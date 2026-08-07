@@ -291,8 +291,8 @@ function sanitizeMenuData(data) {
             const defaultCat = DEFAULT_MENU_DATA.categories.find(dc => dc.id === cat.id);
             cat.items = defaultCat ? JSON.parse(JSON.stringify(defaultCat.items)) : [];
         }
-        if (!cat.submenu || (!validSubmenuIds.includes(cat.submenu) && cat.submenu !== 'all')) {
-            cat.submenu = 'monte_o_seu';
+        if (!cat.submenu || !validSubmenuIds.includes(cat.submenu)) {
+            cat.submenu = '';
         }
         cat.items.forEach((item, itemIndex) => {
             item.id = sanitizeIdentifier(item.id, `${cat.id}_item_${itemIndex}`);
@@ -478,6 +478,36 @@ function getCategorySelectionSummary(category) {
     }
 }
 
+function renderCategoryHomeCard(category) {
+    if (!category.items || category.items.length === 0) return '';
+
+    const summary = getCategorySelectionSummary(category);
+    const isFilled = summary !== 'Pendente';
+    const mediaHtml = category.image
+        ? `<img src="${category.image}" class="category-card-img" alt="${escapeHtml(category.name)}">`
+        : `<div class="category-card-icon">${category.icon || getCategoryIcon(category.id)}</div>`;
+    const cleanName = category.name.replace('Escolha a ', '').replace('Escolha o ', '').replace('Adicione ', '');
+
+    return `
+        <div class="category-card ${isFilled ? 'filled' : ''}" data-category-id="${category.id}">
+            <div class="category-card-check">✓</div>
+            ${mediaHtml}
+            <div class="category-card-title">${escapeHtml(cleanName)}</div>
+            <div class="category-card-status">${escapeHtml(summary)}</div>
+        </div>
+    `;
+}
+
+function bindCategoryDashboardCards() {
+    document.querySelectorAll('.category-card[data-category-id]').forEach(card => {
+        card.addEventListener('click', function() {
+            isDashboardMode = false;
+            activeCategoryId = this.dataset.categoryId;
+            renderMenuCategories();
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        });
+    });
+}
 // Render dynamic sections from categories list
 function renderMenuCategories() {
     // Clear DOM containers
@@ -493,54 +523,50 @@ function renderMenuCategories() {
         }
 
         if (activeSubmenuId === 'home') {
-            // RENDER SUBMENU PRIORITY CARDS HOME VIEW
-            const submenusToRender = (MENU_DATA.submenus || DEFAULT_MENU_DATA.submenus).filter(s => s.id !== 'all' && !s.hidden);
+            const allSubmenus = (MENU_DATA.submenus || DEFAULT_MENU_DATA.submenus).filter(s => s.id !== 'all');
+            const submenusToRender = allSubmenus.filter(submenu => !submenu.hidden);
+            const validSubmenuIds = new Set(allSubmenus.map(submenu => submenu.id));
+            const directCategories = MENU_DATA.categories.filter(category => {
+                return !category.hidden && (!category.submenu || !validSubmenuIds.has(category.submenu));
+            });
 
-            if (submenusToRender.length === 0) {
-                elements.categoryDashboard.innerHTML = `<div style="grid-column: 1 / -1; text-align: center; color: var(--text-secondary); padding: 40px 0;">Nenhum submenu cadastrado no momento.</div>`;
+            if (submenusToRender.length === 0 && directCategories.length === 0) {
+                elements.categoryDashboard.innerHTML = `<div style="grid-column: 1 / -1; text-align: center; color: var(--text-secondary); padding: 40px 0;">Nenhuma categoria disponível no momento.</div>`;
                 return;
             }
 
-            elements.categoryDashboard.innerHTML = submenusToRender.map(sub => {
-                const assignedCategories = MENU_DATA.categories.filter(c => !c.hidden && (c.submenu || 'monte_o_seu') === sub.id);
-                
-                let isFilled = false;
-                assignedCategories.forEach(cat => {
-                    const sel = orderState.selections[cat.id];
-                    if (Array.isArray(sel) ? sel.length > 0 : !!sel) {
-                        isFilled = true;
-                    }
+            const directCategoriesHtml = directCategories.map(renderCategoryHomeCard).join('');
+            const submenusHtml = submenusToRender.map(sub => {
+                const assignedCategories = MENU_DATA.categories.filter(category => !category.hidden && category.submenu === sub.id);
+                const isFilled = assignedCategories.some(category => {
+                    const selection = orderState.selections[category.id];
+                    return Array.isArray(selection) ? selection.length > 0 : !!selection;
                 });
-
-                let mediaHtml = '';
-                if (sub.image) {
-                    mediaHtml = `<img src="${sub.image}" class="category-card-img" alt="${sub.name}">`;
-                } else {
-                    mediaHtml = `<div class="category-card-icon">${sub.icon || '🥤'}</div>`;
-                }
-
-                // Show only subtitle if defined, NO category counts on icons!
-                const statusHtml = sub.subtitle ? `<div class="category-card-status">${sub.subtitle}</div>` : '';
+                const mediaHtml = sub.image
+                    ? `<img src="${sub.image}" class="category-card-img" alt="${escapeHtml(sub.name)}">`
+                    : `<div class="category-card-icon">${sub.icon || '🥤'}</div>`;
+                const statusHtml = sub.subtitle ? `<div class="category-card-status">${escapeHtml(sub.subtitle)}</div>` : '';
 
                 return `
                     <div class="category-card submenu-priority-card ${isFilled ? 'filled' : ''}" data-submenu-card-id="${sub.id}">
                         <div class="category-card-check">✓</div>
                         ${mediaHtml}
-                        <div class="category-card-title">${sub.name}</div>
+                        <div class="category-card-title">${escapeHtml(sub.name)}</div>
                         ${statusHtml}
                     </div>
                 `;
             }).join('');
 
+            elements.categoryDashboard.innerHTML = directCategoriesHtml + submenusHtml;
+
             document.querySelectorAll('.submenu-priority-card').forEach(card => {
                 card.addEventListener('click', function() {
-                    const subId = this.dataset.submenuCardId;
-                    activeSubmenuId = subId;
+                    activeSubmenuId = this.dataset.submenuCardId;
                     renderMenuCategories();
                     window.scrollTo({ top: 0, behavior: 'smooth' });
                 });
             });
-
+            bindCategoryDashboardCards();
         } else {
             // RENDER CATEGORIES INSIDE ACTIVE SUBMENU
             const currentSubmenuObj = (MENU_DATA.submenus || DEFAULT_MENU_DATA.submenus).find(s => s.id === activeSubmenuId);
@@ -559,7 +585,7 @@ function renderMenuCategories() {
             elements.categoryDashboard.innerHTML = backHeaderHtml;
 
             const filteredCategories = MENU_DATA.categories.filter(category => {
-                const catSubmenu = category.submenu || 'monte_o_seu';
+                const catSubmenu = category.submenu || '';
                 const parentSubmenu = (MENU_DATA.submenus || DEFAULT_MENU_DATA.submenus).find(s => s.id === catSubmenu);
                 if (parentSubmenu && parentSubmenu.hidden) return false;
                 return !category.hidden && catSubmenu === activeSubmenuId;

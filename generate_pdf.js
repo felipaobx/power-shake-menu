@@ -78,7 +78,7 @@ function getCategoryItemsForPdf(menuDataObj, categoryIds) {
     
     menuDataObj.categories.forEach(cat => {
         if (cat.hidden) return;
-        const parentSub = submenus.find(s => s.id === (cat.submenu || 'monte_o_seu'));
+        const parentSub = submenus.find(s => s.id === (cat.submenu || ''));
         if (parentSub && parentSub.hidden) return;
 
         if (catList.includes(cat.id) || catList.includes(cat.submenu)) {

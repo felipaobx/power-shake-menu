@@ -332,8 +332,8 @@ function sanitizeMenuData(data) {
             const defaultCat = DEFAULT_MENU_DATA.categories.find(dc => dc.id === cat.id);
             cat.items = defaultCat ? JSON.parse(JSON.stringify(defaultCat.items)) : [];
         }
-        if (!cat.submenu || (!validSubmenuIds.includes(cat.submenu) && cat.submenu !== 'all')) {
-            cat.submenu = 'monte_o_seu';
+        if (!cat.submenu || !validSubmenuIds.includes(cat.submenu)) {
+            cat.submenu = '';
         }
     });
 
@@ -345,8 +345,8 @@ let MENU_DATA = sanitizeMenuData(readStoredJson('power_shake_menu_data', null));
 let SETTINGS = readStoredJson('power_shake_settings', null) || DEFAULT_SETTINGS;
 
 MENU_DATA.categories.forEach(cat => {
-    if (!cat.submenu) {
-        cat.submenu = (cat.id === 'estilo_shakes') ? 'estilo_shakes' : 'monte_o_seu';
+    if (typeof cat.submenu !== 'string') {
+        cat.submenu = '';
     }
     if (cat.required === undefined) {
         cat.required = ['fruits', 'milks'].includes(cat.id);
@@ -545,7 +545,9 @@ function populateSubmenuDropdown(selectedId = null) {
     const el = document.getElementById('cat-submenu-input');
     if (!el) return;
     const submenus = MENU_DATA.submenus || DEFAULT_MENU_DATA.submenus;
-    el.innerHTML = submenus.filter(s => s.id !== 'all').map(sub => `
+    el.innerHTML = `
+        <option value="" ${!selectedId ? 'selected' : ''}>🏠 Página principal (sem submenu)</option>
+    ` + submenus.filter(s => s.id !== 'all').map(sub => `
         <option value="${sub.id}" ${sub.id === selectedId ? 'selected' : ''}>${sub.icon || '📁'} ${sub.name}</option>
     `).join('');
 }
@@ -556,8 +558,10 @@ function updateCategoryToolbarControls() {
     const el = document.getElementById('category-submenu-select');
     if (el) {
         const submenus = MENU_DATA.submenus || DEFAULT_MENU_DATA.submenus;
-        el.innerHTML = submenus.filter(s => s.id !== 'all').map(sub => `
-            <option value="${sub.id}" ${sub.id === (category?.submenu || 'monte_o_seu') ? 'selected' : ''}>${sub.icon || '📁'} ${sub.name}</option>
+        el.innerHTML = `
+            <option value="" ${!category?.submenu ? 'selected' : ''}>🏠 Página principal (sem submenu)</option>
+        ` + submenus.filter(s => s.id !== 'all').map(sub => `
+            <option value="${sub.id}" ${sub.id === category?.submenu ? 'selected' : ''}>${sub.icon || '📁'} ${sub.name}</option>
         `).join('');
     }
     if (category && dom.categorySelectionType) {
@@ -580,8 +584,8 @@ function populateCategoryDropdown(selectedId = null) {
     const submenus = MENU_DATA.submenus || DEFAULT_MENU_DATA.submenus;
     
     dom.categorySelect.innerHTML = MENU_DATA.categories.map(cat => {
-        const sub = submenus.find(s => s.id === (cat.submenu || 'monte_o_seu'));
-        const subName = sub ? sub.name : 'Geral';
+        const sub = submenus.find(s => s.id === cat.submenu);
+        const subName = sub ? sub.name : 'Página principal';
         let suffix = cat.isStep ? ' (Passo)' : ' (Extra)';
         let hiddenTag = cat.hidden ? '🙈 [Oculto] ' : '';
         return `<option value="${cat.id}" ${cat.id === activeId ? 'selected' : ''}>${hiddenTag}[${subName}] ${cat.name}${suffix}</option>`;
@@ -596,8 +600,8 @@ function populateItemCategoryDropdown(selectedCatId = null) {
     const categories = MENU_DATA.categories || [];
     const submenus = MENU_DATA.submenus || DEFAULT_MENU_DATA.submenus;
     el.innerHTML = categories.map(cat => {
-        const sub = submenus.find(s => s.id === (cat.submenu || 'monte_o_seu'));
-        const subName = sub ? sub.name : 'Geral';
+        const sub = submenus.find(s => s.id === cat.submenu);
+        const subName = sub ? sub.name : 'Página principal';
         return `<option value="${cat.id}" ${cat.id === selectedCatId ? 'selected' : ''}>[${subName}] ${cat.icon || '📁'} ${cat.name}</option>`;
     }).join('');
 }
@@ -1205,7 +1209,7 @@ function setupCategoryActions() {
                 dom.catImagePreview.innerText = 'Sem Foto';
             }
             if (dom.catHiddenInput) dom.catHiddenInput.value = 'false';
-            populateSubmenuDropdown('monte_o_seu');
+            populateSubmenuDropdown('');
             toggleCategoryMediaFields();
             if (dom.catModal) dom.catModal.style.display = 'flex';
         });
@@ -1235,7 +1239,7 @@ function setupCategoryActions() {
             if (dom.catSelection) dom.catSelection.value = category.selectionType || 'multi';
             if (dom.catRequired) dom.catRequired.value = category.required ? 'true' : 'false';
             if (dom.catHiddenInput) dom.catHiddenInput.value = category.hidden ? 'true' : 'false';
-            populateSubmenuDropdown(category.submenu || 'monte_o_seu');
+            populateSubmenuDropdown(category.submenu || '');
             
             if (category.image) {
                 if (dom.catMediaType) dom.catMediaType.value = 'image';
@@ -1280,7 +1284,7 @@ function setupCategoryActions() {
             const selection = dom.catSelection ? dom.catSelection.value : 'multi';
             const required = dom.catRequired ? (dom.catRequired.value === 'true') : false;
             const hidden = dom.catHiddenInput ? (dom.catHiddenInput.value === 'true') : false;
-            const submenu = document.getElementById('cat-submenu-input')?.value || 'monte_o_seu';
+            const submenu = document.getElementById('cat-submenu-input')?.value || '';
             const mediaType = dom.catMediaType ? dom.catMediaType.value : 'icon';
             
             const icon = mediaType === 'icon' && dom.catIcon ? dom.catIcon.value.trim() : '';
@@ -1510,8 +1514,8 @@ function renderSubmenusTab() {
     }
 
     grid.innerHTML = submenus.map(sub => {
-        const assignedCategories = MENU_DATA.categories.filter(c => (c.submenu || 'monte_o_seu') === sub.id);
-        const unassignedCategories = MENU_DATA.categories.filter(c => (c.submenu || 'monte_o_seu') !== sub.id);
+        const assignedCategories = MENU_DATA.categories.filter(c => (c.submenu || '') === sub.id);
+        const unassignedCategories = MENU_DATA.categories.filter(c => (c.submenu || '') !== sub.id);
 
         const mediaHtml = sub.image 
             ? `<div style="width: 50px; height: 50px; border-radius: 10px; background-image: url('${sub.image}'); background-size: cover; background-position: center; flex-shrink: 0;"></div>`
@@ -1592,6 +1596,11 @@ window.renderCardapioTab = function() {
     const search = searchInput ? searchInput.value.toLowerCase().trim() : '';
 
     const submenus = (MENU_DATA.submenus || DEFAULT_MENU_DATA.submenus).filter(s => s.id !== 'all');
+    const validSubmenuIds = new Set(submenus.map(sub => sub.id));
+    const categoryGroups = [
+        { id: '', name: 'Página principal', subtitle: 'Categorias exibidas sem submenu', icon: '🏠', isRoot: true },
+        ...submenus.map(sub => ({ ...sub, isRoot: false }))
+    ];
 
     if (submenus.length === 0 && (!MENU_DATA.categories || MENU_DATA.categories.length === 0)) {
         container.innerHTML = `
@@ -1599,14 +1608,17 @@ window.renderCardapioTab = function() {
                 <ion-icon name="restaurant-outline" style="font-size: 3rem; color: var(--accent); margin-bottom: 10px;"></ion-icon>
                 <h4 style="font-size: 1.2rem; color: var(--text-primary); margin-bottom: 5px;">Nenhum Submenu ou Categoria Cadastrada</h4>
                 <p style="font-size: 0.9rem; max-width: 450px; margin: 0 auto 15px auto;">Comece criando seu primeiro Submenu ou Categoria nos botões acima para organizar seu cardápio.</p>
-                <button type="button" class="add-item-btn" onclick="openSubmenuEditor()" style="background: var(--accent); color: #000; font-weight: 700; display: inline-flex;">+ Criar Submenu</button>
+                <div style="display:flex; justify-content:center; gap:10px; flex-wrap:wrap;"><button type="button" class="add-item-btn" onclick="openCategoryModalDirect('')" style="background: var(--accent); color: #000; font-weight: 800; display: inline-flex;">+ Criar Categoria</button><button type="button" class="add-item-btn" onclick="openSubmenuEditor()" style="background: rgba(255,255,255,.06); color: #fff; border:1px solid rgba(255,255,255,.12); font-weight: 700; display: inline-flex;">+ Criar Submenu</button></div>
             </div>
         `;
         return;
     }
 
-    container.innerHTML = submenus.map(sub => {
-        const categories = (MENU_DATA.categories || []).filter(c => (c.submenu || 'monte_o_seu') === sub.id);
+    container.innerHTML = categoryGroups.map(sub => {
+        const categories = (MENU_DATA.categories || []).filter(category => {
+            if (sub.isRoot) return !category.submenu || !validSubmenuIds.has(category.submenu);
+            return category.submenu === sub.id;
+        });
 
         let filteredCategories = categories;
         if (search) {
@@ -1624,9 +1636,9 @@ window.renderCardapioTab = function() {
             ? `<div style="width: 48px; height: 48px; border-radius: 10px; background-image: url('${sub.image}'); background-size: cover; background-position: center; flex-shrink: 0;"></div>`
             : `<div style="font-size: 1.8rem; width: 48px; height: 48px; display: flex; align-items: center; justify-content: center; background: rgba(255,255,255,0.05); border-radius: 10px; flex-shrink: 0;">${sub.icon || '📁'}</div>`;
 
-        const visibilitySubBtn = sub.hidden
+        const visibilitySubBtn = sub.isRoot ? '' : (sub.hidden
             ? `<button type="button" onclick="toggleSubmenuVisibility('${sub.id}')" style="background: rgba(255, 77, 79, 0.15); border: 1px solid rgba(255, 77, 79, 0.3); color: var(--danger); padding: 5px 12px; border-radius: 6px; cursor: pointer; font-size: 0.82rem; font-weight: 700; display: inline-flex; align-items: center; gap: 4px;" title="Clique para exibir no cardápio e PDF"><ion-icon name="eye-off-outline"></ion-icon> Oculto</button>`
-            : `<button type="button" onclick="toggleSubmenuVisibility('${sub.id}')" style="background: rgba(139, 252, 3, 0.15); border: 1px solid rgba(139, 252, 3, 0.3); color: var(--accent); padding: 5px 12px; border-radius: 6px; cursor: pointer; font-size: 0.82rem; font-weight: 700; display: inline-flex; align-items: center; gap: 4px;" title="Clique para ocultar no cardápio e PDF"><ion-icon name="eye-outline"></ion-icon> Visível</button>`;
+            : `<button type="button" onclick="toggleSubmenuVisibility('${sub.id}')" style="background: rgba(139, 252, 3, 0.15); border: 1px solid rgba(139, 252, 3, 0.3); color: var(--accent); padding: 5px 12px; border-radius: 6px; cursor: pointer; font-size: 0.82rem; font-weight: 700; display: inline-flex; align-items: center; gap: 4px;" title="Clique para ocultar no cardápio e PDF"><ion-icon name="eye-outline"></ion-icon> Visível</button>`);
 
         const categoriesHtml = filteredCategories.length > 0
             ? filteredCategories.map(cat => {
@@ -1735,6 +1747,16 @@ window.renderCardapioTab = function() {
             }).join('')
             : `<div style="font-size: 0.85rem; color: var(--text-muted); font-style: italic; padding: 15px 0;">Nenhuma categoria neste submenu. Clique em "+ Categoria" para incluir!</div>`;
 
+        const submenuManagementHtml = sub.isRoot ? '' : `
+                        ${visibilitySubBtn}
+                        <button type="button" onclick="openSubmenuEditor('${sub.id}')" style="background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); color: var(--text-primary); padding: 6px 12px; border-radius: 8px; cursor: pointer; font-size: 0.85rem; display: inline-flex; align-items: center; gap: 4px;">
+                            <ion-icon name="create-outline"></ion-icon> Editar
+                        </button>
+                        <button type="button" onclick="deleteSubmenu('${sub.id}')" style="background: rgba(255, 77, 79, 0.12); border: 1px solid rgba(255, 77, 79, 0.25); color: var(--danger); padding: 6px 12px; border-radius: 8px; cursor: pointer; font-size: 0.85rem; display: inline-flex; align-items: center; gap: 4px;">
+                            <ion-icon name="trash-outline"></ion-icon> Excluir
+                        </button>
+        `;
+
         return `
             <div style="background: rgba(22, 25, 35, 0.75); border: 1px solid ${sub.hidden ? 'rgba(255,77,79,0.3)' : 'var(--border-card)'}; border-radius: 16px; padding: 20px; display: flex; flex-direction: column; gap: 16px; box-shadow: 0 4px 18px rgba(0,0,0,0.25);">
                 <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px; border-bottom: 1px solid rgba(255,255,255,0.06); padding-bottom: 14px;">
@@ -1745,7 +1767,7 @@ window.renderCardapioTab = function() {
                                 ${sub.name}
                                 ${sub.hidden ? '<span style="font-size: 0.72rem; color: var(--danger); background: rgba(255,77,79,0.15); padding: 2px 8px; border-radius: 4px; font-weight: 800;">🙈 OCULTO</span>' : ''}
                             </h4>
-                            <p style="font-size: 0.83rem; color: var(--text-secondary); margin-top: 2px; margin-bottom: 0;">${sub.subtitle || 'Submenu prioritário'}</p>
+                            <p style="font-size: 0.83rem; color: var(--text-secondary); margin-top: 2px; margin-bottom: 0;">${sub.subtitle || (sub.isRoot ? 'Categorias exibidas diretamente no cardápio' : 'Submenu prioritário')}</p>
                         </div>
                     </div>
 
@@ -1753,13 +1775,7 @@ window.renderCardapioTab = function() {
                         <button type="button" onclick="openCategoryModalDirect('${sub.id}')" style="background: rgba(139, 252, 3, 0.15); border: 1px solid rgba(139, 252, 3, 0.3); color: var(--accent); padding: 6px 12px; border-radius: 8px; font-size: 0.85rem; font-weight: 800; cursor: pointer; display: inline-flex; align-items: center; gap: 4px;" title="Criar Categoria neste Submenu">
                             <ion-icon name="folder-open-outline"></ion-icon> + Categoria
                         </button>
-                        ${visibilitySubBtn}
-                        <button type="button" onclick="openSubmenuEditor('${sub.id}')" style="background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); color: var(--text-primary); padding: 6px 12px; border-radius: 8px; cursor: pointer; font-size: 0.85rem; display: inline-flex; align-items: center; gap: 4px;">
-                            <ion-icon name="create-outline"></ion-icon> Editar
-                        </button>
-                        <button type="button" onclick="deleteSubmenu('${sub.id}')" style="background: rgba(255, 77, 79, 0.12); border: 1px solid rgba(255, 77, 79, 0.25); color: var(--danger); padding: 6px 12px; border-radius: 8px; cursor: pointer; font-size: 0.85rem; display: inline-flex; align-items: center; gap: 4px;">
-                            <ion-icon name="trash-outline"></ion-icon> Excluir
-                        </button>
+                        ${submenuManagementHtml}
                     </div>
                 </div>
 
@@ -1785,7 +1801,7 @@ window.openCategoryModalDirect = function(submenuId = null, catId = null) {
         if (dom.catSelection) dom.catSelection.value = category.selectionType || 'multi';
         if (dom.catRequired) dom.catRequired.value = category.required ? 'true' : 'false';
         if (dom.catHiddenInput) dom.catHiddenInput.value = category.hidden ? 'true' : 'false';
-        populateSubmenuDropdown(category.submenu || submenuId || 'monte_o_seu');
+        populateSubmenuDropdown(category.submenu || submenuId || '');
         
         if (category.image) {
             if (dom.catMediaType) dom.catMediaType.value = 'image';
@@ -1818,7 +1834,7 @@ window.openCategoryModalDirect = function(submenuId = null, catId = null) {
             dom.catImagePreview.innerText = 'Sem Foto';
         }
         if (dom.catHiddenInput) dom.catHiddenInput.value = 'false';
-        populateSubmenuDropdown(submenuId || 'monte_o_seu');
+        populateSubmenuDropdown(submenuId || '');
         toggleCategoryMediaFields();
         if (dom.catModal) dom.catModal.style.display = 'flex';
     }
@@ -2878,7 +2894,7 @@ function getCategoryItemsForBoard(categoryIds) {
     
     MENU_DATA.categories.forEach(cat => {
         if (cat.hidden) return;
-        const parentSub = submenus.find(s => s.id === (cat.submenu || 'monte_o_seu'));
+        const parentSub = submenus.find(s => s.id === (cat.submenu || ''));
         if (parentSub && parentSub.hidden) return;
 
         if (catList.includes(cat.id) || catList.includes(cat.submenu)) {
