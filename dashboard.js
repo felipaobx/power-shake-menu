@@ -510,17 +510,17 @@ function populateCategoryDropdown(selectedId = null) {
 
 // Load general text uploader states
 function loadGeneralSettings() {
-    dom.heroTitle.value = SETTINGS.heroTitle;
-    dom.heroSubtitle.value = SETTINGS.heroSubtitle;
-    dom.heroPreview.style.backgroundImage = `url('${SETTINGS.heroImage}')`;
+    if (dom.heroTitle && SETTINGS.heroTitle) dom.heroTitle.value = SETTINGS.heroTitle;
+    if (dom.heroSubtitle && SETTINGS.heroSubtitle) dom.heroSubtitle.value = SETTINGS.heroSubtitle;
+    if (dom.heroPreview && SETTINGS.heroImage) dom.heroPreview.style.backgroundImage = `url('${SETTINGS.heroImage}')`;
 
-    dom.midTitle.value = SETTINGS.midBannerTitle;
-    dom.midSubtitle.value = SETTINGS.midBannerSubtitle;
-    dom.midPreview.style.backgroundImage = `url('${SETTINGS.midBannerImage}')`;
+    if (dom.midTitle && SETTINGS.midBannerTitle) dom.midTitle.value = SETTINGS.midBannerTitle;
+    if (dom.midSubtitle && SETTINGS.midBannerSubtitle) dom.midSubtitle.value = SETTINGS.midBannerSubtitle;
+    if (dom.midPreview && SETTINGS.midBannerImage) dom.midPreview.style.backgroundImage = `url('${SETTINGS.midBannerImage}')`;
 
-    dom.address.value = SETTINGS.address;
-    dom.subaddress.value = SETTINGS.subAddress;
-    dom.mapUrl.value = SETTINGS.mapUrl;
+    if (dom.address && SETTINGS.address) dom.address.value = SETTINGS.address;
+    if (dom.subaddress && SETTINGS.subAddress) dom.subaddress.value = SETTINGS.subAddress;
+    if (dom.mapUrl && SETTINGS.mapUrl) dom.mapUrl.value = SETTINGS.mapUrl;
 }
 
 // Convert files to Base64 strings
@@ -880,13 +880,25 @@ function toggleItemMediaFields() {
 
 // Modal Form Open Logic for Items
 window.openItemEditor = function(id = null) {
-    const catId = dom.categorySelect.value;
-    const category = MENU_DATA.categories.find(c => c.id === catId);
+    const container = document.getElementById('toast-container');
+    if (container) container.innerHTML = '';
     
-    dom.editItemId.value = id || '';
-    dom.modalForm.reset();
+    let catId = dom.categorySelect ? dom.categorySelect.value : null;
+    if (!catId && MENU_DATA.categories && MENU_DATA.categories.length > 0) {
+        catId = MENU_DATA.categories[0].id;
+        if (dom.categorySelect) dom.categorySelect.value = catId;
+    }
+    const category = MENU_DATA.categories ? MENU_DATA.categories.find(c => c.id === catId) : null;
+    
+    if (!category && !id) {
+        showToast('Nenhuma categoria selecionada. Crie uma categoria primeiro!', 'warning');
+        return;
+    }
+    
+    if (dom.editItemId) dom.editItemId.value = id || '';
+    if (dom.modalForm) dom.modalForm.reset();
     uploadedProductImageBase64 = '';
-    dom.productPreview.style.backgroundImage = 'none';
+    if (dom.productPreview) dom.productPreview.style.backgroundImage = 'none';
 
     // Show/hide fields
     const macrosWrapper = document.getElementById('macros-fields-wrapper');
@@ -894,10 +906,10 @@ window.openItemEditor = function(id = null) {
     const descWrapper = document.getElementById('desc-field-wrapper');
     const versionsWrapper = document.getElementById('versions-field-wrapper');
 
-    macrosWrapper.style.display = ['fruits', 'milks', 'whey', 'toppings'].includes(catId) ? 'flex' : 'none';
-    priceWrapper.style.display = 'flex';
-    descWrapper.style.display = ['milks', 'supplements'].includes(catId) ? 'flex' : 'none';
-    versionsWrapper.style.display = catId === 'milks' ? 'flex' : 'none';
+    if (macrosWrapper) macrosWrapper.style.display = ['fruits', 'milks', 'whey', 'toppings'].includes(catId) ? 'flex' : 'none';
+    if (priceWrapper) priceWrapper.style.display = 'flex';
+    if (descWrapper) descWrapper.style.display = ['milks', 'supplements'].includes(catId) ? 'flex' : 'none';
+    if (versionsWrapper) versionsWrapper.style.display = catId === 'milks' ? 'flex' : 'none';
 
     const price2Wrapper = document.getElementById('price2-field-wrapper');
     const priceLabel = document.querySelector('#price-field-wrapper label');
@@ -910,52 +922,46 @@ window.openItemEditor = function(id = null) {
     }
 
     if (id && category) {
-        dom.modalTitle.innerText = 'Editar Item';
-        let item = category.items.find(i => i.id === id);
+        if (dom.modalTitle) dom.modalTitle.innerText = 'Editar Item';
+        let item = category.items ? category.items.find(i => i.id === id) : null;
 
         if (item) {
-            dom.itemName.value = item.name;
+            if (dom.itemName) dom.itemName.value = item.name || '';
             
             // Set image uploader vs emoji uploader fields
             if (item.image) {
-                dom.itemMediaType.value = 'image';
+                if (dom.itemMediaType) dom.itemMediaType.value = 'image';
                 uploadedProductImageBase64 = item.image;
-                dom.productPreview.style.backgroundImage = `url('${item.image}')`;
-                dom.itemIcon.value = '';
+                if (dom.productPreview) dom.productPreview.style.backgroundImage = `url('${item.image}')`;
+                if (dom.itemIcon) dom.itemIcon.value = '';
             } else {
-                dom.itemMediaType.value = 'icon';
-                dom.itemIcon.value = item.icon || '';
+                if (dom.itemMediaType) dom.itemMediaType.value = 'icon';
+                if (dom.itemIcon) dom.itemIcon.value = item.icon || '';
             }
             
-            dom.itemKcal.value = item.kcal || 0;
+            if (dom.itemKcal) dom.itemKcal.value = item.kcal || 0;
             if (dom.itemCarbs) dom.itemCarbs.value = item.carbs || 0;
-            dom.itemProtein.value = item.protein || 0;
-            dom.itemPrice.value = item.price || 0.00;
-            if (dom.itemPrice2) {
-                dom.itemPrice2.value = item.price2 || 0.00;
-            }
-            dom.itemDesc.value = item.description || '';
+            if (dom.itemProtein) dom.itemProtein.value = item.protein || 0;
+            if (dom.itemPrice) dom.itemPrice.value = item.price || 0.00;
+            if (dom.itemPrice2) dom.itemPrice2.value = item.price2 || 0.00;
+            if (dom.itemDesc) dom.itemDesc.value = item.description || '';
             
             if (dom.itemAvailableCheckbox) {
                 dom.itemAvailableCheckbox.checked = !item.outOfStock;
             }
             
-            if (item.versions) {
-                dom.itemVersions.value = item.versions.join(', ');
-            } else {
-                dom.itemVersions.value = '';
+            if (dom.itemVersions) {
+                dom.itemVersions.value = item.versions ? item.versions.join(', ') : '';
             }
         }
     } else {
-        dom.modalTitle.innerText = 'Novo Item';
-        dom.itemMediaType.value = 'icon';
-        dom.itemPrice.value = '0.00';
-        if (dom.itemPrice2) {
-            dom.itemPrice2.value = '0.00';
-        }
-        dom.itemKcal.value = '0';
+        if (dom.modalTitle) dom.modalTitle.innerText = 'Novo Item';
+        if (dom.itemMediaType) dom.itemMediaType.value = 'icon';
+        if (dom.itemPrice) dom.itemPrice.value = '0.00';
+        if (dom.itemPrice2) dom.itemPrice2.value = '0.00';
+        if (dom.itemKcal) dom.itemKcal.value = '0';
         if (dom.itemCarbs) dom.itemCarbs.value = '0';
-        dom.itemProtein.value = '0';
+        if (dom.itemProtein) dom.itemProtein.value = '0';
         if (dom.itemAvailableCheckbox) {
             dom.itemAvailableCheckbox.checked = true;
         }
@@ -1154,141 +1160,169 @@ function setupCategoryActions() {
     }
 
     // Open category modal for creating new category
-    dom.addCategoryBtn.addEventListener('click', () => {
-        dom.catForm.reset();
-        dom.editCategoryId.value = '';
-        document.getElementById('category-modal-form-title').innerText = 'Nova Categoria';
-        uploadedCategoryImageBase64 = '';
-        if (dom.catImagePreview) {
-            dom.catImagePreview.style.backgroundImage = 'none';
-            dom.catImagePreview.innerText = 'Sem Foto';
-        }
-        if (dom.catHiddenInput) dom.catHiddenInput.value = 'false';
-        populateSubmenuDropdown('monte_o_seu');
-        toggleCategoryMediaFields();
-        dom.catModal.style.display = 'flex';
-    });
-
-    // Open category modal for editing existing category
-    dom.editCategoryBtn.addEventListener('click', () => {
-        const catId = dom.categorySelect.value;
-        const category = MENU_DATA.categories.find(c => c.id === catId);
-        if (!category) return;
-        
-        dom.catForm.reset();
-        dom.editCategoryId.value = catId;
-        document.getElementById('category-modal-form-title').innerText = 'Editar Categoria: ' + category.name;
-        dom.catName.value = category.name;
-        dom.catSubtitle.value = category.subtitle;
-        dom.catPosition.value = category.isStep ? 'step' : 'extra';
-        dom.catSelection.value = category.selectionType || 'multi';
-        dom.catRequired.value = category.required ? 'true' : 'false';
-        if (dom.catHiddenInput) dom.catHiddenInput.value = category.hidden ? 'true' : 'false';
-        populateSubmenuDropdown(category.submenu || 'monte_o_seu');
-        
-        if (category.image) {
-            dom.catMediaType.value = 'image';
-            uploadedCategoryImageBase64 = category.image;
-            if (dom.catImagePreview) {
-                dom.catImagePreview.style.backgroundImage = `url('${category.image}')`;
-                dom.catImagePreview.innerText = '';
-            }
-            dom.catIcon.value = '';
-        } else {
-            dom.catMediaType.value = 'icon';
-            dom.catIcon.value = category.icon || '';
+    if (dom.addCategoryBtn) {
+        dom.addCategoryBtn.addEventListener('click', () => {
+            if (dom.catForm) dom.catForm.reset();
+            if (dom.editCategoryId) dom.editCategoryId.value = '';
+            const title = document.getElementById('category-modal-form-title');
+            if (title) title.innerText = 'Nova Categoria';
             uploadedCategoryImageBase64 = '';
             if (dom.catImagePreview) {
                 dom.catImagePreview.style.backgroundImage = 'none';
                 dom.catImagePreview.innerText = 'Sem Foto';
             }
-        }
-        
-        toggleCategoryMediaFields();
-        dom.catModal.style.display = 'flex';
-    });
+            if (dom.catHiddenInput) dom.catHiddenInput.value = 'false';
+            populateSubmenuDropdown('monte_o_seu');
+            toggleCategoryMediaFields();
+            if (dom.catModal) dom.catModal.style.display = 'flex';
+        });
+    }
+
+    // Open category modal for editing existing category
+    if (dom.editCategoryBtn) {
+        dom.editCategoryBtn.addEventListener('click', () => {
+            const catId = dom.categorySelect ? dom.categorySelect.value : null;
+            if (!catId) {
+                showToast('Nenhuma categoria selecionada para editar.', 'warning');
+                return;
+            }
+            const category = MENU_DATA.categories.find(c => c.id === catId);
+            if (!category) {
+                showToast('Categoria não encontrada.', 'warning');
+                return;
+            }
+            
+            if (dom.catForm) dom.catForm.reset();
+            if (dom.editCategoryId) dom.editCategoryId.value = catId;
+            const title = document.getElementById('category-modal-form-title');
+            if (title) title.innerText = 'Editar Categoria: ' + category.name;
+            if (dom.catName) dom.catName.value = category.name || '';
+            if (dom.catSubtitle) dom.catSubtitle.value = category.subtitle || '';
+            if (dom.catPosition) dom.catPosition.value = category.isStep ? 'step' : 'extra';
+            if (dom.catSelection) dom.catSelection.value = category.selectionType || 'multi';
+            if (dom.catRequired) dom.catRequired.value = category.required ? 'true' : 'false';
+            if (dom.catHiddenInput) dom.catHiddenInput.value = category.hidden ? 'true' : 'false';
+            populateSubmenuDropdown(category.submenu || 'monte_o_seu');
+            
+            if (category.image) {
+                if (dom.catMediaType) dom.catMediaType.value = 'image';
+                uploadedCategoryImageBase64 = category.image;
+                if (dom.catImagePreview) {
+                    dom.catImagePreview.style.backgroundImage = `url('${category.image}')`;
+                    dom.catImagePreview.innerText = '';
+                }
+                if (dom.catIcon) dom.catIcon.value = '';
+            } else {
+                if (dom.catMediaType) dom.catMediaType.value = 'icon';
+                if (dom.catIcon) dom.catIcon.value = category.icon || '';
+                uploadedCategoryImageBase64 = '';
+                if (dom.catImagePreview) {
+                    dom.catImagePreview.style.backgroundImage = 'none';
+                    dom.catImagePreview.innerText = 'Sem Foto';
+                }
+            }
+            
+            toggleCategoryMediaFields();
+            if (dom.catModal) dom.catModal.style.display = 'flex';
+        });
+    }
 
     // Close category modal
-    const closeCatModal = () => dom.catModal.style.display = 'none';
-    dom.catCloseBtn.addEventListener('click', closeCatModal);
-    dom.catCancelBtn.addEventListener('click', closeCatModal);
+    const closeCatModal = () => { if (dom.catModal) dom.catModal.style.display = 'none'; };
+    if (dom.catCloseBtn) dom.catCloseBtn.addEventListener('click', closeCatModal);
+    if (dom.catCancelBtn) dom.catCancelBtn.addEventListener('click', closeCatModal);
     
     // Save category (Create or Edit)
-    dom.catForm.addEventListener('submit', function(e) {
-        e.preventDefault();
-        const id = dom.editCategoryId.value;
-        const name = dom.catName.value.trim();
-        const subtitle = dom.catSubtitle.value.trim();
-        const position = dom.catPosition.value;
-        const selection = dom.catSelection.value;
-        const required = dom.catRequired.value === 'true';
-        const hidden = dom.catHiddenInput ? (dom.catHiddenInput.value === 'true') : false;
-        const submenu = document.getElementById('cat-submenu-input')?.value || 'monte_o_seu';
-        const mediaType = dom.catMediaType.value;
-        
-        const icon = mediaType === 'icon' ? dom.catIcon.value.trim() : '';
-        const image = mediaType === 'image' ? uploadedCategoryImageBase64 : '';
-
-        if (id) {
-            // EDIT CATEGORY
-            const category = MENU_DATA.categories.find(c => c.id === id);
-            if (category) {
-                category.name = name;
-                category.subtitle = subtitle;
-                category.isStep = position === 'step';
-                category.selectionType = selection;
-                category.required = required;
-                category.hidden = hidden;
-                category.submenu = submenu;
-                category.icon = icon;
-                category.image = image;
+    if (dom.catForm) {
+        dom.catForm.addEventListener('submit', function(e) {
+            e.preventDefault();
+            const id = dom.editCategoryId ? dom.editCategoryId.value : '';
+            const name = dom.catName ? dom.catName.value.trim() : '';
+            if (!name) {
+                showToast('Informe o nome da categoria.', 'warning');
+                return;
             }
-            closeCatModal();
-            populateCategoryDropdown(id);
-            renderItemsTable();
-        } else {
-            // CREATE CATEGORY
-            const newCatId = 'cat_' + Date.now();
-            const newCategoryObj = {
-                id: newCatId,
-                name,
-                subtitle,
-                isStep: position === 'step',
-                selectionType: selection,
-                required,
-                hidden,
-                submenu,
-                icon,
-                image,
-                items: []
-            };
+            const subtitle = dom.catSubtitle ? dom.catSubtitle.value.trim() : '';
+            const position = dom.catPosition ? dom.catPosition.value : 'extra';
+            const selection = dom.catSelection ? dom.catSelection.value : 'multi';
+            const required = dom.catRequired ? (dom.catRequired.value === 'true') : false;
+            const hidden = dom.catHiddenInput ? (dom.catHiddenInput.value === 'true') : false;
+            const submenu = document.getElementById('cat-submenu-input')?.value || 'monte_o_seu';
+            const mediaType = dom.catMediaType ? dom.catMediaType.value : 'icon';
+            
+            const icon = mediaType === 'icon' && dom.catIcon ? dom.catIcon.value.trim() : '';
+            const image = mediaType === 'image' ? uploadedCategoryImageBase64 : '';
 
-            MENU_DATA.categories.push(newCategoryObj);
-            closeCatModal();
-            populateCategoryDropdown(newCatId);
-            renderItemsTable();
-        }
-        saveMenuDataAndSettings();
-    });
+            if (id) {
+                // EDIT CATEGORY
+                const category = MENU_DATA.categories.find(c => c.id === id);
+                if (category) {
+                    category.name = name;
+                    category.subtitle = subtitle;
+                    category.isStep = position === 'step';
+                    category.selectionType = selection;
+                    category.required = required;
+                    category.hidden = hidden;
+                    category.submenu = submenu;
+                    category.icon = icon;
+                    category.image = image;
+                }
+                closeCatModal();
+                populateCategoryDropdown(id);
+                renderItemsTable();
+                showToast(`Categoria "${name}" atualizada com sucesso!`, 'success');
+            } else {
+                // CREATE CATEGORY
+                const newCatId = 'cat_' + Date.now();
+                const newCategoryObj = {
+                    id: newCatId,
+                    name,
+                    subtitle,
+                    isStep: position === 'step',
+                    selectionType: selection,
+                    required,
+                    hidden,
+                    submenu,
+                    icon,
+                    image,
+                    items: []
+                };
+
+                MENU_DATA.categories.push(newCategoryObj);
+                closeCatModal();
+                populateCategoryDropdown(newCatId);
+                renderItemsTable();
+                showToast(`Categoria "${name}" criada com sucesso!`, 'success');
+            }
+            saveMenuDataAndSettings(true);
+        });
+    }
 
     // Delete category action
-    dom.deleteCategoryBtn.addEventListener('click', function() {
-        const catId = dom.categorySelect.value;
-        if (!catId) {
-            showToast('Nenhuma categoria selecionada para excluir.', 'warning');
-            return;
-        }
+    if (dom.deleteCategoryBtn) {
+        dom.deleteCategoryBtn.addEventListener('click', function() {
+            const catId = dom.categorySelect ? dom.categorySelect.value : null;
+            if (!catId) {
+                showToast('Nenhuma categoria selecionada para excluir.', 'warning');
+                return;
+            }
 
-        const category = MENU_DATA.categories.find(c => c.id === catId);
-        if (category && confirm(`Tem certeza que deseja excluir permanentemente a categoria "${category.name}" e todos os seus produtos cadastrados?`)) {
-            MENU_DATA.categories = MENU_DATA.categories.filter(c => c.id !== catId);
-            const nextCatId = MENU_DATA.categories.length > 0 ? MENU_DATA.categories[0].id : '';
-            populateCategoryDropdown(nextCatId);
-            renderItemsTable();
-            saveMenuDataAndSettings(true);
-            showToast(`Categoria "${category.name}" foi excluída com sucesso!`, 'success');
-        }
-    });
+            const category = MENU_DATA.categories.find(c => c.id === catId);
+            if (!category) {
+                showToast('Categoria não encontrada.', 'warning');
+                return;
+            }
+
+            if (confirm(`Tem certeza que deseja excluir permanentemente a categoria "${category.name}" e todos os seus produtos cadastrados?`)) {
+                MENU_DATA.categories = MENU_DATA.categories.filter(c => c.id !== catId);
+                const nextCatId = MENU_DATA.categories.length > 0 ? MENU_DATA.categories[0].id : '';
+                populateCategoryDropdown(nextCatId);
+                renderItemsTable();
+                saveMenuDataAndSettings(true);
+                showToast(`Categoria "${category.name}" foi excluída com sucesso!`, 'success');
+            }
+        });
+    }
 }
 
 let uploadedSubmenuImageBase64 = '';
@@ -1725,12 +1759,12 @@ async function initDashboard() {
         console.warn('Não foi possível carregar os dados do backend. Usando cache local.');
     }
 
-    loadGeneralSettings();
-    setupUploaders();
-    populateCategoryDropdown();
-    setupCategoryActions();
-    setupDashboardActions();
-    setupOrdersTab();
+    try { loadGeneralSettings(); } catch(e) { console.error('Error in loadGeneralSettings:', e); }
+    try { setupUploaders(); } catch(e) { console.error('Error in setupUploaders:', e); }
+    try { populateCategoryDropdown(); } catch(e) { console.error('Error in populateCategoryDropdown:', e); }
+    try { setupCategoryActions(); } catch(e) { console.error('Error in setupCategoryActions:', e); }
+    try { setupDashboardActions(); } catch(e) { console.error('Error in setupDashboardActions:', e); }
+    try { setupOrdersTab(); } catch(e) { console.error('Error in setupOrdersTab:', e); }
 }
 
 // ==========================================
