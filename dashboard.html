@@ -259,6 +259,13 @@
                                 <span>Obrigatório</span>
                             </label>
                         </div>
+                        <div style="min-width: 160px;">
+                            <label style="font-size:0.85rem; color:var(--text-secondary); display:block; margin-bottom:5px;">Visibilidade (Cardápio & PDF)</label>
+                            <label class="required-toggle-label" style="display: inline-flex; align-items: center; gap: 8px; cursor: pointer; background: var(--bg-card); border: 1px solid var(--border-card); padding: 10px 15px; border-radius: 8px; font-family: 'Outfit', sans-serif; font-weight: 600; font-size: 0.95rem; height: 42px; box-sizing: border-box; width: 100%; justify-content: center;">
+                                <input type="checkbox" id="category-hidden-toggle" onchange="changeCategoryHiddenStatus()" style="accent-color: var(--accent); width: 16px; height: 16px; margin: 0; cursor: pointer;" checked>
+                                <span id="category-hidden-label">Visível</span>
+                            </label>
+                        </div>
                     </div>
                     
                     <div style="display: flex; gap: 15px; align-items: center; flex-wrap: wrap; width: 100%; border-top: 1px solid rgba(255, 255, 255, 0.05); padding-top: 15px;">
@@ -795,10 +802,14 @@
                     </div>
                 </div>
 
-                <div class="grid-2" id="macros-fields-wrapper">
+                <div class="grid-3" id="macros-fields-wrapper" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(110px, 1fr)); gap: 15px;">
                     <div class="form-group">
                         <label for="item-kcal-input">Calorias (kcal)</label>
                         <input type="number" step="any" id="item-kcal-input" class="form-control" value="0">
+                    </div>
+                    <div class="form-group">
+                        <label for="item-carbs-input">Carboidratos (g)</label>
+                        <input type="number" step="any" id="item-carbs-input" class="form-control" value="0">
                     </div>
                     <div class="form-group">
                         <label for="item-protein-input">Proteínas (g)</label>
@@ -885,6 +896,22 @@
                         <select id="cat-required-input" class="form-control">
                             <option value="false">Opcional (Avançar / Pular)</option>
                             <option value="true">Obrigatório para Finalizar</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="grid-2">
+                    <div class="form-group">
+                        <label for="cat-required-input">Preenchimento</label>
+                        <select id="cat-required-input" class="form-control">
+                            <option value="false">Opcional (Avançar / Pular)</option>
+                            <option value="true">Obrigatório para Finalizar</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="cat-hidden-input">Visibilidade (Cardápio & PDF)</label>
+                        <select id="cat-hidden-input" class="form-control">
+                            <option value="false">👁️ Visível no Cardápio & PDF</option>
+                            <option value="true">🙈 Ocultar (Esconder no Cardápio & PDF)</option>
                         </select>
                     </div>
                 </div>
@@ -984,9 +1011,17 @@
                         <input type="text" id="sub-icon-field" class="form-control" placeholder="Ex: 🥤, 🛠️, 🍨, ⚡">
                     </div>
                     <div class="form-group">
-                        <label for="sub-image-field">Imagem do Card (Opcional)</label>
-                        <input type="file" id="sub-image-field" class="form-control" accept="image/*">
+                        <label for="sub-hidden-field">Visibilidade (Cardápio & PDF)</label>
+                        <select id="sub-hidden-field" class="form-control">
+                            <option value="false">👁️ Visível no Cardápio & PDF</option>
+                            <option value="true">🙈 Ocultar (Esconder no Cardápio & PDF)</option>
+                        </select>
                     </div>
+                </div>
+
+                <div class="form-group" style="margin-bottom: 15px;">
+                    <label for="sub-image-field">Imagem do Card (Opcional)</label>
+                    <input type="file" id="sub-image-field" class="form-control" accept="image/*">
                 </div>
 
                 <div class="modal-actions" style="margin-top: 20px;">

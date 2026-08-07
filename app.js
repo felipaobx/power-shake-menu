@@ -54,13 +54,13 @@ const DEFAULT_MENU_DATA = {
             submenu: 'monte_o_seu',
             selectionType: 'single',
             items: [
-                { id: 'mamao', name: 'Mamão', kcal: 43, protein: 0.5, price: 3.50, icon: '🥭', image: '' },
-                { id: 'banana', name: 'Banana', kcal: 89, protein: 1.1, price: 3.00, icon: '🍌', image: '' },
-                { id: 'morango', name: 'Morango', kcal: 33, protein: 0.7, price: 4.50, icon: '🍓', image: '' },
-                { id: 'frutas_vermelhas', name: 'Frutas vermelhas', kcal: 45, protein: 0.5, price: 6.00, icon: '🍒', image: '' },
-                { id: 'maracuja', name: 'Maracujá', kcal: 80, protein: 1.8, price: 4.50, icon: '🍋', image: '' },
-                { id: 'goiaba', name: 'Goiaba', kcal: 68, protein: 2.6, price: 4.00, icon: '🍑', image: '' },
-                { id: 'abacate', name: 'Abacate', kcal: 160, protein: 2.0, price: 5.00, icon: '🥑', image: '' }
+                { id: 'mamao', name: 'Mamão', kcal: 43, carbs: 11.0, protein: 0.5, price: 3.50, icon: '🥭', image: '' },
+                { id: 'banana', name: 'Banana', kcal: 89, carbs: 23.0, protein: 1.1, price: 3.00, icon: '🍌', image: '' },
+                { id: 'morango', name: 'Morango', kcal: 33, carbs: 8.0, protein: 0.7, price: 4.50, icon: '🍓', image: '' },
+                { id: 'frutas_vermelhas', name: 'Frutas vermelhas', kcal: 45, carbs: 10.0, protein: 0.5, price: 6.00, icon: '🍒', image: '' },
+                { id: 'maracuja', name: 'Maracujá', kcal: 80, carbs: 14.0, protein: 1.8, price: 4.50, icon: '🍋', image: '' },
+                { id: 'goiaba', name: 'Goiaba', kcal: 68, carbs: 14.0, protein: 2.6, price: 4.00, icon: '🍑', image: '' },
+                { id: 'abacate', name: 'Abacate', kcal: 160, carbs: 9.0, protein: 2.0, price: 5.00, icon: '🥑', image: '' }
             ]
         },
         {
@@ -427,7 +427,7 @@ function renderMenuCategories() {
 
         if (activeSubmenuId === 'home') {
             // RENDER SUBMENU PRIORITY CARDS HOME VIEW
-            const submenusToRender = (MENU_DATA.submenus || DEFAULT_MENU_DATA.submenus).filter(s => s.id !== 'all');
+            const submenusToRender = (MENU_DATA.submenus || DEFAULT_MENU_DATA.submenus).filter(s => s.id !== 'all' && !s.hidden);
 
             if (submenusToRender.length === 0) {
                 elements.categoryDashboard.innerHTML = `<div style="grid-column: 1 / -1; text-align: center; color: var(--text-secondary); padding: 40px 0;">Nenhum submenu cadastrado no momento.</div>`;
@@ -435,7 +435,7 @@ function renderMenuCategories() {
             }
 
             elements.categoryDashboard.innerHTML = submenusToRender.map(sub => {
-                const assignedCategories = MENU_DATA.categories.filter(c => (c.submenu || 'monte_o_seu') === sub.id);
+                const assignedCategories = MENU_DATA.categories.filter(c => !c.hidden && (c.submenu || 'monte_o_seu') === sub.id);
                 
                 let isFilled = false;
                 assignedCategories.forEach(cat => {
@@ -493,7 +493,9 @@ function renderMenuCategories() {
 
             const filteredCategories = MENU_DATA.categories.filter(category => {
                 const catSubmenu = category.submenu || 'monte_o_seu';
-                return catSubmenu === activeSubmenuId;
+                const parentSubmenu = (MENU_DATA.submenus || DEFAULT_MENU_DATA.submenus).find(s => s.id === catSubmenu);
+                if (parentSubmenu && parentSubmenu.hidden) return false;
+                return !category.hidden && catSubmenu === activeSubmenuId;
             });
 
             if (filteredCategories.length === 0) {
@@ -1114,6 +1116,45 @@ async function loadMenuDataAndSettings() {
     renderMenuCategories();
     setupGlobalActions();
 }
+
+// Real-time synchronization for open cardápio tabs
+try {
+    if ('BroadcastChannel' in window) {
+        const channel = new BroadcastChannel('power_shake_channel');
+        channel.onmessage = (event) => {
+            if (event.data && event.data.type === 'MENU_UPDATED') {
+                if (event.data.menuData) MENU_DATA = event.data.menuData;
+                if (event.data.settings) SETTINGS = event.data.settings;
+                orderState.selections = {};
+                if (MENU_DATA && MENU_DATA.categories) {
+                    MENU_DATA.categories.forEach(cat => {
+                        orderState.selections[cat.id] = cat.selectionType === 'single' ? null : [];
+                    });
+                }
+                loadSettings();
+                renderMenuCategories();
+            }
+        };
+    }
+} catch(e) {}
+
+window.addEventListener('storage', (e) => {
+    if (e.key === 'power_shake_menu_data' || e.key === 'power_shake_settings') {
+        const freshMenu = localStorage.getItem('power_shake_menu_data');
+        const freshSettings = localStorage.getItem('power_shake_settings');
+        if (freshMenu) MENU_DATA = JSON.parse(freshMenu);
+        if (freshSettings) SETTINGS = JSON.parse(freshSettings);
+        orderState.selections = {};
+        if (MENU_DATA && MENU_DATA.categories) {
+            MENU_DATA.categories.forEach(cat => {
+                orderState.selections[cat.id] = cat.selectionType === 'single' ? null : [];
+            });
+        }
+        loadSettings();
+        renderMenuCategories();
+    }
+});
+
 
 
 function finalizeOrder() {

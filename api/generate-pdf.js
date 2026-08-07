@@ -28,15 +28,23 @@ function getCategoryItemsForPdf(menuDataObj, categoryIds) {
     if (!menuDataObj || !menuDataObj.categories) return [];
     let items = [];
     const catList = Array.isArray(categoryIds) ? categoryIds : [categoryIds];
+    const submenus = menuDataObj.submenus || [];
     
     menuDataObj.categories.forEach(cat => {
+        if (cat.hidden) return;
+        const parentSub = submenus.find(s => s.id === (cat.submenu || 'monte_o_seu'));
+        if (parentSub && parentSub.hidden) return;
+
         if (catList.includes(cat.id) || catList.includes(cat.submenu)) {
             if (cat.items) {
                 cat.items.forEach(item => {
                     if (!item.outOfStock) {
                         items.push({
                             name: item.name.toUpperCase(),
-                            price: formatPricePill(item.price)
+                            price: formatPricePill(item.price),
+                            kcal: item.kcal || 0,
+                            carbs: item.carbs || 0,
+                            protein: item.protein || 0
                         });
                     }
                 });
@@ -45,6 +53,41 @@ function getCategoryItemsForPdf(menuDataObj, categoryIds) {
     });
     return items;
 }
+
+function getMacroText(item) {
+    if (!item) return '';
+    const parts = [];
+    if (item.kcal && item.kcal > 0) parts.push(`${item.kcal} kcal`);
+    if (item.carbs && item.carbs > 0) parts.push(`${item.carbs}g carb`);
+    if (item.protein && item.protein > 0) parts.push(`${item.protein}g prot`);
+    return parts.join('  •  ');
+}
+
+    function drawPricePill(text, x, y, width = 90, height = 28) {
+        doc.save();
+        doc.roundedRect(x, y, width, height, 8).fill('#8bfc03');
+        doc.fillColor('#000000')
+           .fontSize(14)
+           .font('Helvetica-Bold')
+           .text(cleanText(text), x, y + 7, { width: width, align: 'center' });
+        doc.restore();
+    }
+
+    function drawPdfItemBox(item, x, y, width = 440, height = 64, strokeColor = 'rgba(139, 252, 3, 0.2)', pricePillX = 410) {
+        doc.save();
+        doc.roundedRect(x, y, width, height, 12).fill('#0e121a');
+        doc.strokeColor(strokeColor).lineWidth(1).roundedRect(x, y, width, height, 12).stroke();
+        
+        const macroText = getMacroText(item);
+        if (macroText) {
+            doc.fillColor('#ffffff').fontSize(16).font('Helvetica-Bold').text(cleanText(item.name), x + 25, y + 14, { width: 240 });
+            doc.fillColor('#9aa0a6').fontSize(11).font('Helvetica').text(macroText, x + 25, y + 36, { width: 240 });
+        } else {
+            doc.fillColor('#ffffff').fontSize(17).font('Helvetica-Bold').text(cleanText(item.name), x + 25, y + Math.floor(height / 2) - 8, { width: 240 });
+        }
+        drawPricePill(item.price, pricePillX, y + Math.floor(height / 2) - 14, 90, 28);
+        doc.restore();
+    }
 
 module.exports = async (req, res) => {
     let client;
@@ -175,15 +218,7 @@ module.exports = async (req, res) => {
         doc.rect(0, 0, 1920, 1080).fill('#07090e');
     }
 
-    function drawPricePill(text, x, y, width = 90, height = 28) {
-        doc.save();
-        doc.roundedRect(x, y, width, height, 8).fill('#8bfc03');
-        doc.fillColor('#000000')
-           .fontSize(14)
-           .font('Helvetica-Bold')
-           .text(cleanText(text), x, y + 7, { width: width, align: 'center' });
-        doc.restore();
-    }
+
 
     // PAGE 1
     drawPageBackground();
@@ -240,23 +275,8 @@ module.exports = async (req, res) => {
         const s1 = shakesList[i];
         const s2 = shakesList[i + 1];
 
-        if (s1) {
-            doc.save();
-            doc.roundedRect(80, shakeY, 440, 64, 12).fill('#0e121a');
-            doc.strokeColor('rgba(139, 252, 3, 0.2)').lineWidth(1).roundedRect(80, shakeY, 440, 64, 12).stroke();
-            doc.fillColor('#ffffff').fontSize(18).font('Helvetica-Bold').text(cleanText(s1.name), 105, shakeY + 23, { width: 240 });
-            drawPricePill(s1.price, 410, shakeY + 18, 90, 28);
-            doc.restore();
-        }
-
-        if (s2) {
-            doc.save();
-            doc.roundedRect(550, shakeY, 440, 64, 12).fill('#0e121a');
-            doc.strokeColor('rgba(139, 252, 3, 0.2)').lineWidth(1).roundedRect(550, shakeY, 440, 64, 12).stroke();
-            doc.fillColor('#ffffff').fontSize(18).font('Helvetica-Bold').text(cleanText(s2.name), 575, shakeY + 23, { width: 240 });
-            drawPricePill(s2.price, 880, shakeY + 18, 90, 28);
-            doc.restore();
-        }
+        if (s1) drawPdfItemBox(doc, s1, 80, shakeY, 440, 64, 'rgba(139, 252, 3, 0.2)', 410);
+        if (s2) drawPdfItemBox(doc, s2, 550, shakeY, 440, 64, 'rgba(139, 252, 3, 0.2)', 880);
 
         shakeY += 80;
     }
@@ -294,23 +314,8 @@ module.exports = async (req, res) => {
         const f1 = fruitsList[i];
         const f2 = fruitsList[i + 1];
 
-        if (f1) {
-            doc.save();
-            doc.roundedRect(80, fruitY, 440, 80, 14).fill('#0e121a');
-            doc.strokeColor('rgba(255,255,255,0.08)').lineWidth(1).roundedRect(80, fruitY, 440, 80, 14).stroke();
-            doc.fillColor('#ffffff').fontSize(20).font('Helvetica-Bold').text(cleanText(f1.name), 110, fruitY + 30, { width: 240 });
-            drawPricePill(f1.price, 410, fruitY + 26, 90, 28);
-            doc.restore();
-        }
-
-        if (f2) {
-            doc.save();
-            doc.roundedRect(550, fruitY, 440, 80, 14).fill('#0e121a');
-            doc.strokeColor('rgba(255,255,255,0.08)').lineWidth(1).roundedRect(550, fruitY, 440, 80, 14).stroke();
-            doc.fillColor('#ffffff').fontSize(20).font('Helvetica-Bold').text(cleanText(f2.name), 580, fruitY + 30, { width: 240 });
-            drawPricePill(f2.price, 880, fruitY + 26, 90, 28);
-            doc.restore();
-        }
+        if (f1) drawPdfItemBox(doc, f1, 80, fruitY, 440, 80, 'rgba(255,255,255,0.08)', 410);
+        if (f2) drawPdfItemBox(doc, f2, 550, fruitY, 440, 80, 'rgba(255,255,255,0.08)', 880);
 
         fruitY += 100;
     }
@@ -350,23 +355,8 @@ module.exports = async (req, res) => {
         const c1 = complementList[i];
         const c2 = complementList[i + 1];
 
-        if (c1) {
-            doc.save();
-            doc.roundedRect(80, compY, 440, 64, 12).fill('#0e121a');
-            doc.strokeColor('rgba(139, 252, 3, 0.2)').lineWidth(1).roundedRect(80, compY, 440, 64, 12).stroke();
-            doc.fillColor('#ffffff').fontSize(18).font('Helvetica-Bold').text(c1.name, 105, compY + 23, { width: 240 });
-            drawPricePill(c1.price, 410, compY + 18, 90, 28);
-            doc.restore();
-        }
-
-        if (c2) {
-            doc.save();
-            doc.roundedRect(550, compY, 440, 64, 12).fill('#0e121a');
-            doc.strokeColor('rgba(139, 252, 3, 0.2)').lineWidth(1).roundedRect(550, compY, 440, 64, 12).stroke();
-            doc.fillColor('#ffffff').fontSize(18).font('Helvetica-Bold').text(c2.name, 575, compY + 23, { width: 240 });
-            drawPricePill(c2.price, 880, compY + 18, 90, 28);
-            doc.restore();
-        }
+        if (c1) drawPdfItemBox(doc, c1, 80, compY, 440, 64, 'rgba(139, 252, 3, 0.2)', 410);
+        if (c2) drawPdfItemBox(doc, c2, 550, compY, 440, 64, 'rgba(139, 252, 3, 0.2)', 880);
 
         compY += 80;
     }

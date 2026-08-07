@@ -54,13 +54,13 @@ const DEFAULT_MENU_DATA = {
             submenu: 'monte_o_seu',
             selectionType: 'single',
             items: [
-                { id: 'mamao', name: 'Mamão', kcal: 43, protein: 0.5, price: 3.50, icon: '🥭', image: '' },
-                { id: 'banana', name: 'Banana', kcal: 89, protein: 1.1, price: 3.00, icon: '🍌', image: '' },
-                { id: 'morango', name: 'Morango', kcal: 33, protein: 0.7, price: 4.50, icon: '🍓', image: '' },
-                { id: 'frutas_vermelhas', name: 'Frutas vermelhas', kcal: 45, protein: 0.5, price: 6.00, icon: '🍒', image: '' },
-                { id: 'maracuja', name: 'Maracujá', kcal: 80, protein: 1.8, price: 4.50, icon: '🍋', image: '' },
-                { id: 'goiaba', name: 'Goiaba', kcal: 68, protein: 2.6, price: 4.00, icon: '🍑', image: '' },
-                { id: 'abacate', name: 'Abacate', kcal: 160, protein: 2.0, price: 5.00, icon: '🥑', image: '' }
+                { id: 'mamao', name: 'Mamão', kcal: 43, carbs: 11.0, protein: 0.5, price: 3.50, icon: '🥭', image: '' },
+                { id: 'banana', name: 'Banana', kcal: 89, carbs: 23.0, protein: 1.1, price: 3.00, icon: '🍌', image: '' },
+                { id: 'morango', name: 'Morango', kcal: 33, carbs: 8.0, protein: 0.7, price: 4.50, icon: '🍓', image: '' },
+                { id: 'frutas_vermelhas', name: 'Frutas vermelhas', kcal: 45, carbs: 10.0, protein: 0.5, price: 6.00, icon: '🍒', image: '' },
+                { id: 'maracuja', name: 'Maracujá', kcal: 80, carbs: 14.0, protein: 1.8, price: 4.50, icon: '🍋', image: '' },
+                { id: 'goiaba', name: 'Goiaba', kcal: 68, carbs: 14.0, protein: 2.6, price: 4.00, icon: '🍑', image: '' },
+                { id: 'abacate', name: 'Abacate', kcal: 160, carbs: 9.0, protein: 2.0, price: 5.00, icon: '🥑', image: '' }
             ]
         },
         {
@@ -254,6 +254,64 @@ MENU_DATA.categories.forEach(cat => {
 let uploadedProductImageBase64 = '';
 let uploadedCategoryImageBase64 = '';
 
+// Centralized save function for MENU_DATA and SETTINGS
+async function saveMenuDataAndSettings(showNotification = false) {
+    // 1. Save to LocalStorage immediately
+    localStorage.setItem('power_shake_menu_data', JSON.stringify(MENU_DATA));
+    localStorage.setItem('power_shake_settings', JSON.stringify(SETTINGS));
+
+    // 2. Broadcast cross-tab update event for real-time menu synchronization
+    try {
+        if ('BroadcastChannel' in window) {
+            const channel = new BroadcastChannel('power_shake_channel');
+            channel.postMessage({ type: 'MENU_UPDATED', menuData: MENU_DATA, settings: SETTINGS });
+            channel.close();
+        }
+    } catch(e) {}
+    window.dispatchEvent(new Event('storage'));
+
+    // 3. Sync to Cloud Backend Vercel Serverless Redis if available
+    const pin = localStorage.getItem('power_shake_admin_pin') || '1234';
+
+    try {
+        const res = await fetch('/api/save-menu', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                menuData: MENU_DATA,
+                settings: SETTINGS,
+                pin: pin
+            })
+        });
+        const data = await res.json();
+
+        if (res.ok && data.success) {
+            if (showNotification) {
+                showToast('Todas as alterações foram salvas com sucesso na nuvem e localmente!', 'success');
+            }
+            return true;
+        } else if (res.status === 401) {
+            // PIN mismatch - ask user once
+            const newPin = prompt('Digite o PIN de Administrador (Padrão: 1234) para autorizar o salvamento na nuvem:');
+            if (newPin && newPin.trim()) {
+                localStorage.setItem('power_shake_admin_pin', newPin.trim());
+                return await saveMenuDataAndSettings(showNotification);
+            }
+        } else {
+            if (showNotification) {
+                showToast(`Salvo localmente neste dispositivo! (${data.error || 'Nuvem sem Redis'})`, 'warning');
+            }
+        }
+    } catch (e) {
+        console.warn('Backend cloud indisponível, mantido em cache local.', e);
+        if (showNotification) {
+            showToast('Alterações salvas com sucesso no seu dispositivo!', 'success');
+        }
+    }
+    return false;
+}
+window.saveMenuDataAndSettings = saveMenuDataAndSettings;
+
 // DOM selectors
 const dom = {
     // General Settings Inputs
@@ -275,6 +333,7 @@ const dom = {
     categorySelect: document.getElementById('category-select'),
     categorySelectionType: document.getElementById('category-selection-type'),
     categoryRequiredToggle: document.getElementById('category-required-toggle'),
+    categoryHiddenToggle: document.getElementById('category-hidden-toggle'),
     tableHeaders: document.getElementById('table-headers'),
     tableBody: document.getElementById('items-table-body'),
     addItemBtn: document.getElementById('add-item-btn'),
@@ -296,6 +355,7 @@ const dom = {
     productPreview: document.getElementById('product-image-preview'),
     productFile: document.getElementById('product-image-file'),
     itemKcal: document.getElementById('item-kcal-input'),
+    itemCarbs: document.getElementById('item-carbs-input'),
     itemProtein: document.getElementById('item-protein-input'),
     itemPrice: document.getElementById('item-price-input'),
     itemPrice2: document.getElementById('item-price2-input'),
@@ -315,6 +375,7 @@ const dom = {
     catPosition: document.getElementById('cat-position-input'),
     catSelection: document.getElementById('cat-selection-input'),
     catRequired: document.getElementById('cat-required-input'),
+    catHiddenInput: document.getElementById('cat-hidden-input'),
     catMediaType: document.getElementById('cat-media-type'),
     catIcon: document.getElementById('cat-icon-input'),
     catImageFile: document.getElementById('cat-image-file'),
@@ -424,6 +485,11 @@ function updateCategoryToolbarControls() {
     if (category && dom.categoryRequiredToggle) {
         dom.categoryRequiredToggle.checked = !!category.required;
     }
+    if (category && dom.categoryHiddenToggle) {
+        dom.categoryHiddenToggle.checked = !category.hidden;
+        const label = document.getElementById('category-hidden-label');
+        if (label) label.innerText = category.hidden ? 'Oculto (Cardápio & PDF)' : 'Visível';
+    }
 }
 
 // Populate the Category select options dynamically from MENU_DATA.categories
@@ -435,7 +501,8 @@ function populateCategoryDropdown(selectedId = null) {
         const sub = submenus.find(s => s.id === (cat.submenu || 'monte_o_seu'));
         const subName = sub ? sub.name : 'Geral';
         let suffix = cat.isStep ? ' (Passo)' : ' (Extra)';
-        return `<option value="${cat.id}" ${cat.id === activeId ? 'selected' : ''}>[${subName}] ${cat.name}${suffix}</option>`;
+        let hiddenTag = cat.hidden ? '🙈 [Oculto] ' : '';
+        return `<option value="${cat.id}" ${cat.id === activeId ? 'selected' : ''}>${hiddenTag}[${subName}] ${cat.name}${suffix}</option>`;
     }).join('');
 
     updateCategoryToolbarControls();
@@ -569,7 +636,7 @@ function renderItemsTable(resetSearch = false) {
     const showDesc = category.id === 'supplements' || category.id === 'milks';
 
     if (showPrice) headers.push('Preço');
-    if (showMacros) headers.push('Kcal', 'Proteína');
+    if (showMacros) headers.push('Kcal', 'Carboidratos', 'Proteína');
     if (showDesc) headers.push(category.id === 'milks' ? 'Versões / Desc' : 'Observação');
     headers.push('Disponível');
     headers.push('Ações');
@@ -614,6 +681,7 @@ function renderItemsTable(resetSearch = false) {
         }
         if (showMacros) {
             cols.push(`<td onclick="startInlineEdit(this, '${category.id}', '${item.id}', 'kcal')" style="cursor: pointer;" title="Clique para editar">${item.kcal || 0} kcal</td>`);
+            cols.push(`<td onclick="startInlineEdit(this, '${category.id}', '${item.id}', 'carbs')" style="cursor: pointer;" title="Clique para editar">${item.carbs || 0}g</td>`);
             cols.push(`<td onclick="startInlineEdit(this, '${category.id}', '${item.id}', 'protein')" style="cursor: pointer;" title="Clique para editar">${item.protein || 0}g</td>`);
         }
         if (showDesc) {
@@ -715,14 +783,15 @@ window.startInlineEdit = function(element, categoryId, itemId, field) {
     let currentVal;
     if (field === 'price') currentVal = item.price || 0;
     else if (field === 'kcal') currentVal = item.kcal || 0;
+    else if (field === 'carbs') currentVal = item.carbs || 0;
     else if (field === 'protein') currentVal = item.protein || 0;
     else currentVal = item.name || '';
 
     const input = document.createElement('input');
-    input.type = ['price', 'kcal', 'protein'].includes(field) ? 'number' : 'text';
+    input.type = ['price', 'kcal', 'carbs', 'protein'].includes(field) ? 'number' : 'text';
     if (field === 'price') {
         input.step = '0.01';
-    } else if (field === 'protein') {
+    } else if (field === 'protein' || field === 'carbs') {
         input.step = 'any';
     }
     input.className = 'dashboard-inline-input';
@@ -743,6 +812,10 @@ window.startInlineEdit = function(element, categoryId, itemId, field) {
             newVal = parseInt(newVal) || 0;
             item.kcal = newVal;
             element.innerHTML = newVal + ' kcal';
+        } else if (field === 'carbs') {
+            newVal = parseFloat(newVal) || 0;
+            item.carbs = newVal;
+            element.innerHTML = newVal + 'g';
         } else if (field === 'protein') {
             newVal = parseFloat(newVal) || 0;
             item.protein = newVal;
@@ -855,6 +928,7 @@ window.openItemEditor = function(id = null) {
             }
             
             dom.itemKcal.value = item.kcal || 0;
+            if (dom.itemCarbs) dom.itemCarbs.value = item.carbs || 0;
             dom.itemProtein.value = item.protein || 0;
             dom.itemPrice.value = item.price || 0.00;
             if (dom.itemPrice2) {
@@ -880,6 +954,7 @@ window.openItemEditor = function(id = null) {
             dom.itemPrice2.value = '0.00';
         }
         dom.itemKcal.value = '0';
+        if (dom.itemCarbs) dom.itemCarbs.value = '0';
         dom.itemProtein.value = '0';
         if (dom.itemAvailableCheckbox) {
             dom.itemAvailableCheckbox.checked = true;
@@ -906,6 +981,7 @@ dom.modalForm.addEventListener('submit', function(e) {
     const image = mediaType === 'image' ? uploadedProductImageBase64 : '';
 
     const kcal = parseFloat(dom.itemKcal.value) || 0;
+    const carbs = dom.itemCarbs ? (parseFloat(dom.itemCarbs.value) || 0) : 0;
     const protein = parseFloat(dom.itemProtein.value) || 0;
     const price = parseFloat(dom.itemPrice.value) || 0;
     const price2 = dom.itemPrice2 ? (parseFloat(dom.itemPrice2.value) || 0) : 0;
@@ -925,14 +1001,14 @@ dom.modalForm.addEventListener('submit', function(e) {
         if (index !== -1) {
             category.items[index] = {
                 ...category.items[index],
-                name, icon, image, kcal, protein, price, price2, description, versions, outOfStock
+                name, icon, image, kcal, carbs, protein, price, price2, description, versions, outOfStock
             };
         }
     } else {
         // ADD NEW ITEM MODE
         const newItem = {
             id: 'item_' + Date.now(),
-            name, icon, image, kcal, protein, price, price2, description, versions, outOfStock
+            name, icon, image, kcal, carbs, protein, price, price2, description, versions, outOfStock
         };
         category.items.push(newItem);
     }
@@ -997,7 +1073,7 @@ window.changeCategorySubmenuStatus = function() {
     const el = document.getElementById('category-submenu-select');
     if (category && el) {
         category.submenu = el.value;
-        localStorage.setItem('power_shake_menu_data', JSON.stringify(MENU_DATA));
+        saveMenuDataAndSettings();
         populateCategoryDropdown(catId);
         showToast(`Categoria "${category.name}" movida para o Submenu.`, 'success');
     }
@@ -1009,7 +1085,7 @@ window.changeCategorySelectionType = function() {
     const category = MENU_DATA.categories.find(c => c.id === catId);
     if (category && dom.categorySelectionType) {
         category.selectionType = dom.categorySelectionType.value;
-        localStorage.setItem('power_shake_menu_data', JSON.stringify(MENU_DATA));
+        saveMenuDataAndSettings();
     }
 };
 
@@ -1019,7 +1095,23 @@ window.changeCategoryRequiredStatus = function() {
     const category = MENU_DATA.categories.find(c => c.id === catId);
     if (category && dom.categoryRequiredToggle) {
         category.required = dom.categoryRequiredToggle.checked;
-        localStorage.setItem('power_shake_menu_data', JSON.stringify(MENU_DATA));
+        saveMenuDataAndSettings();
+    }
+};
+
+// Change Category Hidden Status (true/false) on toggle switch change
+window.changeCategoryHiddenStatus = function() {
+    const catId = dom.categorySelect.value || 'fruits';
+    const category = MENU_DATA.categories.find(c => c.id === catId);
+    if (category && dom.categoryHiddenToggle) {
+        category.hidden = !dom.categoryHiddenToggle.checked;
+        saveMenuDataAndSettings();
+        const label = document.getElementById('category-hidden-label');
+        if (label) label.innerText = category.hidden ? 'Oculto (Cardápio & PDF)' : 'Visível';
+        populateCategoryDropdown(catId);
+        renderItemsTable();
+        const statusText = category.hidden ? 'ocultada no cardápio digital e PDF' : 'visível no cardápio digital e PDF';
+        showToast(`Categoria "${category.name}" foi marcada como ${statusText}.`, 'success');
     }
 };
 
@@ -1071,6 +1163,7 @@ function setupCategoryActions() {
             dom.catImagePreview.style.backgroundImage = 'none';
             dom.catImagePreview.innerText = 'Sem Foto';
         }
+        if (dom.catHiddenInput) dom.catHiddenInput.value = 'false';
         populateSubmenuDropdown('monte_o_seu');
         toggleCategoryMediaFields();
         dom.catModal.style.display = 'flex';
@@ -1090,6 +1183,7 @@ function setupCategoryActions() {
         dom.catPosition.value = category.isStep ? 'step' : 'extra';
         dom.catSelection.value = category.selectionType || 'multi';
         dom.catRequired.value = category.required ? 'true' : 'false';
+        if (dom.catHiddenInput) dom.catHiddenInput.value = category.hidden ? 'true' : 'false';
         populateSubmenuDropdown(category.submenu || 'monte_o_seu');
         
         if (category.image) {
@@ -1128,6 +1222,7 @@ function setupCategoryActions() {
         const position = dom.catPosition.value;
         const selection = dom.catSelection.value;
         const required = dom.catRequired.value === 'true';
+        const hidden = dom.catHiddenInput ? (dom.catHiddenInput.value === 'true') : false;
         const submenu = document.getElementById('cat-submenu-input')?.value || 'monte_o_seu';
         const mediaType = dom.catMediaType.value;
         
@@ -1143,6 +1238,7 @@ function setupCategoryActions() {
                 category.isStep = position === 'step';
                 category.selectionType = selection;
                 category.required = required;
+                category.hidden = hidden;
                 category.submenu = submenu;
                 category.icon = icon;
                 category.image = image;
@@ -1160,6 +1256,7 @@ function setupCategoryActions() {
                 isStep: position === 'step',
                 selectionType: selection,
                 required,
+                hidden,
                 submenu,
                 icon,
                 image,
@@ -1171,25 +1268,25 @@ function setupCategoryActions() {
             populateCategoryDropdown(newCatId);
             renderItemsTable();
         }
-        localStorage.setItem('power_shake_menu_data', JSON.stringify(MENU_DATA));
+        saveMenuDataAndSettings();
     });
 
     // Delete category action
     dom.deleteCategoryBtn.addEventListener('click', function() {
         const catId = dom.categorySelect.value;
-        
-        // Prevent deleting original core categories to keep calculations intact
-        const defaultIds = ['fruits', 'milks', 'whey', 'toppings', 'peanutButters', 'supplements'];
-        if (defaultIds.includes(catId)) {
-            showToast('Categorias padrão do sistema não podem ser excluídas para não quebrar o construtor.', 'warning');
+        if (!catId) {
+            showToast('Nenhuma categoria selecionada para excluir.', 'warning');
             return;
         }
 
         const category = MENU_DATA.categories.find(c => c.id === catId);
         if (category && confirm(`Tem certeza que deseja excluir permanentemente a categoria "${category.name}" e todos os seus produtos cadastrados?`)) {
             MENU_DATA.categories = MENU_DATA.categories.filter(c => c.id !== catId);
-            populateCategoryDropdown('fruits');
+            const nextCatId = MENU_DATA.categories.length > 0 ? MENU_DATA.categories[0].id : '';
+            populateCategoryDropdown(nextCatId);
             renderItemsTable();
+            saveMenuDataAndSettings(true);
+            showToast(`Categoria "${category.name}" foi excluída com sucesso!`, 'success');
         }
     });
 }
@@ -1204,6 +1301,7 @@ window.openSubmenuEditor = function(subId = null) {
     const nameInput = document.getElementById('sub-name-field');
     const subtitleInput = document.getElementById('sub-subtitle-field');
     const iconInput = document.getElementById('sub-icon-field');
+    const hiddenSelect = document.getElementById('sub-hidden-field');
     const titleEl = document.getElementById('sub-editor-modal-title');
     const fileInput = document.getElementById('sub-image-field');
 
@@ -1217,6 +1315,7 @@ window.openSubmenuEditor = function(subId = null) {
         nameInput.value = sub.name || '';
         subtitleInput.value = sub.subtitle || '';
         iconInput.value = sub.icon || '';
+        if (hiddenSelect) hiddenSelect.value = sub.hidden ? 'true' : 'false';
         uploadedSubmenuImageBase64 = sub.image || '';
         titleEl.innerText = 'Editar Submenu: ' + sub.name;
     } else {
@@ -1224,6 +1323,7 @@ window.openSubmenuEditor = function(subId = null) {
         nameInput.value = '';
         subtitleInput.value = '';
         iconInput.value = '';
+        if (hiddenSelect) hiddenSelect.value = 'false';
         titleEl.innerText = 'Criar Novo Submenu Prioritário';
     }
 
@@ -1240,6 +1340,8 @@ window.saveSubmenuFromModal = function() {
     const name = document.getElementById('sub-name-field').value.trim();
     const subtitle = document.getElementById('sub-subtitle-field').value.trim();
     const icon = document.getElementById('sub-icon-field').value.trim();
+    const hiddenSelect = document.getElementById('sub-hidden-field');
+    const hidden = hiddenSelect ? (hiddenSelect.value === 'true') : false;
 
     if (!name) {
         showToast('Informe o nome do submenu.', 'warning');
@@ -1254,6 +1356,7 @@ window.saveSubmenuFromModal = function() {
             sub.name = name;
             sub.subtitle = subtitle;
             sub.icon = icon || '📁';
+            sub.hidden = hidden;
             if (uploadedSubmenuImageBase64) sub.image = uploadedSubmenuImageBase64;
         }
         showToast(`Submenu "${name}" atualizado com sucesso!`, 'success');
@@ -1264,15 +1367,28 @@ window.saveSubmenuFromModal = function() {
             name: name,
             subtitle: subtitle,
             icon: icon || '📁',
+            hidden: hidden,
             image: uploadedSubmenuImageBase64 || ''
         });
         showToast(`Submenu "${name}" criado com sucesso!`, 'success');
     }
 
-    localStorage.setItem('power_shake_menu_data', JSON.stringify(MENU_DATA));
+    saveMenuDataAndSettings();
     closeSubmenuEditor();
     renderSubmenusTab();
     populateCategoryDropdown();
+};
+
+window.toggleSubmenuVisibility = function(subId) {
+    const sub = MENU_DATA.submenus.find(s => s.id === subId);
+    if (sub) {
+        sub.hidden = !sub.hidden;
+        saveMenuDataAndSettings();
+        renderSubmenusTab();
+        populateCategoryDropdown();
+        const statusText = sub.hidden ? 'ocultado no cardápio digital e PDF' : 'visível no cardápio digital e PDF';
+        showToast(`Submenu "${sub.name}" foi marcado como ${statusText}.`, 'success');
+    }
 };
 
 window.editSubmenu = function(subId) {
@@ -1291,10 +1407,10 @@ window.deleteSubmenu = function(subId) {
             }
         });
         MENU_DATA.submenus = MENU_DATA.submenus.filter(s => s.id !== subId);
-        localStorage.setItem('power_shake_menu_data', JSON.stringify(MENU_DATA));
         closeSubmenuEditor();
         renderSubmenusTab();
         populateCategoryDropdown();
+        saveMenuDataAndSettings(true);
         showToast(`Submenu "${sub.name}" foi excluído com sucesso.`, 'success');
     }
 };
@@ -1303,7 +1419,7 @@ window.assignCategoryToSubmenu = function(catId, targetSubmenuId) {
     const category = MENU_DATA.categories.find(c => c.id === catId);
     if (category) {
         category.submenu = targetSubmenuId;
-        localStorage.setItem('power_shake_menu_data', JSON.stringify(MENU_DATA));
+        saveMenuDataAndSettings();
         renderSubmenusTab();
         populateCategoryDropdown();
         showToast(`Categoria "${category.name}" vinculada ao submenu.`, 'success');
@@ -1332,7 +1448,7 @@ function renderSubmenusTab() {
         const categoriesListHtml = assignedCategories.length > 0
             ? assignedCategories.map(cat => `
                 <div style="display: flex; align-items: center; justify-content: space-between; background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.05); padding: 8px 12px; border-radius: 8px; font-size: 0.88rem;">
-                    <span>${cat.icon || '📁'} <strong>${cat.name}</strong> (${cat.items ? cat.items.length : 0} itens)</span>
+                    <span>${cat.hidden ? '🙈 ' : ''}${cat.icon || '📁'} <strong>${cat.name}</strong> (${cat.items ? cat.items.length : 0} itens) ${cat.hidden ? '<span style="color:var(--danger); font-size:0.75rem;">(Oculto)</span>' : ''}</span>
                     <button type="button" onclick="addItemDirectToCategory('${cat.id}')" style="background: rgba(139, 252, 3, 0.15); border: 1px solid rgba(139, 252, 3, 0.3); color: var(--accent); padding: 4px 10px; border-radius: 6px; font-size: 0.78rem; font-weight: 700; cursor: pointer; display: inline-flex; align-items: center; gap: 4px;" title="Adicionar novo item nesta categoria">
                         <ion-icon name="add-outline"></ion-icon> Novo Item
                     </button>
@@ -1344,12 +1460,16 @@ function renderSubmenusTab() {
 
         const firstCatId = assignedCategories.length > 0 ? assignedCategories[0].id : (MENU_DATA.categories[0]?.id || 'fruits');
 
+        const visibilityBtn = sub.hidden 
+            ? `<button type="button" onclick="toggleSubmenuVisibility('${sub.id}')" style="background: rgba(255, 77, 79, 0.15); border: 1px solid rgba(255, 77, 79, 0.3); color: var(--danger); padding: 6px 12px; border-radius: 6px; cursor: pointer; font-size: 0.85rem; font-weight: 700; display: inline-flex; align-items: center; gap: 4px;" title="Clique para exibir este submenu no cardápio e PDF"><ion-icon name="eye-off-outline"></ion-icon> Oculto</button>`
+            : `<button type="button" onclick="toggleSubmenuVisibility('${sub.id}')" style="background: rgba(139, 252, 3, 0.15); border: 1px solid rgba(139, 252, 3, 0.3); color: var(--accent); padding: 6px 12px; border-radius: 6px; cursor: pointer; font-size: 0.85rem; font-weight: 700; display: inline-flex; align-items: center; gap: 4px;" title="Clique para ocultar este submenu no cardápio e PDF"><ion-icon name="eye-outline"></ion-icon> Visível</button>`;
+
         return `
-            <div style="background: rgba(22, 25, 35, 0.7); border: 1px solid var(--border-card); border-radius: 14px; padding: 20px; display: flex; flex-direction: column; gap: 15px; box-shadow: 0 4px 15px rgba(0,0,0,0.2);">
+            <div style="background: rgba(22, 25, 35, 0.7); border: 1px solid ${sub.hidden ? 'rgba(255,77,79,0.3)' : 'var(--border-card)'}; border-radius: 14px; padding: 20px; display: flex; flex-direction: column; gap: 15px; box-shadow: 0 4px 15px rgba(0,0,0,0.2);">
                 <div style="display: flex; gap: 15px; align-items: center;">
                     ${mediaHtml}
                     <div style="flex: 1;">
-                        <h4 style="font-size: 1.15rem; color: var(--text-primary); margin-bottom: 2px;">${sub.name}</h4>
+                        <h4 style="font-size: 1.15rem; color: var(--text-primary); margin-bottom: 2px;">${sub.name} ${sub.hidden ? '<span style="font-size:0.75rem; color:var(--danger); font-weight:700; background:rgba(255,77,79,0.15); padding:2px 6px; border-radius:4px; margin-left:6px;">🙈 OCULTO</span>' : ''}</h4>
                         <p style="font-size: 0.8rem; color: var(--text-secondary);">${sub.subtitle || 'Submenu prioritário'}</p>
                     </div>
                     <button type="button" onclick="addItemDirectToCategory('${firstCatId}')" style="background: var(--accent); color: #000; padding: 6px 12px; border-radius: 8px; font-size: 0.82rem; font-weight: 800; cursor: pointer; display: inline-flex; align-items: center; gap: 4px;" title="Incluir item direto neste submenu">
@@ -1375,6 +1495,7 @@ function renderSubmenusTab() {
                 ` : ''}
 
                 <div style="display: flex; gap: 8px; justify-content: flex-end; border-top: 1px solid rgba(255,255,255,0.06); padding-top: 12px; margin-top: auto;">
+                    ${visibilityBtn}
                     <button type="button" onclick="openSubmenuEditor('${sub.id}')" style="background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); color: var(--text-primary); padding: 6px 12px; border-radius: 6px; cursor: pointer; font-size: 0.85rem; display: inline-flex; align-items: center; gap: 4px;">
                         <ion-icon name="create-outline"></ion-icon> Editar
                     </button>
@@ -1442,8 +1563,11 @@ function setupSubmenuManagerActions() {
         });
     }
 
-    if (closeBtn) closeBtn.addEventListener('click', closeModal);
-    if (cancelBtn) cancelBtn.addEventListener('click', closeModal);
+    const closeSubmenuModal = () => {
+        if (modal) modal.style.display = 'none';
+    };
+    if (closeBtn) closeBtn.addEventListener('click', closeSubmenuModal);
+    if (cancelBtn) cancelBtn.addEventListener('click', closeSubmenuModal);
 }
 
 function setupMobileNavigation() {
@@ -1526,39 +1650,11 @@ function setupDashboardActions() {
         if (SETTINGS.street) SETTINGS.address = `📍 <strong>Endereço:</strong> ${SETTINGS.street}`;
         if (SETTINGS.complement) SETTINGS.subAddress = SETTINGS.complement;
 
-        const pin = prompt("Digite o PIN do Administrador para salvar as alterações globalmente (Padrão: 1234):");
-        if (pin === null) return;
-        if (pin.trim() === '') {
-            showToast('Você precisa informar o PIN do Administrador!', 'warning');
-            return;
-        }
-
         dom.saveSettingsBtn.disabled = true;
         dom.saveSettingsBtn.innerText = 'Salvando...';
 
         try {
-            const res = await fetch('/api/save-menu', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    menuData: MENU_DATA,
-                    settings: SETTINGS,
-                    pin: pin.trim()
-                })
-            });
-            const data = await res.json();
-
-            if (res.ok && data.success) {
-                // Cache locally too
-                localStorage.setItem('power_shake_menu_data', JSON.stringify(MENU_DATA));
-                localStorage.setItem('power_shake_settings', JSON.stringify(SETTINGS));
-                showToast('Todas as alterações foram salvas com sucesso globalmente!', 'success');
-            } else {
-                showToast(`Erro ao salvar: ${data.error || 'Erro desconhecido'}`, 'error');
-            }
-        } catch (e) {
-            console.error(e);
-            showToast('Erro de conexão ao salvar no banco de dados. Verifique sua rede.', 'error');
+            await saveMenuDataAndSettings(true);
         } finally {
             dom.saveSettingsBtn.disabled = false;
             dom.saveSettingsBtn.innerText = 'Salvar Alterações';
@@ -2394,9 +2490,9 @@ window.deleteMenuItem = function(id) {
         const item = category.items.find(i => i.id === id);
         const name = item ? item.name : '';
         category.items = category.items.filter(i => i.id !== id);
-        localStorage.setItem('power_shake_menu_data', JSON.stringify(MENU_DATA));
         renderItemsTable();
         renderBoardPreview();
+        saveMenuDataAndSettings(true);
         showToast(`Item ${name ? '"' + name + '" ' : ''}removido com sucesso.`, 'success');
     }
 };
@@ -2414,19 +2510,36 @@ function formatPricePill(val) {
     return 'R$ 0,00';
 }
 
+function formatMacroSubtext(i) {
+    if (!i) return '';
+    const parts = [];
+    if (i.kcal && i.kcal > 0) parts.push(`${i.kcal} kcal`);
+    if (i.carbs && i.carbs > 0) parts.push(`${i.carbs}g carb`);
+    if (i.protein && i.protein > 0) parts.push(`${i.protein}g prot`);
+    return parts.join(' • ');
+}
+
 function getCategoryItemsForBoard(categoryIds) {
     if (!MENU_DATA || !MENU_DATA.categories) return [];
     let items = [];
     const catList = Array.isArray(categoryIds) ? categoryIds : [categoryIds];
+    const submenus = MENU_DATA.submenus || DEFAULT_MENU_DATA.submenus || [];
     
     MENU_DATA.categories.forEach(cat => {
+        if (cat.hidden) return;
+        const parentSub = submenus.find(s => s.id === (cat.submenu || 'monte_o_seu'));
+        if (parentSub && parentSub.hidden) return;
+
         if (catList.includes(cat.id) || catList.includes(cat.submenu)) {
             if (cat.items) {
                 cat.items.forEach(item => {
                     if (!item.outOfStock) {
                         items.push({
                             name: item.name.toUpperCase(),
-                            price: formatPricePill(item.price)
+                            price: formatPricePill(item.price),
+                            kcal: item.kcal || 0,
+                            carbs: item.carbs || 0,
+                            protein: item.protein || 0
                         });
                     }
                 });
@@ -2459,12 +2572,17 @@ function renderBoardPreview() {
     ];
     const page2List = (dbPage2Items.length > 0 ? dbPage2Items : defaultPage2Items).slice(0, 10);
 
-    const page2GridHtml = page2List.map(i => `
-        <div style="background: #0e121a; border: 1px solid ${accent}33; border-radius: 14px; padding: 18px 22px; display: flex; justify-content: space-between; align-items: center;">
-            <span style="font-weight: 800; font-size: 18px; color: #fff;">${i.name}</span>
+    const page2GridHtml = page2List.map(i => {
+        const subtext = formatMacroSubtext(i);
+        return `
+        <div style="background: #0e121a; border: 1px solid ${accent}33; border-radius: 14px; padding: 14px 22px; display: flex; justify-content: space-between; align-items: center;">
+            <div style="display: flex; flex-direction: column; gap: 2px;">
+                <span style="font-weight: 800; font-size: 17px; color: #fff;">${i.name}</span>
+                ${subtext ? `<span style="font-size: 12px; color: #9aa0a6; font-weight: 600;">${subtext}</span>` : ''}
+            </div>
             <span class="board-price-pill" style="background: ${accent}; font-size: 16px; padding: 6px 14px;">${i.price}</span>
         </div>
-    `).join('');
+    `;}).join('');
 
     // Page 3 items (Frutas)
     const dbPage3Items = getCategoryItemsForBoard(['fruits']);
@@ -2480,12 +2598,17 @@ function renderBoardPreview() {
     ];
     const page3List = (dbPage3Items.length > 0 ? dbPage3Items : defaultPage3Items).slice(0, 10);
 
-    const page3GridHtml = page3List.map(i => `
-        <div style="background: #0e121a; border: 1px solid rgba(255,255,255,0.08); border-radius: 16px; padding: 22px; display: flex; justify-content: space-between; align-items: center;">
-            <span style="font-weight: 800; font-size: 20px; color: #fff;">${i.name}</span>
+    const page3GridHtml = page3List.map(i => {
+        const subtext = formatMacroSubtext(i);
+        return `
+        <div style="background: #0e121a; border: 1px solid rgba(255,255,255,0.08); border-radius: 16px; padding: 16px 22px; display: flex; justify-content: space-between; align-items: center;">
+            <div style="display: flex; flex-direction: column; gap: 2px;">
+                <span style="font-weight: 800; font-size: 19px; color: #fff;">${i.name}</span>
+                ${subtext ? `<span style="font-size: 12px; color: #9aa0a6; font-weight: 600;">${subtext}</span>` : ''}
+            </div>
             <span class="board-price-pill" style="background: ${accent}; font-size: 16px; padding: 6px 14px;">${i.price}</span>
         </div>
-    `).join('');
+    `;}).join('');
 
     // Page 4 items (Complementos)
     const dbPage4Items = getCategoryItemsForBoard(['toppings', 'peanutButters', 'supplements']);
@@ -2503,12 +2626,17 @@ function renderBoardPreview() {
     ];
     const page4List = (dbPage4Items.length > 0 ? dbPage4Items : defaultPage4Items).slice(0, 10);
 
-    const page4GridHtml = page4List.map(i => `
-        <div style="background: #0e121a; border: 1px solid ${accent}33; border-radius: 14px; padding: 18px 22px; display: flex; justify-content: space-between; align-items: center;">
-            <span style="font-weight: 800; font-size: 18px; color: #fff;">${i.name}</span>
+    const page4GridHtml = page4List.map(i => {
+        const subtext = formatMacroSubtext(i);
+        return `
+        <div style="background: #0e121a; border: 1px solid ${accent}33; border-radius: 14px; padding: 14px 22px; display: flex; justify-content: space-between; align-items: center;">
+            <div style="display: flex; flex-direction: column; gap: 2px;">
+                <span style="font-weight: 800; font-size: 17px; color: #fff;">${i.name}</span>
+                ${subtext ? `<span style="font-size: 12px; color: #9aa0a6; font-weight: 600;">${subtext}</span>` : ''}
+            </div>
             <span class="board-price-pill" style="background: ${accent}; font-size: 16px; padding: 6px 14px;">${i.price}</span>
         </div>
-    `).join('');
+    `;}).join('');
 
     container.innerHTML = `
         <!-- PAGE 1: CAPA & HERÓI (1920x1080) -->
