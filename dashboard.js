@@ -450,21 +450,26 @@ function switchTab(tabId) {
     }
 
     if (tabId === 'tab-location') {
-        loadLocationSettings();
+        if (typeof loadLocationSettings === 'function') loadLocationSettings();
+    }
+
+    if (tabId === 'tab-general') {
+        if (typeof loadGeneralSettings === 'function') loadGeneralSettings();
     }
 
     if (tabId === 'tab-export') {
-        loadBoardDataInputs();
-        renderBoardPreview();
+        if (typeof loadBoardDataInputs === 'function') loadBoardDataInputs();
+        if (typeof renderBoardPreview === 'function') renderBoardPreview();
     }
 
     if (tabId === 'tab-orders') {
-        loadOrders();
+        if (typeof loadOrders === 'function') loadOrders();
         startOrdersPolling();
     } else {
         stopOrdersPolling();
     }
 }
+window.switchTab = switchTab;
 
 // Populate Submenu dropdown for Category Modal
 function populateSubmenuDropdown(selectedId = null) {
@@ -3309,12 +3314,15 @@ window.addEventListener('resize', () => {
 });
 
 // Bind to window for HTML inline onclick
+window.switchTab = switchTab;
 window.toggleTimelineStep = toggleTimelineStep;
 window.updateOrderStatus = updateOrderStatus;
 window.deleteOrder = deleteOrder;
 window.renderOverviewTab = renderOverviewTab;
+window.renderCardapioTab = renderCardapioTab;
 window.renderUsersTab = renderUsersTab;
 window.loadLocationSettings = loadLocationSettings;
+window.loadGeneralSettings = loadGeneralSettings;
 window.updateLocationPreview = updateLocationPreview;
 window.updateBoardHeroPhoto = updateBoardHeroPhoto;
 window.syncBoardFromMenuData = syncBoardFromMenuData;
