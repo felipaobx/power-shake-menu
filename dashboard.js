@@ -197,10 +197,6 @@ const DEFAULT_SETTINGS = {
     ]
 };
 
-// Database State
-let MENU_DATA = JSON.parse(localStorage.getItem('power_shake_menu_data'));
-let SETTINGS = JSON.parse(localStorage.getItem('power_shake_settings')) || DEFAULT_SETTINGS;
-
 function migrateFruitPrices(menuData) {
     if (menuData && menuData.categories) {
         const fruitsCat = menuData.categories.find(c => c.id === 'fruits');
@@ -221,25 +217,41 @@ function migrateFruitPrices(menuData) {
     return menuData;
 }
 
-// Migration Check: If old data structure doesn't support categories lists, reload
-if (MENU_DATA && !MENU_DATA.categories) {
-    MENU_DATA = DEFAULT_MENU_DATA;
-    localStorage.setItem('power_shake_menu_data', JSON.stringify(DEFAULT_MENU_DATA));
-} else if (!MENU_DATA) {
-    MENU_DATA = DEFAULT_MENU_DATA;
-    localStorage.setItem('power_shake_menu_data', JSON.stringify(DEFAULT_MENU_DATA));
-} else {
-    MENU_DATA = migrateFruitPrices(MENU_DATA);
+function sanitizeMenuData(data) {
+    if (!data || typeof data !== 'object') {
+        return JSON.parse(JSON.stringify(DEFAULT_MENU_DATA));
+    }
+    
+    if (!data.categories || !Array.isArray(data.categories) || data.categories.length === 0) {
+        data.categories = JSON.parse(JSON.stringify(DEFAULT_MENU_DATA.categories));
+    }
+    
+    if (!data.submenus || !Array.isArray(data.submenus) || data.submenus.length === 0) {
+        data.submenus = JSON.parse(JSON.stringify(DEFAULT_MENU_DATA.submenus));
+    } else {
+        if (!data.submenus.some(s => s.id === 'all')) {
+            data.submenus.unshift({ id: 'all', name: 'Todos', icon: '🌟' });
+        }
+    }
+    
+    const validSubmenuIds = data.submenus.map(s => s.id);
+
+    data.categories.forEach(cat => {
+        if (!cat.items || !Array.isArray(cat.items)) {
+            const defaultCat = DEFAULT_MENU_DATA.categories.find(dc => dc.id === cat.id);
+            cat.items = defaultCat ? JSON.parse(JSON.stringify(defaultCat.items)) : [];
+        }
+        if (!cat.submenu || (!validSubmenuIds.includes(cat.submenu) && cat.submenu !== 'all')) {
+            cat.submenu = 'monte_o_seu';
+        }
+    });
+
+    return migrateFruitPrices(data);
 }
 
-// Migration Check: Submenus & Submenu Categorization
-if (!MENU_DATA.submenus) {
-    MENU_DATA.submenus = DEFAULT_MENU_DATA.submenus;
-} else {
-    if (!MENU_DATA.submenus.some(s => s.id === 'all')) {
-        MENU_DATA.submenus.unshift({ id: 'all', name: 'Todos', icon: '🌟' });
-    }
-}
+// Database State
+let MENU_DATA = sanitizeMenuData(JSON.parse(localStorage.getItem('power_shake_menu_data')));
+let SETTINGS = JSON.parse(localStorage.getItem('power_shake_settings')) || DEFAULT_SETTINGS;
 
 MENU_DATA.categories.forEach(cat => {
     if (!cat.submenu) {
@@ -1998,18 +2010,19 @@ async function initDashboard() {
     try {
         const response = await fetch('/api/get-menu');
         const data = await response.json();
-        if (data && data.success) {
-            if (data.menuData) {
-                MENU_DATA = migrateFruitPrices(data.menuData);
-                localStorage.setItem('power_shake_menu_data', JSON.stringify(MENU_DATA));
-            }
-            if (data.settings) {
-                SETTINGS = data.settings;
-                localStorage.setItem('power_shake_settings', JSON.stringify(data.settings));
-            }
+        if (data && data.success && data.menuData) {
+            MENU_DATA = sanitizeMenuData(data.menuData);
+            localStorage.setItem('power_shake_menu_data', JSON.stringify(MENU_DATA));
+        } else {
+            MENU_DATA = sanitizeMenuData(MENU_DATA);
+        }
+        if (data && data.success && data.settings) {
+            SETTINGS = { ...DEFAULT_SETTINGS, ...data.settings };
+            localStorage.setItem('power_shake_settings', JSON.stringify(SETTINGS));
         }
     } catch (e) {
         console.warn('Não foi possível carregar os dados do backend. Usando cache local.');
+        MENU_DATA = sanitizeMenuData(MENU_DATA);
     }
 
     try { loadGeneralSettings(); } catch(e) { console.error('Error in loadGeneralSettings:', e); }

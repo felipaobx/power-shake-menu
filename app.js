@@ -213,37 +213,40 @@ function migrateFruitPrices(menuData) {
     return menuData;
 }
 
-// Migration helper (converts old object schema to list schema if needed)
-if (MENU_DATA && !MENU_DATA.categories) {
-    MENU_DATA = null; // Forces reset to category list schema
+function sanitizeMenuData(data) {
+    if (!data || typeof data !== 'object') {
+        return JSON.parse(JSON.stringify(DEFAULT_MENU_DATA));
+    }
+    
+    if (!data.categories || !Array.isArray(data.categories) || data.categories.length === 0) {
+        data.categories = JSON.parse(JSON.stringify(DEFAULT_MENU_DATA.categories));
+    }
+    
+    if (!data.submenus || !Array.isArray(data.submenus) || data.submenus.length === 0) {
+        data.submenus = JSON.parse(JSON.stringify(DEFAULT_MENU_DATA.submenus));
+    } else {
+        if (!data.submenus.some(s => s.id === 'all')) {
+            data.submenus.unshift({ id: 'all', name: 'Todos', icon: '🌟' });
+        }
+    }
+    
+    const validSubmenuIds = data.submenus.map(s => s.id);
+
+    data.categories.forEach(cat => {
+        if (!cat.items || !Array.isArray(cat.items)) {
+            const defaultCat = DEFAULT_MENU_DATA.categories.find(dc => dc.id === cat.id);
+            cat.items = defaultCat ? JSON.parse(JSON.stringify(defaultCat.items)) : [];
+        }
+        if (!cat.submenu || (!validSubmenuIds.includes(cat.submenu) && cat.submenu !== 'all')) {
+            cat.submenu = 'monte_o_seu';
+        }
+    });
+
+    return migrateFruitPrices(data);
 }
 
-if (!MENU_DATA) {
-    MENU_DATA = DEFAULT_MENU_DATA;
-    localStorage.setItem('power_shake_menu_data', JSON.stringify(DEFAULT_MENU_DATA));
-} else {
-    MENU_DATA = migrateFruitPrices(MENU_DATA);
-}
+MENU_DATA = sanitizeMenuData(JSON.parse(localStorage.getItem('power_shake_menu_data')));
 
-// Migration: Submenus & Submenu Categorization
-if (!MENU_DATA.submenus) {
-    MENU_DATA.submenus = DEFAULT_MENU_DATA.submenus;
-} else {
-    // Ensure 'all' tab is in submenus
-    if (!MENU_DATA.submenus.some(s => s.id === 'all')) {
-        MENU_DATA.submenus.unshift({ id: 'all', name: 'Todos', icon: '🌟' });
-    }
-}
-
-// Ensure every category has a submenu
-MENU_DATA.categories.forEach(cat => {
-    if (!cat.submenu) {
-        cat.submenu = (cat.id === 'estilo_shakes') ? 'estilo_shakes' : 'monte_o_seu';
-    }
-    if (cat.required === undefined) {
-        cat.required = ['fruits', 'milks'].includes(cat.id);
-    }
-});
 if (!SETTINGS) {
     SETTINGS = DEFAULT_SETTINGS;
     localStorage.setItem('power_shake_settings', JSON.stringify(DEFAULT_SETTINGS));
@@ -1090,19 +1093,19 @@ async function loadMenuDataAndSettings() {
         const response = await fetch('/api/get-menu');
         const data = await response.json();
         
-        if (data && data.success) {
-            // Update local memory and cache if loaded successfully from database
-            if (data.menuData) {
-                MENU_DATA = migrateFruitPrices(data.menuData);
-                localStorage.setItem('power_shake_menu_data', JSON.stringify(MENU_DATA));
-            }
-            if (data.settings) {
-                SETTINGS = data.settings;
-                localStorage.setItem('power_shake_settings', JSON.stringify(data.settings));
-            }
+        if (data && data.success && data.menuData) {
+            MENU_DATA = sanitizeMenuData(data.menuData);
+            localStorage.setItem('power_shake_menu_data', JSON.stringify(MENU_DATA));
+        } else {
+            MENU_DATA = sanitizeMenuData(MENU_DATA);
+        }
+        if (data && data.success && data.settings) {
+            SETTINGS = { ...DEFAULT_SETTINGS, ...data.settings };
+            localStorage.setItem('power_shake_settings', JSON.stringify(SETTINGS));
         }
     } catch (e) {
         console.warn('Backend database offline or failed. Loading from local cache.');
+        MENU_DATA = sanitizeMenuData(MENU_DATA);
     }
     
     // Refresh dynamic selection lists keys if categories modified
