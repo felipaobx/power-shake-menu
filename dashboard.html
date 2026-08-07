@@ -696,6 +696,13 @@
             <form id="item-editor-form" onsubmit="event.preventDefault()">
                 <input type="hidden" id="edit-item-id">
                 
+                <div class="form-group" style="margin-bottom: 15px;">
+                    <label for="item-category-select">Categoria Pertencente</label>
+                    <select id="item-category-select" class="form-control">
+                        <!-- Populated dynamically by dashboard.js -->
+                    </select>
+                </div>
+
                 <div class="grid-2">
                     <div class="form-group">
                         <label for="item-name-input">Nome do Item</label>

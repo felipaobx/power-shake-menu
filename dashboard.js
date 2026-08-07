@@ -349,6 +349,7 @@ const dom = {
     modalTitle: document.getElementById('modal-form-title'),
     modalForm: document.getElementById('item-editor-form'),
     editItemId: document.getElementById('edit-item-id'),
+    itemCategorySelect: document.getElementById('item-category-select'),
     itemName: document.getElementById('item-name-input'),
     itemMediaType: document.getElementById('item-media-type'),
     itemIcon: document.getElementById('item-icon-input'),
@@ -488,6 +489,7 @@ function updateCategoryToolbarControls() {
 
 // Populate the Category select options dynamically from MENU_DATA.categories
 function populateCategoryDropdown(selectedId = null) {
+    if (!dom.categorySelect) return;
     const activeId = selectedId || dom.categorySelect.value || (MENU_DATA.categories[0] ? MENU_DATA.categories[0].id : 'fruits');
     const submenus = MENU_DATA.submenus || DEFAULT_MENU_DATA.submenus;
     
@@ -500,6 +502,18 @@ function populateCategoryDropdown(selectedId = null) {
     }).join('');
 
     updateCategoryToolbarControls();
+}
+
+function populateItemCategoryDropdown(selectedCatId = null) {
+    const el = document.getElementById('item-category-select');
+    if (!el) return;
+    const categories = MENU_DATA.categories || [];
+    const submenus = MENU_DATA.submenus || DEFAULT_MENU_DATA.submenus;
+    el.innerHTML = categories.map(cat => {
+        const sub = submenus.find(s => s.id === (cat.submenu || 'monte_o_seu'));
+        const subName = sub ? sub.name : 'Geral';
+        return `<option value="${cat.id}" ${cat.id === selectedCatId ? 'selected' : ''}>[${subName}] ${cat.icon || '📁'} ${cat.name}</option>`;
+    }).join('');
 }
 
 // Load general text uploader states
@@ -873,24 +887,26 @@ function toggleItemMediaFields() {
 }
 
 // Modal Form Open Logic for Items
-window.openItemEditor = function(id = null) {
+window.openItemEditor = function(id = null, targetCatId = null) {
     const container = document.getElementById('toast-container');
     if (container) container.innerHTML = '';
     
-    let catId = dom.categorySelect ? dom.categorySelect.value : null;
+    let catId = targetCatId || (dom.itemCategorySelect ? dom.itemCategorySelect.value : null) || (dom.categorySelect ? dom.categorySelect.value : null);
     if (!catId && MENU_DATA.categories && MENU_DATA.categories.length > 0) {
         catId = MENU_DATA.categories[0].id;
-        if (dom.categorySelect) dom.categorySelect.value = catId;
     }
+
+    populateItemCategoryDropdown(catId);
     const category = MENU_DATA.categories ? MENU_DATA.categories.find(c => c.id === catId) : null;
     
     if (!category && !id) {
-        showToast('Nenhuma categoria selecionada. Crie uma categoria primeiro!', 'warning');
+        showToast('Nenhuma categoria cadastrada. Crie uma categoria primeiro!', 'warning');
         return;
     }
     
     if (dom.editItemId) dom.editItemId.value = id || '';
     if (dom.modalForm) dom.modalForm.reset();
+    if (dom.itemCategorySelect && catId) dom.itemCategorySelect.value = catId;
     uploadedProductImageBase64 = '';
     if (dom.productPreview) dom.productPreview.style.backgroundImage = 'none';
 
@@ -966,7 +982,6 @@ window.openItemEditor = function(id = null) {
 };
 
 // Move Menu Item Up
-window.moveItemUp = function(id) {
     const catId = dom.categorySelect ? dom.categorySelect.value : null;
     const category = MENU_DATA.categories ? MENU_DATA.categories.find(c => c.id === catId) : null;
     if (!category) return;
@@ -1735,12 +1750,7 @@ window.deleteCategoryDirect = function(catId) {
 };
 
 window.openItemEditorDirect = function(catId = null, itemId = null) {
-    if (dom.categorySelect && catId) {
-        dom.categorySelect.value = catId;
-    } else if (catId) {
-        populateCategoryDropdown(catId);
-    }
-    openItemEditor(itemId);
+    openItemEditor(itemId, catId);
 };
 
 window.deleteMenuItemDirect = function(catId, itemId) {
@@ -2697,7 +2707,7 @@ function addItemDirectToCategory(catId) {
 if (dom.modalForm) {
     dom.modalForm.addEventListener('submit', function(e) {
         e.preventDefault();
-        const catId = dom.categorySelect ? dom.categorySelect.value : null;
+        const catId = (dom.itemCategorySelect ? dom.itemCategorySelect.value : null) || (dom.categorySelect ? dom.categorySelect.value : null);
         const category = MENU_DATA.categories ? MENU_DATA.categories.find(c => c.id === catId) : null;
         
         if (!category) {
@@ -2755,9 +2765,9 @@ if (dom.modalForm) {
         }
 
         saveMenuDataAndSettings(true);
+        renderCardapioTab();
 
         if (dom.itemModal) dom.itemModal.style.display = 'none';
-        renderItemsTable();
         if (typeof renderBoardPreview === 'function') renderBoardPreview();
     });
 }
