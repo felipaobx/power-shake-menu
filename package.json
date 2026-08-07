@@ -1,10 +1,11 @@
 {
   "name": "power-shake-menu",
   "version": "1.0.0",
-  "description": "",
+  "description": "Digital menu, admin dashboard, kitchen workflow and order management for Power Shake",
   "main": "app.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "node --test",
+    "check": "node scripts/check-syntax.js"
   },
   "repository": {
     "type": "git",
@@ -21,6 +22,9 @@
   "dependencies": {
     "pdfkit": "^0.19.1",
     "qrcode": "^1.5.4",
-    "redis": "^6.1.0"
+    "redis": "^6.2.0"
+  },
+  "engines": {
+    "node": ">=20"
   }
 }

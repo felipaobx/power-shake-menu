@@ -1,3 +1,40 @@
+function escapeHtml(value) {
+    return String(value == null ? '' : value).replace(/[&<>'"]/g, char => ({
+        '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;'
+    })[char]);
+}
+
+
+function sanitizeDisplayText(value, maxLength = 180) {
+    return String(value == null ? '' : value)
+        .replace(/[<>"']/g, '')
+        .replace(/[\u0000-\u001f\u007f]/g, ' ')
+        .trim()
+        .slice(0, maxLength);
+}
+
+function sanitizeIdentifier(value, fallback) {
+    const identifier = String(value || '').replace(/[^a-zA-Z0-9_-]/g, '').slice(0, 80);
+    return identifier || fallback;
+}
+
+function sanitizeImageUrl(value) {
+    const url = String(value || '').trim();
+    if (/^(?:\.\/)?assets\/[a-zA-Z0-9_./-]+$/.test(url)) return url;
+    if (/^data:image\/(?:png|jpe?g|webp);base64,[a-zA-Z0-9+/=]+$/.test(url)) return url;
+    if (/^https:\/\//i.test(url)) return url;
+    return '';
+}
+
+function sanitizeExternalUrl(value) {
+    try {
+        const url = new URL(String(value || ''), window.location.origin);
+        return ['https:', 'http:'].includes(url.protocol) ? url.href : '#';
+    } catch {
+        return '#';
+    }
+}
+
 // Power Shake Default Menu Data (List of Categories Schema)
 const DEFAULT_MENU_DATA = {
     submenus: [
@@ -184,7 +221,7 @@ const DEFAULT_SETTINGS = {
     midBannerTitle: 'Experimente um novo estilo de vida',
     midBannerSubtitle: 'Venha conhecer a Power Shake! Nossa missão é trazer sabor incomparável alinhado com a sua rotina fitness.',
     midBannerImage: 'assets/fruits.png',
-    address: '📍 <strong>Endereço:</strong> Rua Zeferino Galvão, nº 508, 1º andar, sala 01',
+    address: '📍 Endereço: Rua Zeferino Galvão, nº 508, 1º andar, sala 01',
     subAddress: 'Em frente ao receptivo de lotação (Acima da Medic Center)',
     mapUrl: 'https://maps.google.com/?q=Rua+Zeferino+Galvão,+508+Caruaru'
 };
@@ -192,6 +229,10 @@ const DEFAULT_SETTINGS = {
 // Load from LocalStorage or initialize with defaults
 let MENU_DATA = JSON.parse(localStorage.getItem('power_shake_menu_data'));
 let SETTINGS = JSON.parse(localStorage.getItem('power_shake_settings'));
+if (SETTINGS && Object.prototype.hasOwnProperty.call(SETTINGS, 'users')) {
+    delete SETTINGS.users;
+    localStorage.setItem('power_shake_settings', JSON.stringify(SETTINGS));
+}
 
 function migrateFruitPrices(menuData) {
     if (menuData && menuData.categories) {
@@ -230,9 +271,22 @@ function sanitizeMenuData(data) {
         }
     }
     
+    data.submenus.forEach((submenu, index) => {
+        submenu.id = sanitizeIdentifier(submenu.id, `submenu_${index}`);
+        submenu.name = sanitizeDisplayText(submenu.name, 100);
+        submenu.icon = sanitizeDisplayText(submenu.icon, 12);
+        submenu.description = sanitizeDisplayText(submenu.description, 240);
+        submenu.image = sanitizeImageUrl(submenu.image);
+    });
+
     const validSubmenuIds = data.submenus.map(s => s.id);
 
-    data.categories.forEach(cat => {
+    data.categories.forEach((cat, categoryIndex) => {
+        cat.id = sanitizeIdentifier(cat.id, `category_${categoryIndex}`);
+        cat.name = sanitizeDisplayText(cat.name, 100);
+        cat.subtitle = sanitizeDisplayText(cat.subtitle, 180);
+        cat.icon = sanitizeDisplayText(cat.icon, 12);
+        cat.image = sanitizeImageUrl(cat.image);
         if (!cat.items || !Array.isArray(cat.items)) {
             const defaultCat = DEFAULT_MENU_DATA.categories.find(dc => dc.id === cat.id);
             cat.items = defaultCat ? JSON.parse(JSON.stringify(defaultCat.items)) : [];
@@ -240,6 +294,16 @@ function sanitizeMenuData(data) {
         if (!cat.submenu || (!validSubmenuIds.includes(cat.submenu) && cat.submenu !== 'all')) {
             cat.submenu = 'monte_o_seu';
         }
+        cat.items.forEach((item, itemIndex) => {
+            item.id = sanitizeIdentifier(item.id, `${cat.id}_item_${itemIndex}`);
+            item.name = sanitizeDisplayText(item.name, 120);
+            item.description = sanitizeDisplayText(item.description, 300);
+            item.icon = sanitizeDisplayText(item.icon, 12);
+            item.image = sanitizeImageUrl(item.image);
+            if (Array.isArray(item.versions)) {
+                item.versions = item.versions.map(version => sanitizeDisplayText(version, 50)).filter(Boolean).slice(0, 20);
+            }
+        });
     });
 
     return migrateFruitPrices(data);
@@ -1022,7 +1086,7 @@ function updateTotals() {
         elements.summaryItems.innerHTML = receiptItems.map(item => `
             <div class="summary-item">
                 <div class="summary-item-left">
-                    <span class="item-name">${item.name}</span>
+                    <span class="item-name">${escapeHtml(item.name)}</span>
                     <span class="item-details">${item.details}</span>
                 </div>
                 <div class="summary-item-right">
@@ -1071,19 +1135,19 @@ function loadSettings() {
     document.getElementById('mid-banner-title').innerText = SETTINGS.midBannerTitle;
     document.getElementById('mid-banner-subtitle').innerText = SETTINGS.midBannerSubtitle;
     
-    document.getElementById('footer-address').innerHTML = SETTINGS.address;
+    document.getElementById('footer-address').innerText = SETTINGS.address;
     document.getElementById('footer-subaddress').innerText = SETTINGS.subAddress;
     
     const mapBtn = document.getElementById('footer-map-btn');
     if (mapBtn) {
-        mapBtn.href = SETTINGS.mapUrl;
+        mapBtn.href = sanitizeExternalUrl(SETTINGS.mapUrl);
     }
 
     if (SETTINGS.heroImage) {
-        document.documentElement.style.setProperty('--hero-bg-url', `url('${SETTINGS.heroImage}')`);
+        document.documentElement.style.setProperty('--hero-bg-url', `url('${sanitizeImageUrl(SETTINGS.heroImage)}')`);
     }
     if (SETTINGS.midBannerImage) {
-        document.documentElement.style.setProperty('--mid-banner-bg-url', `url('${SETTINGS.midBannerImage}')`);
+        document.documentElement.style.setProperty('--mid-banner-bg-url', `url('${sanitizeImageUrl(SETTINGS.midBannerImage)}')`);
     }
 }
 
@@ -1188,7 +1252,7 @@ function finalizeOrder() {
     }
 }
 
-function submitOrder(clientName) {
+async function submitOrder(clientName) {
     // Build the list of chosen items (exactly as we calculate in updateTotals)
     let kcal = 0;
     let protein = 0;
@@ -1259,34 +1323,32 @@ function submitOrder(clientName) {
         createdAt: new Date().toISOString()
     };
 
-    // 1. Save to backend API (fails silently/logged if backend offline)
-    fetch('/api/save-order', {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json'
-        },
-        body: JSON.stringify(orderData)
-    }).then(res => res.json())
-      .then(data => {
-          if (!data.success) {
-              console.warn('API save-order returned false:', data.error);
-          }
-      })
-      .catch(err => console.error('Error saving order to backend:', err));
-
-    // 2. Save to LocalStorage as secondary store/fallback
+    // Confirm with the shared backend before showing a successful receipt.
     try {
-        let localOrders = JSON.parse(localStorage.getItem('power_shake_orders') || '[]');
-        localOrders.unshift(orderData);
-        localStorage.setItem('power_shake_orders', JSON.stringify(localOrders));
-    } catch (e) {
-        console.error('Failed to save order to localStorage:', e);
+        const response = await fetch('/api/save-order', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(orderData)
+        });
+        const data = await response.json();
+        if (!response.ok || !data.success || !data.order) {
+            throw new Error(data.error || 'Não foi possível registrar o pedido.');
+        }
+        Object.assign(orderData, data.order);
+        try {
+            const localOrders = JSON.parse(localStorage.getItem('power_shake_orders') || '[]');
+            localOrders.unshift(orderData);
+            localStorage.setItem('power_shake_orders', JSON.stringify(localOrders.slice(0, 200)));
+        } catch {}
+    } catch (error) {
+        showToast(error.message || 'Pedido não enviado. Verifique a conexão e tente novamente.', 'error');
+        return;
     }
 
     // Render screen
     elements.receiptScreenItems.innerHTML = receiptItems.map(item => `
         <div class="receipt-item-row">
-            <span class="receipt-item-name">${item.name}</span>
+            <span class="receipt-item-name">${escapeHtml(item.name)}</span>
             <span class="receipt-item-cost">${item.price > 0 ? formatCurrency(item.price) : 'Grátis'}</span>
         </div>
     `).join('');

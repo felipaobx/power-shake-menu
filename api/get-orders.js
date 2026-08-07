@@ -1,79 +1,32 @@
-// Vercel Serverless Function: Get Orders
-// URL: /api/get-orders
 const { createClient } = require('redis');
+const { requireAuth } = require('./_auth');
+const { getOrders } = require('./_orders');
+const { requireMethod, setSecurityHeaders } = require('./_security');
 
 module.exports = async (req, res) => {
-    // Enable CORS
-    res.setHeader('Access-Control-Allow-Credentials', true);
-    res.setHeader('Access-Control-Allow-Origin', '*');
-    res.setHeader('Access-Control-Allow-Methods', 'GET,OPTIONS');
-    res.setHeader('Access-Control-Allow-Headers', 'X-CSRF-Token, X-Requested-With, Accept, Accept-Version, Content-Length, Content-MD5, Content-Type, Date, X-Api-Version');
-
-    if (req.method === 'OPTIONS') {
-        res.status(200).end();
-        return;
-    }
+    setSecurityHeaders(res);
+    if (!requireMethod(req, res, 'GET')) return;
 
     const { REDIS_URL } = process.env;
-
-    // PIN Validation
-    const pin = (req.query && req.query.pin) || req.headers['x-admin-pin'];
-    const ADMIN_PIN = process.env.ADMIN_PIN || '1234';
-
-    if (!pin || pin.toString() !== ADMIN_PIN.toString()) {
-        res.status(401).json({
-            success: false,
-            error: 'PIN de Administrador incorreto ou ausente.',
-            orders: []
-        });
-        return;
-    }
-
     if (!REDIS_URL) {
-        res.status(200).json({ 
-            success: false, 
-            error: 'Vercel Redis Storage not connected.',
-            orders: [] 
-        });
+        res.status(503).json({ success: false, error: 'Serviço de pedidos indisponível.', orders: [] });
         return;
     }
 
     let client;
     try {
-        // Connect to Redis
         client = createClient({ url: REDIS_URL });
-        client.on('error', (err) => console.error('Redis Client Error', err));
+        client.on('error', error => console.error('Redis error:', error.message));
         await client.connect();
+        if (!await requireAuth(client, req, res)) return;
 
-        // Get orders
-        const ordersRaw = await client.get('orders');
-        let orders = [];
-
-        if (ordersRaw) {
-            try {
-                orders = JSON.parse(ordersRaw);
-            } catch (e) {
-                console.error('Failed to parse orders JSON:', e);
-            }
-        }
-
-        res.status(200).json({
-            success: true,
-            orders
-        });
-
-    } catch (err) {
-        console.error('Serverless get-orders error:', err);
-        res.status(200).json({
-            success: false,
-            error: err.message,
-            orders: []
-        });
+        res.status(200).json({ success: true, orders: await getOrders(client) });
+    } catch (error) {
+        console.error('get-orders error:', error.message);
+        res.status(500).json({ success: false, error: 'Não foi possível carregar os pedidos.', orders: [] });
     } finally {
         if (client) {
-            try {
-                await client.disconnect();
-            } catch (e) {}
+            try { await client.disconnect(); } catch {}
         }
     }
 };

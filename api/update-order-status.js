@@ -1,91 +1,49 @@
-// Vercel Serverless Function: Update Order Status
-// URL: /api/update-order-status
 const { createClient } = require('redis');
+const { requireAuth } = require('./_auth');
+const { updateOrderStatus } = require('./_orders');
+const { assertBodySize, requireMethod, requireSameOrigin, setSecurityHeaders } = require('./_security');
+const { cleanText, normalizeStatus } = require('./_validation');
 
 module.exports = async (req, res) => {
-    // Enable CORS
-    res.setHeader('Access-Control-Allow-Credentials', true);
-    res.setHeader('Access-Control-Allow-Origin', '*');
-    res.setHeader('Access-Control-Allow-Methods', 'POST,OPTIONS');
-    res.setHeader('Access-Control-Allow-Headers', 'X-CSRF-Token, X-Requested-With, Accept, Accept-Version, Content-Length, Content-MD5, Content-Type, Date, X-Api-Version');
-
-    if (req.method === 'OPTIONS') {
-        res.status(200).end();
-        return;
-    }
-
-    if (req.method !== 'POST') {
-        res.status(405).json({ success: false, error: 'Method not allowed' });
-        return;
-    }
+    setSecurityHeaders(res);
+    if (!requireMethod(req, res, 'POST') || !requireSameOrigin(req, res)) return;
 
     const { REDIS_URL } = process.env;
-
     if (!REDIS_URL) {
-        res.status(200).json({ 
-            success: false, 
-            error: 'Vercel Redis Storage not connected.' 
-        });
+        res.status(503).json({ success: false, error: 'Serviço de pedidos indisponível.' });
         return;
     }
 
     let client;
     try {
-        const { orderId, status, pin } = req.body || {};
-        
-        // PIN Validation
-        const ADMIN_PIN = process.env.ADMIN_PIN || '1234';
-        if (!pin || pin.toString() !== ADMIN_PIN.toString()) {
-            res.status(401).json({ success: false, error: 'PIN de Administrador incorreto ou ausente.' });
-            return;
-        }
-
-        if (!orderId || !status) {
-            res.status(400).json({ success: false, error: 'Missing orderId or status in request body.' });
-            return;
-        }
-
-        // Connect to Redis
+        assertBodySize(req.body, 4096);
         client = createClient({ url: REDIS_URL });
-        client.on('error', (err) => console.error('Redis Client Error', err));
+        client.on('error', error => console.error('Redis error:', error.message));
         await client.connect();
+        if (!await requireAuth(client, req, res)) return;
 
-        // Get existing orders
-        const ordersRaw = await client.get('orders');
-        let orders = [];
-        if (ordersRaw) {
-            try {
-                orders = JSON.parse(ordersRaw);
-            } catch (e) {
-                console.error('Failed to parse orders JSON:', e);
-            }
+        const orderId = cleanText(req.body && req.body.orderId, 100);
+        const status = normalizeStatus(req.body && req.body.status);
+        if (!orderId) {
+            res.status(400).json({ success: false, error: 'Pedido não informado.' });
+            return;
         }
 
-        // Check if we need to delete or update
-        if (status === 'deleted') {
-            orders = orders.filter(o => o.id !== orderId);
-        } else {
-            orders = orders.map(o => {
-                if (o.id === orderId) {
-                    return { ...o, status };
-                }
-                return o;
-            });
+        const found = await updateOrderStatus(client, orderId, status);
+        if (!found) {
+            res.status(404).json({ success: false, error: 'Pedido não encontrado.' });
+            return;
         }
-
-        // Save back to Redis
-        await client.set('orders', JSON.stringify(orders));
-
         res.status(200).json({ success: true });
-
-    } catch (err) {
-        console.error('Serverless update-order-status error:', err);
-        res.status(500).json({ success: false, error: err.message });
+    } catch (error) {
+        console.error('update-order-status error:', error.message);
+        res.status(error.statusCode || 500).json({
+            success: false,
+            error: error.statusCode ? error.message : 'Não foi possível atualizar o pedido.'
+        });
     } finally {
         if (client) {
-            try {
-                await client.disconnect();
-            } catch (e) {}
+            try { await client.disconnect(); } catch {}
         }
     }
 };

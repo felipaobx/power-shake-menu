@@ -5,6 +5,7 @@ const PDFDocument = require('pdfkit');
 const QRCode = require('qrcode');
 const fs = require('fs');
 const path = require('path');
+const { requireMethod, setSecurityHeaders } = require('./_security');
 
 function cleanText(str) {
     if (!str) return '';
@@ -63,7 +64,7 @@ function getMacroText(item) {
     return parts.join('  •  ');
 }
 
-    function drawPricePill(text, x, y, width = 90, height = 28) {
+    function drawPricePill(doc, text, x, y, width = 90, height = 28) {
         doc.save();
         doc.roundedRect(x, y, width, height, 8).fill('#8bfc03');
         doc.fillColor('#000000')
@@ -73,7 +74,7 @@ function getMacroText(item) {
         doc.restore();
     }
 
-    function drawPdfItemBox(item, x, y, width = 440, height = 64, strokeColor = 'rgba(139, 252, 3, 0.2)', pricePillX = 410) {
+    function drawPdfItemBox(doc, item, x, y, width = 440, height = 64, strokeColor = 'rgba(139, 252, 3, 0.2)', pricePillX = 410) {
         doc.save();
         doc.roundedRect(x, y, width, height, 12).fill('#0e121a');
         doc.strokeColor(strokeColor).lineWidth(1).roundedRect(x, y, width, height, 12).stroke();
@@ -85,11 +86,13 @@ function getMacroText(item) {
         } else {
             doc.fillColor('#ffffff').fontSize(17).font('Helvetica-Bold').text(cleanText(item.name), x + 25, y + Math.floor(height / 2) - 8, { width: 240 });
         }
-        drawPricePill(item.price, pricePillX, y + Math.floor(height / 2) - 14, 90, 28);
+        drawPricePill(doc, item.price, pricePillX, y + Math.floor(height / 2) - 14, 90, 28);
         doc.restore();
     }
 
 module.exports = async (req, res) => {
+    setSecurityHeaders(res);
+    if (!requireMethod(req, res, 'GET')) return;
     let client;
     let menuData = null;
     let settings = null;
@@ -121,7 +124,7 @@ module.exports = async (req, res) => {
     if (!menuData || !settings) {
         try {
             const mockContext = {
-                window: { innerWidth: 1920 },
+                window: { innerWidth: 1920, addEventListener: () => {}, scrollTo: () => {} },
                 document: {
                     addEventListener: () => {},
                     getElementById: () => ({ href: '' }),
@@ -366,7 +369,7 @@ module.exports = async (req, res) => {
     doc.strokeColor('rgba(139, 252, 3, 0.3)').lineWidth(1.5).roundedRect(80, 920, 910, 75, 16).stroke();
     doc.fillColor('#8bfc03').fontSize(20).font('Helvetica-Bold').text('COBERTURAS', 110, 946);
     doc.fillColor('#ffffff').fontSize(16).font('Helvetica').text('CHOCOLATE  •  MORANGO  •  CARAMELO', 280, 948);
-    drawPricePill('R$ 2,00', 880, 943, 90, 30);
+    drawPricePill(doc, 'R$ 2,00', 880, 943, 90, 30);
     doc.restore();
 
     if (complementsBuffer) {

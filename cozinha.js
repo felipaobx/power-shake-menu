@@ -1,7 +1,11 @@
+function escapeHtml(value) {
+    return String(value == null ? '' : value).replace(/[&<>'"]/g, char => ({
+        '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;'
+    })[char]);
+}
 // Cozinha Powershake - Kanban & Gestão Operacional
 let currentOrders = [];
 let menuData = null;
-let currentPin = '';
 let isSoundEnabled = true;
 let knownOrderIds = new Set();
 let pollInterval = null;
@@ -33,83 +37,66 @@ function initClock() {
 }
 
 // Authentication Check
-function checkAuthSession() {
-    const savedPin = sessionStorage.getItem('powershake_admin_pin');
-    if (savedPin) {
-        currentPin = savedPin;
-        validateAndStartApp(savedPin);
-    } else {
-        showAuthModal(true);
-    }
+async function checkAuthSession() {
+    try {
+        const response = await fetch('/api/auth-session', { cache: 'no-store' });
+        const data = await response.json();
+        if (response.ok && data.authenticated) {
+            startKitchenApp();
+            return;
+        }
+    } catch {}
+    showAuthModal(true);
 }
 
 function showAuthModal(show) {
     document.getElementById('auth-modal').style.display = show ? 'flex' : 'none';
     document.getElementById('kitchen-app').style.display = show ? 'none' : 'flex';
+    if (show) setTimeout(() => document.getElementById('pin-input')?.focus(), 50);
+}
+
+function startKitchenApp() {
+    showAuthModal(false);
+    fetchOrders();
+    fetchMenuData();
+    if (pollInterval) clearInterval(pollInterval);
+    pollInterval = setInterval(fetchOrders, 8000);
 }
 
 async function handlePinLogin() {
-    const input = document.getElementById('pin-input').value.trim();
+    const input = document.getElementById('pin-input');
     const errorEl = document.getElementById('pin-error-msg');
+    const button = document.getElementById('pin-submit-btn');
     errorEl.textContent = '';
-
-    if (!input) {
+    if (!input.value.trim()) {
         errorEl.textContent = 'Por favor, insira o PIN.';
         return;
     }
 
-    const isValid = await validateAndStartApp(input);
-    if (!isValid) {
-        errorEl.textContent = 'PIN de Administrador incorreto.';
+    button.disabled = true;
+    try {
+        const response = await fetch('/api/auth-login', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ pin: input.value })
+        });
+        const data = await response.json();
+        if (!response.ok) throw new Error(data.error || 'PIN incorreto.');
+        input.value = '';
+        startKitchenApp();
+    } catch (error) {
+        errorEl.textContent = error.message || 'Não foi possível entrar.';
+        showAuthModal(true);
+    } finally {
+        button.disabled = false;
     }
 }
 
-async function validateAndStartApp(pin) {
-    // Check if PIN matches any user in settings
-    let localSettings = null;
-    try {
-        localSettings = JSON.parse(localStorage.getItem('power_shake_settings'));
-    } catch (e) {}
-
-    let userMatch = null;
-    if (localSettings && localSettings.users) {
-        userMatch = localSettings.users.find(u => u.pin === pin || u.username === pin);
-    }
-
-    try {
-        const response = await fetch(`/api/get-orders?pin=${encodeURIComponent(pin)}`);
-        if (response.status === 401 && !userMatch) {
-            sessionStorage.removeItem('powershake_admin_pin');
-            showAuthModal(true);
-            return false;
-        }
-
-        currentPin = pin;
-        sessionStorage.setItem('powershake_admin_pin', pin);
-        showAuthModal(false);
-
-        // Start real-time polling
-        fetchOrders();
-        fetchMenuData();
-        if (pollInterval) clearInterval(pollInterval);
-        pollInterval = setInterval(fetchOrders, 8000);
-
-        return true;
-    } catch (err) {
-        console.warn('Fallback para modo offline/local:', err);
-        // Fallback local se API não estiver acessível
-        currentPin = pin;
-        sessionStorage.setItem('powershake_admin_pin', pin);
-        showAuthModal(false);
-        fetchOrdersLocal();
-        fetchMenuLocal();
-        return true;
-    }
-}
-
-function handleLogout() {
-    sessionStorage.removeItem('powershake_admin_pin');
+async function handleLogout() {
+    try { await fetch('/api/auth-logout', { method: 'POST' }); } catch {}
     if (pollInterval) clearInterval(pollInterval);
+    pollInterval = null;
+    currentOrders = [];
     showAuthModal(true);
 }
 
@@ -166,7 +153,7 @@ function toggleSound() {
 // Fetch Orders from Serverless API
 async function fetchOrders() {
     try {
-        const response = await fetch(`/api/get-orders?pin=${encodeURIComponent(currentPin)}`);
+        const response = await fetch('/api/get-orders', { cache: 'no-store' });
         if (response.status === 401) {
             handleLogout();
             return;
@@ -176,10 +163,10 @@ async function fetchOrders() {
         if (data.success && Array.isArray(data.orders)) {
             processOrdersData(data.orders);
         } else {
-            fetchOrdersLocal();
+            console.warn('Pedidos temporariamente indisponíveis.');
         }
     } catch (err) {
-        fetchOrdersLocal();
+        console.warn('Pedidos temporariamente indisponíveis.');
     }
 }
 
@@ -302,7 +289,7 @@ function createKanbanCard(order) {
         new Date(order.timestamp || order.createdAt).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' }) + ' ' + dateFormatted : dateFormatted;
 
     const totalFormatted = order.totalPrice ? Number(order.totalPrice).toFixed(2).replace('.', ',') : '0,00';
-    const clientName = order.clientName || order.customerName || 'Cliente';
+    const clientName = escapeHtml(order.clientName || order.customerName || 'Cliente');
     const currentStatus = order.status || 'pending';
 
     const statusObj = {
@@ -332,8 +319,8 @@ function createKanbanCard(order) {
             return `
                 <div class="timeline-step">
                     <div class="step-marker-node"></div>
-                    <span class="step-category-badge ${info.colorClass}">${info.emoji} ${info.label}</span>
-                    <span class="step-item-name">${rawName}${qtyStr}</span>
+                    <span class="step-category-badge ${info.colorClass}">${escapeHtml(info.emoji)} ${escapeHtml(info.label)}</span>
+                    <span class="step-item-name">${escapeHtml(rawName)}${escapeHtml(qtyStr)}</span>
                 </div>
             `;
         }).join('');
@@ -342,36 +329,38 @@ function createKanbanCard(order) {
     let actionsHtml = '';
     if (currentStatus === 'pending') {
         actionsHtml = `
-            <button class="card-btn prep-btn" onclick="updateOrderStatus('${order.id}', 'preparing')">
+            <button class="card-btn prep-btn" onclick="updateOrderStatus('${safeOrderId}', 'preparing')">
                 <ion-icon name="flame"></ion-icon>
                 <span>Preparar</span>
             </button>
-            <button class="card-btn cancel-btn" onclick="updateOrderStatus('${order.id}', 'cancelled')">
+            <button class="card-btn cancel-btn" onclick="updateOrderStatus('${safeOrderId}', 'cancelled')">
                 <ion-icon name="close-circle-outline"></ion-icon>
                 <span>Cancelar</span>
             </button>
         `;
     } else if (currentStatus === 'preparing') {
         actionsHtml = `
-            <button class="card-btn done-btn" onclick="updateOrderStatus('${order.id}', 'completed')">
+            <button class="card-btn done-btn" onclick="updateOrderStatus('${safeOrderId}', 'completed')">
                 <ion-icon name="checkmark-done-circle"></ion-icon>
                 <span>Finalizar</span>
             </button>
-            <button class="card-btn cancel-btn" onclick="updateOrderStatus('${order.id}', 'cancelled')">
+            <button class="card-btn cancel-btn" onclick="updateOrderStatus('${safeOrderId}', 'cancelled')">
                 <ion-icon name="close-circle-outline"></ion-icon>
                 <span>Cancelar</span>
             </button>
         `;
     } else if (currentStatus === 'completed' || currentStatus === 'cancelled') {
         actionsHtml = `
-            <button class="card-btn prep-btn" onclick="updateOrderStatus('${order.id}', 'pending')">
+            <button class="card-btn prep-btn" onclick="updateOrderStatus('${safeOrderId}', 'pending')">
                 <ion-icon name="arrow-undo-circle-outline"></ion-icon>
                 <span>Voltar p/ Pendentes</span>
             </button>
         `;
     }
 
-    const shortId = order.id.toString().startsWith('#') ? order.id : `#${order.id}`;
+    const rawShortId = order.id.toString().startsWith('#') ? order.id : `#${order.id}`;
+    const safeOrderId = escapeHtml(order.id);
+    const shortId = escapeHtml(rawShortId);
     const kcalVal = parseFloat(order.totalKcal || 0).toFixed(1);
     const proteinVal = parseFloat(order.totalProtein || 0).toFixed(1);
 
@@ -381,11 +370,11 @@ function createKanbanCard(order) {
                 <span class="order-id-neon">${shortId}</span>
                 <h3 class="customer-name-heading">${clientName}</h3>
             </div>
-            <span class="order-status-pill ${statusObj.class}">${statusObj.label}</span>
+            <span class="order-status-pill ${statusObj.class}">${escapeHtml(statusObj.label)}</span>
         </div>
 
         <div class="customer-sub-row">
-            <span class="order-timestamp-text">${dateFull}</span>
+            <span class="order-timestamp-text">${escapeHtml(dateFull)}</span>
         </div>
 
         <div class="timeline-container">
@@ -436,19 +425,17 @@ async function updateOrderStatus(orderId, newStatus) {
         const res = await fetch('/api/update-order-status', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                orderId,
-                status: newStatus,
-                pin: currentPin
-            })
+            body: JSON.stringify({ orderId, status: newStatus })
         });
 
-        if (!res.ok) {
-            console.warn('API update status returned non-200, updating localStorage');
-            saveOrdersLocal();
+        if (res.status === 401) {
+            await handleLogout();
+            return;
         }
-    } catch (err) {
-        saveOrdersLocal();
+        if (!res.ok) throw new Error('Falha ao atualizar pedido.');
+    } catch (error) {
+        console.warn(error.message);
+        await fetchOrders();
     }
 }
 
@@ -505,19 +492,19 @@ function renderKitchenItemsManager() {
 
     container.innerHTML = menuData.categories.map(cat => `
         <div class="kitchen-cat-block">
-            <h3 class="kitchen-cat-title">${cat.name}</h3>
+            <h3 class="kitchen-cat-title">${escapeHtml(cat.name)}</h3>
             <div class="kitchen-items-list">
                 ${cat.items.map(item => `
-                    <div class="kitchen-item-row" id="item-row-${item.id}">
+                    <div class="kitchen-item-row" id="item-row-${escapeHtml(item.id)}">
                         <div class="kitchen-item-info">
-                            <span class="kitchen-item-icon">${item.icon || '🥤'}</span>
+                            <span class="kitchen-item-icon">${escapeHtml(item.icon || '🥤')}</span>
                             <div>
-                                <div class="kitchen-item-name">${item.name}</div>
+                                <div class="kitchen-item-name">${escapeHtml(item.name)}</div>
                                 <div class="kitchen-item-price">R$ ${Number(item.price || 0).toFixed(2).replace('.', ',')}</div>
                             </div>
                         </div>
                         <label class="switch-toggle" title="Disponível no Cardápio">
-                            <input type="checkbox" ${item.available !== false ? 'checked' : ''} onchange="toggleItemAvailability('${cat.id}', '${item.id}', this.checked)">
+                            <input type="checkbox" ${!item.outOfStock ? 'checked' : ''} onchange="toggleItemAvailability('${escapeHtml(cat.id)}', '${escapeHtml(item.id)}', this.checked)">
                             <span class="slider"></span>
                         </label>
                     </div>
@@ -535,7 +522,7 @@ async function toggleItemAvailability(catId, itemId, isAvailable) {
     if (cat) {
         const item = cat.items.find(i => i.id === itemId);
         if (item) {
-            item.available = isAvailable;
+            item.outOfStock = !isAvailable;
         }
     }
 
@@ -543,15 +530,16 @@ async function toggleItemAvailability(catId, itemId, isAvailable) {
     localStorage.setItem('power_shake_menu_data', JSON.stringify(menuData));
 
     try {
-        await fetch('/api/save-menu', {
+        const response = await fetch('/api/update-item-availability', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                menuData,
-                settings: JSON.parse(localStorage.getItem('power_shake_settings') || '{}'),
-                pin: currentPin
-            })
+            body: JSON.stringify({ categoryId: catId, itemId, available: isAvailable })
         });
+        if (response.status === 401) {
+            await handleLogout();
+            return;
+        }
+        if (!response.ok) throw new Error('Falha ao sincronizar disponibilidade.');
     } catch (e) {
         console.warn('Erro ao sincronizar disponibilidade via API');
     }

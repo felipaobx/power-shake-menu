@@ -2046,3 +2046,21 @@ textarea.form-control {
     transform: scale(1.15);
     box-shadow: 0 0 10px currentColor;
 }
+
+/* Secure admin session overlay */
+.admin-auth-overlay { position: fixed; inset: 0; z-index: 10000; display: flex; align-items: center; justify-content: center; padding: 24px; background: rgba(5, 8, 13, .96); backdrop-filter: blur(14px); }
+body:not(.auth-locked) .admin-auth-overlay { display: none; }
+body.auth-locked .dashboard-layout, body.auth-locked .mobile-top-bar { visibility: hidden; }
+.admin-auth-card { width: min(420px, 100%); display: grid; gap: 14px; padding: 34px; border: 1px solid rgba(139,252,3,.25); border-radius: 22px; background: #111722; box-shadow: 0 24px 80px rgba(0,0,0,.55); }
+.admin-auth-logo { width: 74px; height: 74px; object-fit: contain; margin: 0 auto 4px; }
+.admin-auth-card h1 { margin: 0; text-align: center; color: #fff; font-size: 1.6rem; }
+.admin-auth-card p { margin: 0 0 4px; text-align: center; color: var(--text-secondary); }
+.admin-auth-card label { color: #fff; font-weight: 700; }
+.admin-auth-card input { width: 100%; box-sizing: border-box; padding: 14px 16px; color: #fff; background: #090d14; border: 1px solid rgba(255,255,255,.14); border-radius: 10px; font: inherit; }
+.admin-auth-card input:focus { outline: 2px solid var(--accent); outline-offset: 2px; }
+.admin-auth-card button { padding: 14px 18px; border: 0; border-radius: 10px; color: #071000; background: var(--accent); font: inherit; font-weight: 800; cursor: pointer; }
+.admin-auth-card .admin-auth-error { min-height: 1.3em; margin: 0; color: var(--danger); font-size: .9rem; }
+
+.empty-state { grid-column: 1 / -1; padding: 28px; text-align: center; color: var(--text-secondary); border: 1px dashed rgba(255,255,255,.14); border-radius: 14px; }
+.user-action-btn { display: inline-flex; align-items: center; gap: 4px; padding: 6px 12px; border: 1px solid rgba(255,255,255,.1); border-radius: 6px; color: #fff; background: rgba(255,255,255,.05); cursor: pointer; font: inherit; font-size: .82rem; }
+.user-action-btn.danger { color: var(--danger); border-color: rgba(255,77,79,.25); background: rgba(255,77,79,.12); }

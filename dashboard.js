@@ -1,3 +1,66 @@
+let dashboardInitialized = false;
+
+function escapeHtml(value) {
+    return String(value == null ? '' : value).replace(/[&<>'"]/g, char => ({
+        '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;'
+    })[char]);
+}
+
+function showAdminAuth(show, message = '') {
+    document.body.classList.toggle('auth-locked', show);
+    const error = document.getElementById('admin-auth-error');
+    if (error) error.textContent = message;
+    if (show) setTimeout(() => document.getElementById('admin-pin-input')?.focus(), 50);
+}
+
+async function checkAdminSession() {
+    try {
+        const response = await fetch('/api/auth-session', { cache: 'no-store' });
+        const data = await response.json();
+        if (response.ok && data.authenticated && data.user?.role === 'admin') {
+            showAdminAuth(false);
+            return true;
+        }
+    } catch {
+        console.warn('Não foi possível validar a sessão administrativa.');
+    }
+    showAdminAuth(true);
+    return false;
+}
+
+async function handleAdminLogin(event) {
+    event.preventDefault();
+    const input = document.getElementById('admin-pin-input');
+    const button = event.currentTarget.querySelector('button[type="submit"]');
+    button.disabled = true;
+    showAdminAuth(true, '');
+    try {
+        const response = await fetch('/api/auth-login', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ pin: input.value })
+        });
+        const data = await response.json();
+        if (!response.ok || data.user?.role !== 'admin') throw new Error(data.error || 'Acesso não autorizado.');
+        input.value = '';
+        showAdminAuth(false);
+        if (!dashboardInitialized) {
+            dashboardInitialized = true;
+            await initDashboard();
+            renderBoardPreview();
+        }
+    } catch (error) {
+        showAdminAuth(true, error.message || 'Não foi possível entrar.');
+    } finally {
+        button.disabled = false;
+    }
+}
+
+async function handleAdminLogout() {
+    try { await fetch('/api/auth-logout', { method: 'POST' }); } catch {}
+    stopOrdersPolling();
+    showAdminAuth(true, 'Sessão encerrada.');
+}
 // Power Shake Default Database (List of Categories Schema)
 const DEFAULT_MENU_DATA = {
     submenus: [
@@ -183,7 +246,7 @@ const DEFAULT_SETTINGS = {
     midBannerTitle: 'Experimente um novo estilo de vida',
     midBannerSubtitle: 'Venha conhecer a Power Shake! Nossa missão é trazer sabor incomparável alinhado com a sua rotina fitness.',
     midBannerImage: 'assets/fruits.png',
-    address: '📍 <strong>Endereço:</strong> Rua Zeferino Galvão, nº 508, 1º andar, sala 01',
+    address: '📍 Endereço: Rua Zeferino Galvão, nº 508, 1º andar, sala 01',
     subAddress: 'Em frente ao receptivo de lotação (Acima da Medic Center)',
     mapUrl: 'https://maps.google.com/?q=Rua+Zeferino+Galvão,+508+Caruaru',
     street: 'Rua Zeferino Galvão, nº 508, 1º andar, sala 01',
@@ -191,10 +254,7 @@ const DEFAULT_SETTINGS = {
     hours: 'Segunda a Sábado: 10h às 22h',
     phone: '(81) 99999-9999',
     instagram: '@powershake.caruaru',
-    users: [
-        { id: 'usr_admin', name: 'Administrador Principal', username: 'admin', pin: '1234', role: 'admin' },
-        { id: 'usr_cozinha', name: 'Equipe da Cozinha', username: 'cozinha', pin: '1234', role: 'cozinha' }
-    ]
+    users: []
 };
 
 function migrateFruitPrices(menuData) {
@@ -268,59 +328,37 @@ let uploadedCategoryImageBase64 = '';
 
 // Centralized save function for MENU_DATA and SETTINGS
 async function saveMenuDataAndSettings(showNotification = false) {
-    // 1. Save to LocalStorage immediately
+    const { users, ...publicSettings } = SETTINGS;
     localStorage.setItem('power_shake_menu_data', JSON.stringify(MENU_DATA));
-    localStorage.setItem('power_shake_settings', JSON.stringify(SETTINGS));
+    localStorage.setItem('power_shake_settings', JSON.stringify(publicSettings));
 
-    // 2. Broadcast cross-tab update event for real-time menu synchronization
     try {
         if ('BroadcastChannel' in window) {
             const channel = new BroadcastChannel('power_shake_channel');
-            channel.postMessage({ type: 'MENU_UPDATED', menuData: MENU_DATA, settings: SETTINGS });
+            channel.postMessage({ type: 'MENU_UPDATED', menuData: MENU_DATA, settings: publicSettings });
             channel.close();
         }
-    } catch(e) {}
-    window.dispatchEvent(new Event('storage'));
-
-    // 3. Sync to Cloud Backend Vercel Serverless Redis if available
-    const pin = localStorage.getItem('power_shake_admin_pin') || '1234';
+    } catch {}
 
     try {
         const res = await fetch('/api/save-menu', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                menuData: MENU_DATA,
-                settings: SETTINGS,
-                pin: pin
-            })
+            body: JSON.stringify({ menuData: MENU_DATA, settings: SETTINGS })
         });
         const data = await res.json();
-
-        if (res.ok && data.success) {
-            if (showNotification) {
-                showToast('Todas as alterações foram salvas com sucesso na nuvem e localmente!', 'success');
-            }
-            return true;
-        } else if (res.status === 401) {
-            // PIN mismatch - ask user once
-            const newPin = prompt('Digite o PIN de Administrador (Padrão: 1234) para autorizar o salvamento na nuvem:');
-            if (newPin && newPin.trim()) {
-                localStorage.setItem('power_shake_admin_pin', newPin.trim());
-                return await saveMenuDataAndSettings(showNotification);
-            }
-        } else {
-            if (showNotification) {
-                showToast(`Salvo localmente neste dispositivo! (${data.error || 'Nuvem sem Redis'})`, 'warning');
-            }
+        if (res.status === 401) {
+            showAdminAuth(true, 'Sua sessão expirou. Entre novamente.');
+            return false;
         }
-    } catch (e) {
-        console.warn('Backend cloud indisponível, mantido em cache local.', e);
-        if (showNotification) {
-            showToast('Alterações salvas com sucesso no seu dispositivo!', 'success');
-        }
+        if (!res.ok || !data.success) throw new Error(data.error || 'Falha ao salvar.');
+        if (Array.isArray(data.users)) SETTINGS.users = data.users;
+        if (showNotification) showToast('Alterações salvas com segurança na nuvem.', 'success');
+        return true;
+    } catch (error) {
+        if (showNotification) showToast(error.message || 'Não foi possível salvar.', 'error');
+        return false;
     }
-    return false;
 }
 window.saveMenuDataAndSettings = saveMenuDataAndSettings;
 
@@ -999,6 +1037,7 @@ window.openItemEditor = function(id = null, targetCatId = null) {
 };
 
 // Move Menu Item Up
+window.moveItemUp = function(id) {
     const catId = dom.categorySelect ? dom.categorySelect.value : null;
     const category = MENU_DATA.categories ? MENU_DATA.categories.find(c => c.id === catId) : null;
     if (!category) return;
@@ -1969,12 +2008,6 @@ function setupDashboardActions() {
     dom.resetDefaultsBtn.addEventListener('click', async function() {
         if (confirm('Atenção: Você tem certeza de que deseja restaurar as configurações originais do cardápio? Todas as alterações personalizadas, novas categorias, fotos e preços serão apagadas globalmente para todos os clientes.')) {
             
-            const pin = prompt("Digite o PIN do Administrador para confirmar a restauração global:");
-            if (pin === null) return;
-            if (pin.trim() === '') {
-                showToast('Você precisa informar o PIN do Administrador!', 'warning');
-                return;
-            }
 
             dom.resetDefaultsBtn.disabled = true;
             dom.resetDefaultsBtn.innerText = 'Restaurando...';
@@ -1985,8 +2018,7 @@ function setupDashboardActions() {
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
                         menuData: DEFAULT_MENU_DATA,
-                        settings: DEFAULT_SETTINGS,
-                        pin: pin.trim()
+                        settings: DEFAULT_SETTINGS
                     })
                 });
                 const data = await res.json();
@@ -2022,7 +2054,7 @@ async function initDashboard() {
             MENU_DATA = sanitizeMenuData(MENU_DATA);
         }
         if (data && data.success && data.settings) {
-            SETTINGS = { ...DEFAULT_SETTINGS, ...data.settings };
+            SETTINGS = { ...DEFAULT_SETTINGS, ...data.settings, users: SETTINGS.users || [] };
             localStorage.setItem('power_shake_settings', JSON.stringify(SETTINGS));
         }
     } catch (e) {
@@ -2030,6 +2062,14 @@ async function initDashboard() {
         MENU_DATA = sanitizeMenuData(MENU_DATA);
     }
 
+
+    try {
+        const usersResponse = await fetch('/api/get-users', { cache: 'no-store' });
+        const usersData = await usersResponse.json();
+        SETTINGS.users = usersResponse.ok && Array.isArray(usersData.users) ? usersData.users : [];
+    } catch {
+        SETTINGS.users = [];
+    }
     try { loadGeneralSettings(); } catch(e) { console.error('Error in loadGeneralSettings:', e); }
     try { setupUploaders(); } catch(e) { console.error('Error in setupUploaders:', e); }
     try { renderCardapioTab(); } catch(e) { console.error('Error in renderCardapioTab:', e); }
@@ -2074,8 +2114,7 @@ async function loadOrders() {
     
     // 1. Try to load from API
     try {
-        const pin = sessionStorage.getItem('powershake_admin_pin') || '';
-        const response = await fetch(`/api/get-orders?pin=${encodeURIComponent(pin)}`);
+        const response = await fetch('/api/get-orders', { cache: 'no-store' });
         const data = await response.json();
         if (data.success && Array.isArray(data.orders)) {
             orders = data.orders;
@@ -2152,14 +2191,14 @@ function renderOrders(orders) {
             cancelled: 'Cancelado'
         }[order.status] || order.status;
 
-        const itemsHtml = order.items.map(item => {
+        const itemsHtml = (Array.isArray(order.items) ? order.items : []).map(item => {
             if (item.categoryId && item.itemName) {
                 const info = getCategoryInfo(item.categoryId, item.categoryName);
                 return `
                     <div class="timeline-step" onclick="toggleTimelineStep(this)">
                         <div class="step-marker"></div>
-                        <span class="step-category-badge ${info.colorClass}">${info.emoji} ${info.label}</span>
-                        <span class="step-details-text"><strong>${item.itemName}</strong> ${item.itemDetails || ''}</span>
+                        <span class="step-category-badge ${info.colorClass}">${escapeHtml(info.emoji)} ${escapeHtml(info.label)}</span>
+                        <span class="step-details-text"><strong>${escapeHtml(item.itemName)}</strong> ${escapeHtml(item.itemDetails) || ''}</span>
                     </div>
                 `;
             } else {
@@ -2192,13 +2231,15 @@ function renderOrders(orders) {
                 return `
                     <div class="timeline-step" onclick="toggleTimelineStep(this)">
                         <div class="step-marker"></div>
-                        <span class="step-category-badge ${colorClass}">${emoji} ${label}</span>
-                        <span class="step-details-text"><strong>${cleanText || rawText}</strong></span>
+                        <span class="step-category-badge ${colorClass}">${escapeHtml(emoji)} ${escapeHtml(label)}</span>
+                        <span class="step-details-text"><strong>${escapeHtml(cleanText || rawText)}</strong></span>
                     </div>
                 `;
             }
         }).join('');
 
+        const safeOrderId = escapeHtml(order.id);
+        const safeStatus = ['pending', 'preparing', 'completed', 'cancelled'].includes(order.status) ? order.status : 'pending';
         const kcalVal = parseFloat(order.totalKcal || 0).toFixed(1);
         const proteinVal = parseFloat(order.totalProtein || 0).toFixed(1);
 
@@ -2206,30 +2247,30 @@ function renderOrders(orders) {
         let actionsHtml = '';
         if (order.status === 'pending') {
             actionsHtml = `
-                <button class="order-btn order-btn-complete" onclick="updateOrderStatus('${order.id}', 'completed')">
+                <button class="order-btn order-btn-complete" onclick="updateOrderStatus('${safeOrderId}', 'completed')">
                     <ion-icon name="checkmark-outline"></ion-icon> Concluir
                 </button>
-                <button class="order-btn order-btn-cancel" onclick="updateOrderStatus('${order.id}', 'cancelled')">
+                <button class="order-btn order-btn-cancel" onclick="updateOrderStatus('${safeOrderId}', 'cancelled')">
                     <ion-icon name="close-outline"></ion-icon> Cancelar
                 </button>
             `;
         } else {
             actionsHtml = `
-                <button class="order-btn order-btn-complete" style="opacity: 0.7;" onclick="updateOrderStatus('${order.id}', 'pending')">
+                <button class="order-btn order-btn-complete" style="opacity: 0.7;" onclick="updateOrderStatus('${safeOrderId}', 'pending')">
                     <ion-icon name="arrow-undo-outline"></ion-icon> Reabrir
                 </button>
             `;
         }
 
         return `
-            <div class="order-card ${order.status}">
+            <div class="order-card ${safeStatus}">
                 <div class="order-card-header">
-                    <span class="order-id">#${order.id}</span>
-                    <span class="order-badge-status ${order.status}">${statusLabel}</span>
+                    <span class="order-id">#${safeOrderId}</span>
+                    <span class="order-badge-status ${safeStatus}">${escapeHtml(statusLabel)}</span>
                 </div>
                 <div style="display: flex; justify-content: space-between; align-items: baseline; margin-top: 4px; margin-bottom: 14px;">
-                    <div class="order-client-name" style="margin-bottom: 0;">${order.clientName}</div>
-                    <span class="order-date">${dateFormatted}</span>
+                    <div class="order-client-name" style="margin-bottom: 0;">${escapeHtml(order.clientName)}</div>
+                    <span class="order-date">${escapeHtml(dateFormatted)}</span>
                 </div>
                 
                 <div class="order-timeline">
@@ -2246,7 +2287,7 @@ function renderOrders(orders) {
 
                 <div class="order-actions">
                     ${actionsHtml}
-                    <button class="order-btn order-btn-delete" title="Excluir do Histórico" onclick="deleteOrder('${order.id}')">
+                    <button class="order-btn order-btn-delete" title="Excluir do Histórico" onclick="deleteOrder('${safeOrderId}')">
                         <ion-icon name="trash-outline"></ion-icon>
                     </button>
                 </div>
@@ -2281,13 +2322,12 @@ function formatCurrency(value) {
 }
 
 async function updateOrderStatus(orderId, newStatus) {
-    const pin = sessionStorage.getItem('powershake_admin_pin') || '';
     // 1. Update backend
     try {
         await fetch('/api/update-order-status', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ orderId, status: newStatus, pin })
+            body: JSON.stringify({ orderId, status: newStatus })
         });
     } catch (e) {
         console.warn('Failed to update order status on backend:', e);
@@ -2312,14 +2352,13 @@ async function updateOrderStatus(orderId, newStatus) {
 
 async function deleteOrder(orderId) {
     if (!confirm('Deseja excluir permanentemente este pedido do histórico?')) return;
-    const pin = sessionStorage.getItem('powershake_admin_pin') || '';
 
     // 1. Update backend
     try {
         await fetch('/api/update-order-status', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ orderId, status: 'deleted', pin })
+            body: JSON.stringify({ orderId, status: 'deleted' })
         });
     } catch (e) {
         console.warn('Failed to delete order from backend:', e);
@@ -2384,68 +2423,38 @@ function renderOverviewTab() {
 function renderUsersTab() {
     const grid = document.getElementById('users-list-grid');
     if (!grid) return;
-
-    if (!SETTINGS.users) {
-        SETTINGS.users = [...DEFAULT_SETTINGS.users];
-    }
+    if (!Array.isArray(SETTINGS.users)) SETTINGS.users = [];
 
     const usersBadge = document.getElementById('users-nav-badge');
     if (usersBadge) usersBadge.innerText = SETTINGS.users.length;
+    if (!SETTINGS.users.length) {
+        grid.innerHTML = '<div class="empty-state">Nenhum usuário adicional cadastrado. O administrador configurado no servidor continua ativo.</div>';
+        return;
+    }
 
-    grid.innerHTML = SETTINGS.users.map(u => {
-        const isCozinha = u.role === 'cozinha';
-        const roleLabel = isCozinha ? 'Operador de Cozinha' : 'Administrador';
-        const roleClass = isCozinha ? 'cozinha' : 'admin';
-        const initial = (u.name || u.username || 'U').charAt(0).toUpperCase();
-
+    grid.innerHTML = SETTINGS.users.map(user => {
+        const roleLabel = user.role === 'admin' ? 'Administrador' : 'Operador de Cozinha';
+        const roleClass = user.role === 'admin' ? 'admin' : 'cozinha';
+        const initial = escapeHtml((user.name || user.username || 'U').charAt(0).toUpperCase());
         return `
             <div class="user-card">
-                <div style="display: flex; align-items: center; justify-content: space-between;">
-                    <div style="display: flex; align-items: center; gap: 12px;">
+                <div style="display:flex;align-items:center;justify-content:space-between;gap:12px">
+                    <div style="display:flex;align-items:center;gap:12px">
                         <div class="user-avatar">${initial}</div>
-                        <div>
-                            <h4 style="font-size: 1.05rem; color: #fff; margin: 0;">${u.name}</h4>
-                            <span style="font-size: 0.8rem; color: var(--text-secondary);">@${u.username}</span>
-                        </div>
+                        <div><h4 style="font-size:1.05rem;color:#fff;margin:0">${escapeHtml(user.name)}</h4><span style="font-size:.8rem;color:var(--text-secondary)">@${escapeHtml(user.username)}</span></div>
                     </div>
                     <span class="role-badge ${roleClass}">${roleLabel}</span>
                 </div>
-
-                <div style="background: rgba(0,0,0,0.25); padding: 10px 14px; border-radius: 10px; font-size: 0.88rem; display: flex; justify-content: space-between; align-items: center;">
-                    <span style="color: var(--text-secondary);">PIN / Senha:</span>
-                    <span style="font-family: monospace; font-weight: 700; color: var(--accent); letter-spacing: 1px;" id="user-pin-display-${u.id}">••••</span>
-                    <button type="button" onclick="togglePinDisplay('${u.id}', '${u.pin}')" style="background: transparent; border: none; color: var(--text-secondary); cursor: pointer; font-size: 1.1rem;" title="Mostrar/Ocultar PIN">
-                        <ion-icon name="eye-outline" id="eye-icon-${u.id}"></ion-icon>
-                    </button>
+                <div style="background:rgba(0,0,0,.25);padding:10px 14px;border-radius:10px;font-size:.88rem;display:flex;justify-content:space-between;align-items:center">
+                    <span style="color:var(--text-secondary)">PIN protegido no servidor</span><span aria-label="PIN oculto">••••</span>
                 </div>
-
-                <div style="display: flex; gap: 8px; justify-content: flex-end; margin-top: auto; border-top: 1px solid rgba(255,255,255,0.06); padding-top: 12px;">
-                    <button type="button" onclick="openUserModal('${u.id}')" style="background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); color: #fff; padding: 6px 12px; border-radius: 6px; cursor: pointer; font-size: 0.82rem; display: inline-flex; align-items: center; gap: 4px;">
-                        <ion-icon name="create-outline"></ion-icon> Editar
-                    </button>
-                    <button type="button" onclick="deleteUser('${u.id}')" style="background: rgba(255, 77, 79, 0.12); border: 1px solid rgba(255, 77, 79, 0.25); color: var(--danger); padding: 6px 12px; border-radius: 6px; cursor: pointer; font-size: 0.82rem; display: inline-flex; align-items: center; gap: 4px;">
-                        <ion-icon name="trash-outline"></ion-icon> Excluir
-                    </button>
+                <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:auto;border-top:1px solid rgba(255,255,255,.06);padding-top:12px">
+                    <button type="button" onclick="openUserModal('${escapeHtml(user.id)}')" class="user-action-btn"><ion-icon name="create-outline"></ion-icon> Editar</button>
+                    <button type="button" onclick="deleteUser('${escapeHtml(user.id)}')" class="user-action-btn danger"><ion-icon name="trash-outline"></ion-icon> Excluir</button>
                 </div>
-            </div>
-        `;
+            </div>`;
     }).join('');
 }
-
-window.togglePinDisplay = function(userId, realPin) {
-    const el = document.getElementById(`user-pin-display-${userId}`);
-    const icon = document.getElementById(`eye-icon-${userId}`);
-    if (el) {
-        if (el.innerText === '••••') {
-            el.innerText = realPin;
-            if (icon) icon.setAttribute('name', 'eye-off-outline');
-        } else {
-            el.innerText = '••••';
-            if (icon) icon.setAttribute('name', 'eye-outline');
-        }
-    }
-};
-
 window.openUserModal = function(userId = null) {
     const modal = document.getElementById('user-editor-modal');
     if (!modal) return;
@@ -2465,7 +2474,8 @@ window.openUserModal = function(userId = null) {
         editId.value = u.id;
         nameIn.value = u.name || '';
         usernameIn.value = u.username || '';
-        pinIn.value = u.pin || '';
+        pinIn.value = '';
+        pinIn.required = false;
         roleSel.value = u.role || 'cozinha';
         titleEl.innerText = 'Editar Usuário: ' + u.name;
     } else {
@@ -2485,14 +2495,14 @@ window.closeUserModal = function() {
     if (modal) modal.style.display = 'none';
 };
 
-window.saveUserFromModal = function() {
+window.saveUserFromModal = async function() {
     const id = document.getElementById('edit-user-id').value;
     const name = document.getElementById('user-name-input').value.trim();
     const username = document.getElementById('user-username-input').value.trim();
     const pin = document.getElementById('user-pin-input').value.trim();
     const role = document.getElementById('user-role-select').value;
 
-    if (!name || !username || !pin) {
+    if (!name || !username || (!id && !pin)) {
         showToast('Preencha todos os campos obrigatórios.', 'warning');
         return;
     }
@@ -2520,12 +2530,12 @@ window.saveUserFromModal = function() {
         showToast(`Usuário "${name}" criado com sucesso!`, 'success');
     }
 
-    localStorage.setItem('power_shake_settings', JSON.stringify(SETTINGS));
     closeUserModal();
+    await saveMenuDataAndSettings(true);
     renderUsersTab();
 };
 
-window.deleteUser = function(userId) {
+window.deleteUser = async function(userId) {
     if (!SETTINGS.users) return;
 
     if (SETTINGS.users.length <= 1) {
@@ -2536,7 +2546,7 @@ window.deleteUser = function(userId) {
     const u = SETTINGS.users.find(usr => usr.id === userId);
     if (u && confirm(`Tem certeza que deseja excluir o usuário "${u.name}"?`)) {
         SETTINGS.users = SETTINGS.users.filter(usr => usr.id !== userId);
-        localStorage.setItem('power_shake_settings', JSON.stringify(SETTINGS));
+        await saveMenuDataAndSettings(true);
         renderUsersTab();
         showToast(`Usuário "${u.name}" foi removido.`, 'success');
     }
@@ -2899,7 +2909,7 @@ function renderBoardPreview() {
     const defaultPage3Items = [
         { name: 'MORANGO', price: 'R$ 4,50' },
         { name: 'BANANA', price: 'R$ 3,00' },
-        { name: 'MAMÃO', price: 'R$ 3,50' },
+        { name: 'MAM�O', price: 'R$ 3,50' },
         { name: 'MANGA', price: 'R$ 3,50' },
         { name: 'GOIABA', price: 'R$ 4,00' },
         { name: 'ABACATE', price: 'R$ 5,00' },
@@ -3331,7 +3341,12 @@ window.exportBoardToPdf = exportBoardToPdf;
 window.exportBoardToPng = exportBoardToPng;
 
 // Run initializations
-document.addEventListener('DOMContentLoaded', () => {
-    initDashboard();
-    renderBoardPreview();
+document.addEventListener('DOMContentLoaded', async () => {
+    document.getElementById('admin-auth-form')?.addEventListener('submit', handleAdminLogin);
+    document.getElementById('admin-logout-btn')?.addEventListener('click', handleAdminLogout);
+    if (await checkAdminSession()) {
+        dashboardInitialized = true;
+        await initDashboard();
+        renderBoardPreview();
+    }
 });

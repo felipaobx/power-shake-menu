@@ -11,7 +11,18 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 </head>
-<body>
+<body class="auth-locked">
+    <div id="admin-auth-modal" class="admin-auth-overlay" role="dialog" aria-modal="true" aria-labelledby="admin-auth-title">
+        <form id="admin-auth-form" class="admin-auth-card">
+            <img src="assets/logo.png" alt="Power Shake" class="admin-auth-logo">
+            <h1 id="admin-auth-title">Painel Power Shake</h1>
+            <p>Entre com seu PIN administrativo.</p>
+            <label for="admin-pin-input">PIN de acesso</label>
+            <input type="password" id="admin-pin-input" minlength="4" maxlength="64" autocomplete="current-password" required>
+            <button type="submit">Entrar</button>
+            <p id="admin-auth-error" class="admin-auth-error" aria-live="polite"></p>
+        </form>
+    </div>
 
     <!-- MOBILE TOP BAR HEADER (SHOWN ONLY ON MOBILE SCREENS <= 900px) -->
     <header class="mobile-top-bar" id="mobile-top-bar">
@@ -138,7 +149,10 @@
                     <h2 id="current-tab-heading"><ion-icon name="grid-outline"></ion-icon> Visão Geral</h2>
                     <p id="current-tab-description">Resumo operacional, atalhos rápidos e métricas do seu cardápio.</p>
                 </div>
-                <div class="top-bar-actions">
+                <div class="top-bar-actions">                    <button class="add-item-btn" id="admin-logout-btn" style="background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.12); color: #fff; margin: 0;">
+                        <ion-icon name="log-out-outline"></ion-icon>
+                        Sair
+                    </button>
                     <button class="add-item-btn" id="reset-defaults-btn" style="background: rgba(255, 77, 79, 0.12); border: 1px solid rgba(255, 77, 79, 0.25); color: var(--danger); margin: 0;" title="Restaurar Padrões">
                         <ion-icon name="refresh-outline"></ion-icon>
                         Restaurar
@@ -980,7 +994,7 @@
                 <div class="grid-2" style="margin-bottom: 15px;">
                     <div class="form-group">
                         <label for="user-pin-input">PIN / Senha de Acesso</label>
-                        <input type="text" id="user-pin-input" class="form-control" placeholder="Ex: 1234 ou senha" required>
+                        <input type="password" id="user-pin-input" class="form-control" minlength="4" maxlength="64" autocomplete="new-password" placeholder="Deixe em branco para manter o PIN atual">
                     </div>
                     <div class="form-group">
                         <label for="user-role-select">Função / Permissão</label>
