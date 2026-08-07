@@ -331,6 +331,16 @@ function switchTab(tabId) {
     const clickedTab = Array.from(sidebarBtns).find(t => t.getAttribute('onclick') && t.getAttribute('onclick').includes(tabId));
     if (clickedTab) clickedTab.classList.add('active');
 
+    const mobilePills = document.querySelectorAll('.mobile-nav-pill');
+    mobilePills.forEach(p => {
+        if (p.getAttribute('onclick') && p.getAttribute('onclick').includes(tabId)) {
+            p.classList.add('active');
+            try { p.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' }); } catch(e) {}
+        } else {
+            p.classList.remove('active');
+        }
+    });
+
     const contents = document.querySelectorAll('.tab-content');
     contents.forEach(c => c.classList.remove('active'));
     
@@ -1436,9 +1446,42 @@ function setupSubmenuManagerActions() {
     if (cancelBtn) cancelBtn.addEventListener('click', closeModal);
 }
 
+function setupMobileNavigation() {
+    const hamburgerBtn = document.getElementById('mobile-hamburger-btn');
+    const sidebar = document.querySelector('.sidebar');
+    const overlay = document.getElementById('sidebar-overlay');
+    const closeBtn = document.getElementById('sidebar-close-btn');
+
+    function openSidebar() {
+        if (sidebar) sidebar.classList.add('mobile-open');
+        if (overlay) overlay.classList.add('active');
+        document.body.style.overflow = 'hidden';
+    }
+
+    function closeSidebar() {
+        if (sidebar) sidebar.classList.remove('mobile-open');
+        if (overlay) overlay.classList.remove('active');
+        document.body.style.overflow = '';
+    }
+
+    if (hamburgerBtn) hamburgerBtn.addEventListener('click', openSidebar);
+    if (overlay) overlay.addEventListener('click', closeSidebar);
+    if (closeBtn) closeBtn.addEventListener('click', closeSidebar);
+
+    // Close mobile drawer when clicking any sidebar button
+    document.querySelectorAll('.sidebar-nav-btn, .sidebar-footer-link').forEach(btn => {
+        btn.addEventListener('click', () => {
+            if (window.innerWidth <= 900) {
+                closeSidebar();
+            }
+        });
+    });
+}
+
 // Setup Event Listeners and Button Actions
 function setupDashboardActions() {
     setupSubmenuManagerActions();
+    setupMobileNavigation();
 
     // Switch media type dropdown in modal editor
     dom.itemMediaType.addEventListener('change', toggleItemMediaFields);
