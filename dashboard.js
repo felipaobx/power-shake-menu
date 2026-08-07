@@ -971,75 +971,10 @@ window.openItemEditor = function(id = null) {
     dom.itemModal.style.display = 'flex';
 };
 
-// Item Editor Modal Submit Save
-dom.modalForm.addEventListener('submit', function(e) {
-    e.preventDefault();
-    const catId = dom.categorySelect.value;
-    const category = MENU_DATA.categories.find(c => c.id === catId);
-    
-    if (!category) return;
-    
-    const id = dom.editItemId.value;
-    const name = dom.itemName.value.trim();
-    const mediaType = dom.itemMediaType.value;
-    
-    const icon = mediaType === 'icon' ? dom.itemIcon.value.trim() : '';
-    const image = mediaType === 'image' ? uploadedProductImageBase64 : '';
-
-    const kcal = parseFloat(dom.itemKcal.value) || 0;
-    const carbs = dom.itemCarbs ? (parseFloat(dom.itemCarbs.value) || 0) : 0;
-    const protein = parseFloat(dom.itemProtein.value) || 0;
-    const price = parseFloat(dom.itemPrice.value) || 0;
-    const price2 = dom.itemPrice2 ? (parseFloat(dom.itemPrice2.value) || 0) : 0;
-    const description = dom.itemDesc.value.trim();
-    const rawVersions = dom.itemVersions.value.trim();
-
-    let versions = undefined;
-    if (catId === 'milks' && rawVersions) {
-        versions = rawVersions.split(',').map(v => v.trim()).filter(v => v.length > 0);
-    }
-
-    const outOfStock = dom.itemAvailableCheckbox ? !dom.itemAvailableCheckbox.checked : false;
-
-    if (id) {
-        // EDIT MODE
-        const index = category.items.findIndex(i => i.id === id);
-        if (index !== -1) {
-            category.items[index] = {
-                ...category.items[index],
-                name, icon, image, kcal, carbs, protein, price, price2, description, versions, outOfStock
-            };
-        }
-    } else {
-        // ADD NEW ITEM MODE
-        const newItem = {
-            id: 'item_' + Date.now(),
-            name, icon, image, kcal, carbs, protein, price, price2, description, versions, outOfStock
-        };
-        category.items.push(newItem);
-    }
-    localStorage.setItem('power_shake_menu_data', JSON.stringify(MENU_DATA));
-
-    dom.itemModal.style.display = 'none';
-    renderItemsTable();
-});
-
-// Delete Menu Item
-window.deleteMenuItem = function(id) {
-    const catId = dom.categorySelect.value;
-    const category = MENU_DATA.categories.find(c => c.id === catId);
-    if (!category) return;
-
-    if (confirm('Tem certeza que deseja remover este item de forma permanente?')) {
-        category.items = category.items.filter(i => i.id !== id);
-        renderItemsTable();
-    }
-};
-
 // Move Menu Item Up
 window.moveItemUp = function(id) {
-    const catId = dom.categorySelect.value;
-    const category = MENU_DATA.categories.find(c => c.id === catId);
+    const catId = dom.categorySelect ? dom.categorySelect.value : null;
+    const category = MENU_DATA.categories ? MENU_DATA.categories.find(c => c.id === catId) : null;
     if (!category) return;
 
     const index = category.items.findIndex(i => i.id === id);
@@ -1049,13 +984,14 @@ window.moveItemUp = function(id) {
         category.items[index] = category.items[index - 1];
         category.items[index - 1] = temp;
         renderItemsTable();
+        saveMenuDataAndSettings();
     }
 };
 
 // Move Menu Item Down
 window.moveItemDown = function(id) {
-    const catId = dom.categorySelect.value;
-    const category = MENU_DATA.categories.find(c => c.id === catId);
+    const catId = dom.categorySelect ? dom.categorySelect.value : null;
+    const category = MENU_DATA.categories ? MENU_DATA.categories.find(c => c.id === catId) : null;
     if (!category) return;
 
     const index = category.items.findIndex(i => i.id === id);
@@ -1065,6 +1001,7 @@ window.moveItemDown = function(id) {
         category.items[index] = category.items[index + 1];
         category.items[index + 1] = temp;
         renderItemsTable();
+        saveMenuDataAndSettings();
     }
 };
 
@@ -2450,69 +2387,73 @@ function addItemDirectToCategory(catId) {
 }
 
 // Item Editor Modal Submit Save
-dom.modalForm.addEventListener('submit', function(e) {
-    e.preventDefault();
-    const catId = dom.categorySelect.value;
-    const category = MENU_DATA.categories.find(c => c.id === catId);
-    
-    if (!category) {
-        showToast('Selecione uma categoria válida para adicionar ou editar o item.', 'error');
-        return;
-    }
-    
-    const id = dom.editItemId.value;
-    const name = dom.itemName.value.trim();
-    const mediaType = dom.itemMediaType.value;
-    
-    if (!name) {
-        showToast('Informe o nome do item.', 'warning');
-        return;
-    }
-
-    const existingItem = id ? category.items.find(i => i.id === id) : null;
-    const icon = mediaType === 'icon' ? dom.itemIcon.value.trim() : '';
-    const image = mediaType === 'image' ? (uploadedProductImageBase64 || (existingItem ? existingItem.image : '') || '') : '';
-
-    const kcal = parseFloat(dom.itemKcal.value) || 0;
-    const protein = parseFloat(dom.itemProtein.value) || 0;
-    const price = parseFloat(dom.itemPrice.value) || 0;
-    const price2 = dom.itemPrice2 ? (parseFloat(dom.itemPrice2.value) || 0) : 0;
-    const description = dom.itemDesc.value.trim();
-    const rawVersions = dom.itemVersions.value.trim();
-
-    let versions = undefined;
-    if (catId === 'milks' && rawVersions) {
-        versions = rawVersions.split(',').map(v => v.trim()).filter(v => v.length > 0);
-    }
-
-    const outOfStock = dom.itemAvailableCheckbox ? !dom.itemAvailableCheckbox.checked : false;
-
-    if (id) {
-        // EDIT MODE
-        const index = category.items.findIndex(i => i.id === id);
-        if (index !== -1) {
-            category.items[index] = {
-                ...category.items[index],
-                name, icon, image, kcal, protein, price, price2, description, versions, outOfStock
-            };
+if (dom.modalForm) {
+    dom.modalForm.addEventListener('submit', function(e) {
+        e.preventDefault();
+        const catId = dom.categorySelect ? dom.categorySelect.value : null;
+        const category = MENU_DATA.categories ? MENU_DATA.categories.find(c => c.id === catId) : null;
+        
+        if (!category) {
+            showToast('Selecione uma categoria válida para adicionar ou editar o item.', 'error');
+            return;
         }
-        showToast(`Item "${name}" atualizado com sucesso!`, 'success');
-    } else {
-        // ADD NEW ITEM MODE
-        const newItem = {
-            id: 'item_' + Date.now(),
-            name, icon, image, kcal, protein, price, price2, description, versions, outOfStock
-        };
-        category.items.push(newItem);
-        showToast(`Novo item "${name}" adicionado com sucesso!`, 'success');
-    }
+        
+        const id = dom.editItemId ? dom.editItemId.value : '';
+        const name = dom.itemName ? dom.itemName.value.trim() : '';
+        const mediaType = dom.itemMediaType ? dom.itemMediaType.value : 'icon';
+        
+        if (!name) {
+            showToast('Informe o nome do item.', 'warning');
+            return;
+        }
 
-    localStorage.setItem('power_shake_menu_data', JSON.stringify(MENU_DATA));
+        const existingItem = id ? category.items.find(i => i.id === id) : null;
+        const icon = mediaType === 'icon' && dom.itemIcon ? dom.itemIcon.value.trim() : '';
+        const image = mediaType === 'image' ? (uploadedProductImageBase64 || (existingItem ? existingItem.image : '') || '') : '';
 
-    dom.itemModal.style.display = 'none';
-    renderItemsTable();
-    renderBoardPreview();
-});
+        const kcal = dom.itemKcal ? (parseFloat(dom.itemKcal.value) || 0) : 0;
+        const carbs = dom.itemCarbs ? (parseFloat(dom.itemCarbs.value) || 0) : 0;
+        const protein = dom.itemProtein ? (parseFloat(dom.itemProtein.value) || 0) : 0;
+        const price = dom.itemPrice ? (parseFloat(dom.itemPrice.value) || 0) : 0;
+        const price2 = dom.itemPrice2 ? (parseFloat(dom.itemPrice2.value) || 0) : 0;
+        const description = dom.itemDesc ? dom.itemDesc.value.trim() : '';
+        const rawVersions = dom.itemVersions ? dom.itemVersions.value.trim() : '';
+
+        let versions = undefined;
+        if (catId === 'milks' && rawVersions) {
+            versions = rawVersions.split(',').map(v => v.trim()).filter(v => v.length > 0);
+        }
+
+        const outOfStock = dom.itemAvailableCheckbox ? !dom.itemAvailableCheckbox.checked : false;
+
+        if (id) {
+            // EDIT MODE
+            const index = category.items.findIndex(i => i.id === id);
+            if (index !== -1) {
+                category.items[index] = {
+                    ...category.items[index],
+                    name, icon, image, kcal, carbs, protein, price, price2, description, versions, outOfStock
+                };
+            }
+            showToast(`Item "${name}" atualizado com sucesso!`, 'success');
+        } else {
+            // ADD NEW ITEM MODE
+            const newItem = {
+                id: 'item_' + Date.now(),
+                name, icon, image, kcal, carbs, protein, price, price2, description, versions, outOfStock
+            };
+            if (!category.items) category.items = [];
+            category.items.push(newItem);
+            showToast(`Novo item "${name}" adicionado com sucesso!`, 'success');
+        }
+
+        saveMenuDataAndSettings(true);
+
+        if (dom.itemModal) dom.itemModal.style.display = 'none';
+        renderItemsTable();
+        if (typeof renderBoardPreview === 'function') renderBoardPreview();
+    });
+}
 
 // Delete Menu Item
 window.deleteMenuItem = function(id) {
