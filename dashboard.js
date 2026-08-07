@@ -411,8 +411,7 @@ function switchTab(tabId) {
     // Dynamic Header Headings
     const headings = {
         'tab-overview': { title: '<ion-icon name="grid-outline"></ion-icon> Visão Geral', desc: 'Resumo operacional, estatísticas rápidas e métricas do seu cardápio.' },
-        'tab-items': { title: '<ion-icon name="restaurant-outline"></ion-icon> Cardápio & Itens', desc: 'Gerencie categorias, preços, disponibilidade e produtos do cardápio.' },
-        'tab-submenus': { title: '<ion-icon name="layers-outline"></ion-icon> Gerenciar Submenus', desc: 'Crie e organize os submenus prioritários que aparecem na tela inicial.' },
+        'tab-menu': { title: '<ion-icon name="restaurant-outline"></ion-icon> Gestão do Cardápio', desc: 'Gerencie submenus, categorias, produtos, preços e disponibilidade em um único lugar.' },
         'tab-users': { title: '<ion-icon name="people-outline"></ion-icon> Usuários & Controle de Acesso', desc: 'Gerencie logins e PINs de acesso para o Dashboard e Operadores da Cozinha.' },
         'tab-location': { title: '<ion-icon name="location-outline"></ion-icon> Endereço & Contato', desc: 'Edite o endereço físico, horários de funcionamento, WhatsApp e redes sociais.' },
         'tab-general': { title: '<ion-icon name="create-outline"></ion-icon> Textos & Banners', desc: 'Personalize os títulos, descrições e imagens dos banners da loja.' },
@@ -429,13 +428,8 @@ function switchTab(tabId) {
         renderOverviewTab();
     }
 
-    if (tabId === 'tab-items') {
-        populateCategoryDropdown();
-        renderItemsTable();
-    }
-
-    if (tabId === 'tab-submenus') {
-        renderSubmenusTab();
+    if (tabId === 'tab-menu' || tabId === 'tab-items' || tabId === 'tab-submenus') {
+        renderCardapioTab();
     }
 
     if (tabId === 'tab-users') {
@@ -1232,6 +1226,7 @@ function setupCategoryActions() {
                 showToast(`Categoria "${name}" criada com sucesso!`, 'success');
             }
             saveMenuDataAndSettings(true);
+            renderCardapioTab();
         });
     }
 
@@ -1347,6 +1342,7 @@ window.saveSubmenuFromModal = function() {
     saveMenuDataAndSettings();
     closeSubmenuEditor();
     renderSubmenusTab();
+    renderCardapioTab();
     populateCategoryDropdown();
 };
 
@@ -1356,6 +1352,7 @@ window.toggleSubmenuVisibility = function(subId) {
         sub.hidden = !sub.hidden;
         saveMenuDataAndSettings();
         renderSubmenusTab();
+        renderCardapioTab();
         populateCategoryDropdown();
         const statusText = sub.hidden ? 'ocultado no cardápio digital e PDF' : 'visível no cardápio digital e PDF';
         showToast(`Submenu "${sub.name}" foi marcado como ${statusText}.`, 'success');
@@ -1380,6 +1377,7 @@ window.deleteSubmenu = function(subId) {
         MENU_DATA.submenus = MENU_DATA.submenus.filter(s => s.id !== subId);
         closeSubmenuEditor();
         renderSubmenusTab();
+        renderCardapioTab();
         populateCategoryDropdown();
         saveMenuDataAndSettings(true);
         showToast(`Submenu "${sub.name}" foi excluído com sucesso.`, 'success');
@@ -1392,6 +1390,7 @@ window.assignCategoryToSubmenu = function(catId, targetSubmenuId) {
         category.submenu = targetSubmenuId;
         saveMenuDataAndSettings();
         renderSubmenusTab();
+        renderCardapioTab();
         populateCategoryDropdown();
         showToast(`Categoria "${category.name}" vinculada ao submenu.`, 'success');
     }
@@ -1478,6 +1477,313 @@ function renderSubmenusTab() {
         `;
     }).join('');
 }
+
+// ==========================================
+// RENDERING CARDÁPIO UNIFICADO (CARDS HIERÁRQUICOS)
+// ==========================================
+
+window.renderCardapioTab = function() {
+    const container = document.getElementById('cardapio-unified-container');
+    if (!container) return;
+
+    const searchInput = document.getElementById('unified-menu-search-input');
+    const search = searchInput ? searchInput.value.toLowerCase().trim() : '';
+
+    const submenus = (MENU_DATA.submenus || DEFAULT_MENU_DATA.submenus).filter(s => s.id !== 'all');
+
+    if (submenus.length === 0 && (!MENU_DATA.categories || MENU_DATA.categories.length === 0)) {
+        container.innerHTML = `
+            <div style="text-align: center; color: var(--text-secondary); padding: 50px 20px; background: rgba(22, 25, 35, 0.7); border: 1px solid var(--border-card); border-radius: 16px;">
+                <ion-icon name="restaurant-outline" style="font-size: 3rem; color: var(--accent); margin-bottom: 10px;"></ion-icon>
+                <h4 style="font-size: 1.2rem; color: var(--text-primary); margin-bottom: 5px;">Nenhum Submenu ou Categoria Cadastrada</h4>
+                <p style="font-size: 0.9rem; max-width: 450px; margin: 0 auto 15px auto;">Comece criando seu primeiro Submenu ou Categoria nos botões acima para organizar seu cardápio.</p>
+                <button type="button" class="add-item-btn" onclick="openSubmenuEditor()" style="background: var(--accent); color: #000; font-weight: 700; display: inline-flex;">+ Criar Submenu</button>
+            </div>
+        `;
+        return;
+    }
+
+    container.innerHTML = submenus.map(sub => {
+        const categories = (MENU_DATA.categories || []).filter(c => (c.submenu || 'monte_o_seu') === sub.id);
+
+        let filteredCategories = categories;
+        if (search) {
+            filteredCategories = categories.filter(c => {
+                const matchCat = c.name.toLowerCase().includes(search) || (c.subtitle && c.subtitle.toLowerCase().includes(search));
+                const matchItems = c.items && c.items.some(i => i.name.toLowerCase().includes(search) || (i.description && i.description.toLowerCase().includes(search)));
+                return matchCat || matchItems;
+            });
+            if (!sub.name.toLowerCase().includes(search) && filteredCategories.length === 0) {
+                return '';
+            }
+        }
+
+        const mediaHtml = sub.image
+            ? `<div style="width: 48px; height: 48px; border-radius: 10px; background-image: url('${sub.image}'); background-size: cover; background-position: center; flex-shrink: 0;"></div>`
+            : `<div style="font-size: 1.8rem; width: 48px; height: 48px; display: flex; align-items: center; justify-content: center; background: rgba(255,255,255,0.05); border-radius: 10px; flex-shrink: 0;">${sub.icon || '📁'}</div>`;
+
+        const visibilitySubBtn = sub.hidden
+            ? `<button type="button" onclick="toggleSubmenuVisibility('${sub.id}')" style="background: rgba(255, 77, 79, 0.15); border: 1px solid rgba(255, 77, 79, 0.3); color: var(--danger); padding: 5px 12px; border-radius: 6px; cursor: pointer; font-size: 0.82rem; font-weight: 700; display: inline-flex; align-items: center; gap: 4px;" title="Clique para exibir no cardápio e PDF"><ion-icon name="eye-off-outline"></ion-icon> Oculto</button>`
+            : `<button type="button" onclick="toggleSubmenuVisibility('${sub.id}')" style="background: rgba(139, 252, 3, 0.15); border: 1px solid rgba(139, 252, 3, 0.3); color: var(--accent); padding: 5px 12px; border-radius: 6px; cursor: pointer; font-size: 0.82rem; font-weight: 700; display: inline-flex; align-items: center; gap: 4px;" title="Clique para ocultar no cardápio e PDF"><ion-icon name="eye-outline"></ion-icon> Visível</button>`;
+
+        const categoriesHtml = filteredCategories.length > 0
+            ? filteredCategories.map(cat => {
+                let itemsList = cat.items || [];
+                if (search) {
+                    itemsList = itemsList.filter(i => i.name.toLowerCase().includes(search) || (i.description && i.description.toLowerCase().includes(search)) || cat.name.toLowerCase().includes(search));
+                }
+
+                const catMediaHtml = cat.image
+                    ? `<div style="width: 38px; height: 38px; border-radius: 8px; background-image: url('${cat.image}'); background-size: cover; background-position: center; flex-shrink: 0;"></div>`
+                    : `<div style="font-size: 1.4rem; width: 38px; height: 38px; display: flex; align-items: center; justify-content: center; background: rgba(255,255,255,0.06); border-radius: 8px; flex-shrink: 0;">${cat.icon || '📁'}</div>`;
+
+                const selectionBadge = cat.selectionType === 'single'
+                    ? `<span style="background: rgba(24, 144, 255, 0.15); color: #1890ff; border: 1px solid rgba(24, 144, 255, 0.3); font-size: 0.75rem; padding: 2px 8px; border-radius: 6px; font-weight: 700;">Escolhe 1 (Única)</span>`
+                    : `<span style="background: rgba(139, 252, 3, 0.15); color: var(--accent); border: 1px solid rgba(139, 252, 3, 0.3); font-size: 0.75rem; padding: 2px 8px; border-radius: 6px; font-weight: 700;">Vários (Múltipla)</span>`;
+
+                const requiredBadge = cat.required
+                    ? `<span style="background: rgba(250, 173, 20, 0.15); color: #faad14; border: 1px solid rgba(250, 173, 20, 0.3); font-size: 0.75rem; padding: 2px 8px; border-radius: 6px; font-weight: 700;">Obrigatório</span>`
+                    : `<span style="background: rgba(255,255,255,0.05); color: var(--text-muted); border: 1px solid rgba(255,255,255,0.1); font-size: 0.75rem; padding: 2px 8px; border-radius: 6px;">Opcional</span>`;
+
+                const hiddenCatBadge = cat.hidden
+                    ? `<span style="background: rgba(255, 77, 79, 0.15); color: var(--danger); border: 1px solid rgba(255, 77, 79, 0.3); font-size: 0.75rem; padding: 2px 8px; border-radius: 6px; font-weight: 700;">🙈 Oculto</span>`
+                    : `<span style="background: rgba(139, 252, 3, 0.12); color: var(--accent); border: 1px solid rgba(139, 252, 3, 0.25); font-size: 0.75rem; padding: 2px 8px; border-radius: 6px; font-weight: 700;">👁️ Visível</span>`;
+
+                const productsHtml = itemsList.length > 0
+                    ? itemsList.map(item => {
+                        const itemMedia = item.image
+                            ? `<div style="width: 42px; height: 42px; border-radius: 8px; background-image: url('${item.image}'); background-size: cover; background-position: center; flex-shrink: 0;"></div>`
+                            : `<div style="font-size: 1.5rem; width: 42px; height: 42px; display: flex; align-items: center; justify-content: center; background: rgba(255,255,255,0.05); border-radius: 8px; flex-shrink: 0;">${item.icon || '🥤'}</div>`;
+
+                        const subtextParts = [];
+                        if (item.kcal && item.kcal > 0) subtextParts.push(`${item.kcal} kcal`);
+                        if (item.carbs && item.carbs > 0) subtextParts.push(`${item.carbs}g carb`);
+                        if (item.protein && item.protein > 0) subtextParts.push(`${item.protein}g prot`);
+                        if (item.description) subtextParts.push(item.description);
+                        const subtextStr = subtextParts.join(' • ');
+
+                        return `
+                            <div style="background: rgba(255, 255, 255, 0.02); border: 1px solid ${item.outOfStock ? 'rgba(255,77,79,0.25)' : 'rgba(255,255,255,0.06)'}; border-radius: 10px; padding: 10px 14px; display: flex; align-items: center; justify-content: space-between; gap: 12px; transition: all 0.2s ease;">
+                                <div style="display: flex; align-items: center; gap: 12px; flex: 1; min-width: 0;">
+                                    ${itemMedia}
+                                    <div style="display: flex; flex-direction: column; gap: 2px; min-width: 0;">
+                                        <div style="font-weight: 700; color: ${item.outOfStock ? 'var(--text-muted)' : 'var(--text-primary)'}; font-size: 0.95rem; text-decoration: ${item.outOfStock ? 'line-through' : 'none'}; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
+                                            ${item.name} ${item.outOfStock ? '<span style="font-size: 0.72rem; color: var(--danger); text-decoration: none; font-weight: 800; background: rgba(255,77,79,0.15); padding: 1px 6px; border-radius: 4px; margin-left: 4px;">PAUSADO</span>' : ''}
+                                        </div>
+                                        ${subtextStr ? `<div style="font-size: 0.78rem; color: var(--text-secondary); overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${subtextStr}</div>` : ''}
+                                    </div>
+                                </div>
+
+                                <div style="display: flex; align-items: center; gap: 10px; flex-shrink: 0; flex-wrap: wrap;">
+                                    <span style="font-weight: 800; color: var(--accent); font-size: 0.95rem; background: rgba(139, 252, 3, 0.1); padding: 4px 10px; border-radius: 6px; border: 1px solid rgba(139, 252, 3, 0.2);">
+                                        ${formatPricePill(item.price)}
+                                    </span>
+
+                                    <label class="required-toggle-label" style="display: inline-flex; align-items: center; gap: 4px; cursor: pointer; padding: 4px 8px; border-radius: 6px; font-size: 0.78rem; background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.08);" title="Marcar como disponível ou pausado">
+                                        <input type="checkbox" onchange="toggleItemAvailability('${cat.id}', '${item.id}', this)" ${!item.outOfStock ? 'checked' : ''} style="accent-color: var(--accent); cursor: pointer;">
+                                        <span style="font-size: 0.75rem; color: ${item.outOfStock ? 'var(--danger)' : 'var(--accent)'}">${item.outOfStock ? 'Esgotado' : 'Ativo'}</span>
+                                    </label>
+
+                                    <div style="display: flex; gap: 4px;">
+                                        <button type="button" onclick="moveItemUpDirect('${cat.id}', '${item.id}')" style="background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.08); color: #fff; padding: 4px 8px; border-radius: 6px; cursor: pointer;" title="Subir Posição">⬆️</button>
+                                        <button type="button" onclick="moveItemDownDirect('${cat.id}', '${item.id}')" style="background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.08); color: #fff; padding: 4px 8px; border-radius: 6px; cursor: pointer;" title="Descer Posição">⬇️</button>
+                                        <button type="button" onclick="openItemEditorDirect('${cat.id}', '${item.id}')" style="background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.12); color: #fff; padding: 4px 8px; border-radius: 6px; cursor: pointer;" title="Editar Item"><ion-icon name="create-outline"></ion-icon></button>
+                                        <button type="button" onclick="deleteMenuItemDirect('${cat.id}', '${item.id}')" style="background: rgba(255, 77, 79, 0.12); border: 1px solid rgba(255, 77, 79, 0.25); color: var(--danger); padding: 4px 8px; border-radius: 6px; cursor: pointer;" title="Excluir Item"><ion-icon name="trash-outline"></ion-icon></button>
+                                    </div>
+                                </div>
+                            </div>
+                        `;
+                    }).join('')
+                    : `<div style="font-size: 0.82rem; color: var(--text-muted); font-style: italic; padding: 8px 0;">Nenhum produto nesta categoria. Clique em "+ Item" para adicionar!</div>`;
+
+                return `
+                    <div style="background: rgba(0, 0, 0, 0.25); border: 1px solid ${cat.hidden ? 'rgba(255,77,79,0.25)' : 'rgba(255, 255, 255, 0.08)'}; border-radius: 12px; padding: 16px; display: flex; flex-direction: column; gap: 12px;">
+                        <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px; border-bottom: 1px solid rgba(255,255,255,0.05); padding-bottom: 10px;">
+                            <div style="display: flex; align-items: center; gap: 10px;">
+                                ${catMediaHtml}
+                                <div>
+                                    <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
+                                        <h5 style="font-size: 1.05rem; font-weight: 800; color: var(--text-primary); margin: 0;">${cat.name}</h5>
+                                        ${selectionBadge}
+                                        ${requiredBadge}
+                                        ${hiddenCatBadge}
+                                    </div>
+                                    ${cat.subtitle ? `<div style="font-size: 0.8rem; color: var(--text-secondary); margin-top: 2px;">${cat.subtitle}</div>` : ''}
+                                </div>
+                            </div>
+
+                            <div style="display: flex; gap: 6px; align-items: center;">
+                                <button type="button" onclick="openItemEditorDirect('${cat.id}')" style="background: rgba(139, 252, 3, 0.15); border: 1px solid rgba(139, 252, 3, 0.3); color: var(--accent); padding: 5px 10px; border-radius: 6px; font-size: 0.8rem; font-weight: 700; cursor: pointer; display: inline-flex; align-items: center; gap: 4px;" title="Incluir novo produto nesta categoria">
+                                    <ion-icon name="add-outline"></ion-icon> + Item
+                                </button>
+                                <button type="button" onclick="openCategoryModalDirect('${sub.id}', '${cat.id}')" style="background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); color: var(--text-primary); padding: 5px 10px; border-radius: 6px; cursor: pointer; font-size: 0.8rem; display: inline-flex; align-items: center; gap: 4px;" title="Editar Categoria">
+                                    <ion-icon name="create-outline"></ion-icon> Editar
+                                </button>
+                                <button type="button" onclick="deleteCategoryDirect('${cat.id}')" style="background: rgba(255, 77, 79, 0.12); border: 1px solid rgba(255, 77, 79, 0.25); color: var(--danger); padding: 5px 10px; border-radius: 6px; cursor: pointer; font-size: 0.8rem; display: inline-flex; align-items: center; gap: 4px;" title="Excluir Categoria">
+                                    <ion-icon name="trash-outline"></ion-icon> Excluir
+                                </button>
+                            </div>
+                        </div>
+
+                        <div style="display: flex; flex-direction: column; gap: 8px;">
+                            ${productsHtml}
+                        </div>
+                    </div>
+                `;
+            }).join('')
+            : `<div style="font-size: 0.85rem; color: var(--text-muted); font-style: italic; padding: 15px 0;">Nenhuma categoria neste submenu. Clique em "+ Categoria" para incluir!</div>`;
+
+        return `
+            <div style="background: rgba(22, 25, 35, 0.75); border: 1px solid ${sub.hidden ? 'rgba(255,77,79,0.3)' : 'var(--border-card)'}; border-radius: 16px; padding: 20px; display: flex; flex-direction: column; gap: 16px; box-shadow: 0 4px 18px rgba(0,0,0,0.25);">
+                <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px; border-bottom: 1px solid rgba(255,255,255,0.06); padding-bottom: 14px;">
+                    <div style="display: flex; align-items: center; gap: 12px;">
+                        ${mediaHtml}
+                        <div>
+                            <h4 style="font-size: 1.2rem; font-weight: 800; color: var(--text-primary); margin: 0; display: flex; align-items: center; gap: 8px;">
+                                ${sub.name}
+                                ${sub.hidden ? '<span style="font-size: 0.72rem; color: var(--danger); background: rgba(255,77,79,0.15); padding: 2px 8px; border-radius: 4px; font-weight: 800;">🙈 OCULTO</span>' : ''}
+                            </h4>
+                            <p style="font-size: 0.83rem; color: var(--text-secondary); margin-top: 2px; margin-bottom: 0;">${sub.subtitle || 'Submenu prioritário'}</p>
+                        </div>
+                    </div>
+
+                    <div style="display: flex; gap: 8px; align-items: center; flex-wrap: wrap;">
+                        <button type="button" onclick="openCategoryModalDirect('${sub.id}')" style="background: rgba(139, 252, 3, 0.15); border: 1px solid rgba(139, 252, 3, 0.3); color: var(--accent); padding: 6px 12px; border-radius: 8px; font-size: 0.85rem; font-weight: 800; cursor: pointer; display: inline-flex; align-items: center; gap: 4px;" title="Criar Categoria neste Submenu">
+                            <ion-icon name="folder-open-outline"></ion-icon> + Categoria
+                        </button>
+                        ${visibilitySubBtn}
+                        <button type="button" onclick="openSubmenuEditor('${sub.id}')" style="background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); color: var(--text-primary); padding: 6px 12px; border-radius: 8px; cursor: pointer; font-size: 0.85rem; display: inline-flex; align-items: center; gap: 4px;">
+                            <ion-icon name="create-outline"></ion-icon> Editar
+                        </button>
+                        <button type="button" onclick="deleteSubmenu('${sub.id}')" style="background: rgba(255, 77, 79, 0.12); border: 1px solid rgba(255, 77, 79, 0.25); color: var(--danger); padding: 6px 12px; border-radius: 8px; cursor: pointer; font-size: 0.85rem; display: inline-flex; align-items: center; gap: 4px;">
+                            <ion-icon name="trash-outline"></ion-icon> Excluir
+                        </button>
+                    </div>
+                </div>
+
+                <div style="display: flex; flex-direction: column; gap: 15px;">
+                    ${categoriesHtml}
+                </div>
+            </div>
+        `;
+    }).join('');
+};
+
+window.openCategoryModalDirect = function(submenuId = null, catId = null) {
+    if (catId) {
+        const category = MENU_DATA.categories.find(c => c.id === catId);
+        if (!category) return;
+        if (dom.catForm) dom.catForm.reset();
+        if (dom.editCategoryId) dom.editCategoryId.value = catId;
+        const title = document.getElementById('category-modal-form-title');
+        if (title) title.innerText = 'Editar Categoria: ' + category.name;
+        if (dom.catName) dom.catName.value = category.name || '';
+        if (dom.catSubtitle) dom.catSubtitle.value = category.subtitle || '';
+        if (dom.catPosition) dom.catPosition.value = category.isStep ? 'step' : 'extra';
+        if (dom.catSelection) dom.catSelection.value = category.selectionType || 'multi';
+        if (dom.catRequired) dom.catRequired.value = category.required ? 'true' : 'false';
+        if (dom.catHiddenInput) dom.catHiddenInput.value = category.hidden ? 'true' : 'false';
+        populateSubmenuDropdown(category.submenu || submenuId || 'monte_o_seu');
+        
+        if (category.image) {
+            if (dom.catMediaType) dom.catMediaType.value = 'image';
+            uploadedCategoryImageBase64 = category.image;
+            if (dom.catImagePreview) {
+                dom.catImagePreview.style.backgroundImage = `url('${category.image}')`;
+                dom.catImagePreview.innerText = '';
+            }
+            if (dom.catIcon) dom.catIcon.value = '';
+        } else {
+            if (dom.catMediaType) dom.catMediaType.value = 'icon';
+            if (dom.catIcon) dom.catIcon.value = category.icon || '';
+            uploadedCategoryImageBase64 = '';
+            if (dom.catImagePreview) {
+                dom.catImagePreview.style.backgroundImage = 'none';
+                dom.catImagePreview.innerText = 'Sem Foto';
+            }
+        }
+        
+        toggleCategoryMediaFields();
+        if (dom.catModal) dom.catModal.style.display = 'flex';
+    } else {
+        if (dom.catForm) dom.catForm.reset();
+        if (dom.editCategoryId) dom.editCategoryId.value = '';
+        const title = document.getElementById('category-modal-form-title');
+        if (title) title.innerText = 'Nova Categoria';
+        uploadedCategoryImageBase64 = '';
+        if (dom.catImagePreview) {
+            dom.catImagePreview.style.backgroundImage = 'none';
+            dom.catImagePreview.innerText = 'Sem Foto';
+        }
+        if (dom.catHiddenInput) dom.catHiddenInput.value = 'false';
+        populateSubmenuDropdown(submenuId || 'monte_o_seu');
+        toggleCategoryMediaFields();
+        if (dom.catModal) dom.catModal.style.display = 'flex';
+    }
+};
+
+window.deleteCategoryDirect = function(catId) {
+    const category = MENU_DATA.categories.find(c => c.id === catId);
+    if (!category) return;
+
+    if (confirm(`Tem certeza que deseja excluir permanentemente a categoria "${category.name}" e todos os seus produtos cadastrados?`)) {
+        MENU_DATA.categories = MENU_DATA.categories.filter(c => c.id !== catId);
+        saveMenuDataAndSettings(true);
+        renderCardapioTab();
+        showToast(`Categoria "${category.name}" foi excluída com sucesso!`, 'success');
+    }
+};
+
+window.openItemEditorDirect = function(catId = null, itemId = null) {
+    if (dom.categorySelect && catId) {
+        dom.categorySelect.value = catId;
+    } else if (catId) {
+        populateCategoryDropdown(catId);
+    }
+    openItemEditor(itemId);
+};
+
+window.deleteMenuItemDirect = function(catId, itemId) {
+    const category = MENU_DATA.categories.find(c => c.id === catId);
+    if (!category) return;
+
+    if (confirm('Tem certeza que deseja remover este produto de forma permanente?')) {
+        const item = category.items ? category.items.find(i => i.id === itemId) : null;
+        const name = item ? item.name : '';
+        category.items = category.items.filter(i => i.id !== itemId);
+        saveMenuDataAndSettings(true);
+        renderCardapioTab();
+        showToast(`Item ${name ? '"' + name + '" ' : ''}removido com sucesso.`, 'success');
+    }
+};
+
+window.moveItemUpDirect = function(catId, itemId) {
+    const category = MENU_DATA.categories.find(c => c.id === catId);
+    if (!category || !category.items) return;
+
+    const index = category.items.findIndex(i => i.id === itemId);
+    if (index > 0) {
+        const temp = category.items[index];
+        category.items[index] = category.items[index - 1];
+        category.items[index - 1] = temp;
+        saveMenuDataAndSettings();
+        renderCardapioTab();
+    }
+};
+
+window.moveItemDownDirect = function(catId, itemId) {
+    const category = MENU_DATA.categories.find(c => c.id === catId);
+    if (!category || !category.items) return;
+
+    const index = category.items.findIndex(i => i.id === itemId);
+    if (index !== -1 && index < category.items.length - 1) {
+        const temp = category.items[index];
+        category.items[index] = category.items[index + 1];
+        category.items[index + 1] = temp;
+        saveMenuDataAndSettings();
+        renderCardapioTab();
+    }
+};
 
 function setupSubmenuManagerActions() {
     const btn = document.getElementById('manage-submenus-btn');
@@ -1698,6 +2004,7 @@ async function initDashboard() {
 
     try { loadGeneralSettings(); } catch(e) { console.error('Error in loadGeneralSettings:', e); }
     try { setupUploaders(); } catch(e) { console.error('Error in setupUploaders:', e); }
+    try { renderCardapioTab(); } catch(e) { console.error('Error in renderCardapioTab:', e); }
     try { populateCategoryDropdown(); } catch(e) { console.error('Error in populateCategoryDropdown:', e); }
     try { setupCategoryActions(); } catch(e) { console.error('Error in setupCategoryActions:', e); }
     try { setupDashboardActions(); } catch(e) { console.error('Error in setupDashboardActions:', e); }

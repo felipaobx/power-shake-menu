@@ -55,14 +55,9 @@
 
                 <div class="nav-section-label">Gestão do Cardápio</div>
 
-                <button class="sidebar-nav-btn" onclick="switchTab('tab-items')">
+                <button class="sidebar-nav-btn" onclick="switchTab('tab-menu')">
                     <ion-icon name="restaurant-outline"></ion-icon>
-                    <span>Cardápio & Itens</span>
-                </button>
-
-                <button class="sidebar-nav-btn" onclick="switchTab('tab-submenus')">
-                    <ion-icon name="layers-outline"></ion-icon>
-                    <span>Gerenciar Submenus</span>
+                    <span>Cardápio</span>
                 </button>
 
                 <button class="sidebar-nav-btn" onclick="switchTab('tab-general')">
@@ -117,11 +112,8 @@
                 <button class="mobile-nav-pill active" onclick="switchTab('tab-overview')">
                     <ion-icon name="grid-outline"></ion-icon> Visão Geral
                 </button>
-                <button class="mobile-nav-pill" onclick="switchTab('tab-items')">
-                    <ion-icon name="restaurant-outline"></ion-icon> Cardápio & Itens
-                </button>
-                <button class="mobile-nav-pill" onclick="switchTab('tab-submenus')">
-                    <ion-icon name="layers-outline"></ion-icon> Submenus
+                <button class="mobile-nav-pill" onclick="switchTab('tab-menu')">
+                    <ion-icon name="restaurant-outline"></ion-icon> Cardápio
                 </button>
                 <button class="mobile-nav-pill" onclick="switchTab('tab-general')">
                     <ion-icon name="create-outline"></ion-icon> Textos
@@ -229,109 +221,43 @@
                 </div>
             </section>
 
-            <!-- TAB 2: GERENCIAR ITENS DO CARDÁPIO -->
-            <section id="tab-items" class="tab-content">
-                <div class="category-select-wrapper" style="display: flex; flex-direction: column; gap: 15px; margin-bottom: 25px; background: rgba(255, 255, 255, 0.02); border: 1px solid var(--border-card); padding: 20px; border-radius: 14px;">
-                    <div style="display: flex; gap: 15px; align-items: flex-end; flex-wrap: wrap; width: 100%;">
-                        <div style="flex: 1.2; min-width: 200px;">
-                            <label style="font-size:0.85rem; color:var(--text-secondary); display:block; margin-bottom:5px;">Categoria do Item</label>
-                            <select id="category-select" class="category-select-control" onchange="onCategorySelectChange()" style="width: 100%;">
-                                <!-- Populated dynamically by dashboard.js -->
-                            </select>
-                        </div>
-                        <div style="flex: 1; min-width: 170px;">
-                            <label style="font-size:0.85rem; color:var(--text-secondary); display:block; margin-bottom:5px;">Submenu Pertencente</label>
-                            <select id="category-submenu-select" class="category-select-control" onchange="changeCategorySubmenuStatus()" style="width: 100%;">
-                                <!-- Populated dynamically by dashboard.js -->
-                            </select>
-                        </div>
-                        <div style="flex: 1; min-width: 170px;">
-                            <label style="font-size:0.85rem; color:var(--text-secondary); display:block; margin-bottom:5px;">Modo de Seleção</label>
-                            <select id="category-selection-type" class="category-select-control" onchange="changeCategorySelectionType()" style="width: 100%;">
-                                <option value="single">Seleção Única (Escolhe 1)</option>
-                                <option value="multi">Seleção Múltipla (Escolhe vários)</option>
-                            </select>
-                        </div>
-                        <div style="min-width: 140px;">
-                            <label style="font-size:0.85rem; color:var(--text-secondary); display:block; margin-bottom:5px;">Obrigatoriedade</label>
-                            <label class="required-toggle-label" style="display: inline-flex; align-items: center; gap: 8px; cursor: pointer; background: var(--bg-card); border: 1px solid var(--border-card); padding: 10px 15px; border-radius: 8px; font-family: 'Outfit', sans-serif; font-weight: 600; font-size: 0.95rem; height: 42px; box-sizing: border-box; width: 100%; justify-content: center;">
-                                <input type="checkbox" id="category-required-toggle" onchange="changeCategoryRequiredStatus()" style="accent-color: var(--accent); width: 16px; height: 16px; margin: 0; cursor: pointer;">
-                                <span>Obrigatório</span>
-                            </label>
-                        </div>
-                        <div style="min-width: 160px;">
-                            <label style="font-size:0.85rem; color:var(--text-secondary); display:block; margin-bottom:5px;">Visibilidade (Cardápio & PDF)</label>
-                            <label class="required-toggle-label" style="display: inline-flex; align-items: center; gap: 8px; cursor: pointer; background: var(--bg-card); border: 1px solid var(--border-card); padding: 10px 15px; border-radius: 8px; font-family: 'Outfit', sans-serif; font-weight: 600; font-size: 0.95rem; height: 42px; box-sizing: border-box; width: 100%; justify-content: center;">
-                                <input type="checkbox" id="category-hidden-toggle" onchange="changeCategoryHiddenStatus()" style="accent-color: var(--accent); width: 16px; height: 16px; margin: 0; cursor: pointer;" checked>
-                                <span id="category-hidden-label">Visível</span>
-                            </label>
-                        </div>
-                    </div>
-                    
-                    <div style="display: flex; gap: 15px; align-items: center; flex-wrap: wrap; width: 100%; border-top: 1px solid rgba(255, 255, 255, 0.05); padding-top: 15px;">
-                        <div style="flex: 1; min-width: 250px; position: relative;">
-                            <input type="text" id="item-search-input" placeholder="🔍 Buscar item nesta categoria..." oninput="renderItemsTable()" class="category-select-control" style="width: 100%; padding-left: 15px; box-sizing: border-box;">
-                        </div>
-                        <div style="display: flex; gap: 10px; flex-wrap: wrap; margin-left: auto;">
-                            <button class="add-item-btn" id="manage-submenus-btn" style="background: rgba(139, 252, 3, 0.1); border: 1px solid rgba(139, 252, 3, 0.25); color: var(--accent); margin: 0;">
-                                <ion-icon name="layers-outline"></ion-icon>
-                                Gerenciar Submenus
-                            </button>
-                            <button class="add-item-btn" id="add-category-btn" style="background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.08); color: var(--text-primary); margin: 0;">
-                                <ion-icon name="folder-open-outline"></ion-icon>
-                                Nova Categoria
-                            </button>
-                            <button class="add-item-btn" id="edit-category-btn" style="background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.08); color: var(--text-primary); margin: 0;" title="Editar Categoria Atual">
-                                <ion-icon name="create-outline"></ion-icon>
-                                Editar Categoria
-                            </button>
-                            <button class="add-item-btn" id="delete-category-btn" style="background: rgba(255, 77, 79, 0.12); border: 1px solid rgba(255, 77, 79, 0.2); color: var(--danger); margin: 0;" title="Excluir Categoria Atual">
-                                <ion-icon name="trash-outline"></ion-icon>
-                                Excluir Categoria
-                            </button>
-                            <button class="add-item-btn" id="add-item-btn" style="background: var(--accent); color: #000; margin: 0; box-shadow: 0 0 10px rgba(139, 252, 3, 0.15);">
-                                <ion-icon name="add-outline"></ion-icon>
-                                Novo Item
-                            </button>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Items Table List -->
-                <div class="items-list-container">
-                    <table class="items-table">
-                        <thead>
-                            <tr id="table-headers">
-                                <!-- Headers dynamically set by JS -->
-                            </tr>
-                        </thead>
-                        <tbody id="items-table-body">
-                            <!-- Table rows populated dynamically -->
-                        </tbody>
-                    </table>
-                </div>
-            </section>
-
-            <!-- TAB 3: GERENCIAR SUBMENUS -->
-            <section id="tab-submenus" class="tab-content">
-                <div class="form-section">
-                    <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 15px; margin-bottom: 20px;">
+            <!-- TAB: GESTÃO UNIFICADA DO CARDÁPIO -->
+            <section id="tab-menu" class="tab-content">
+                <!-- Top Action Header & Quick Controls -->
+                <div class="category-select-wrapper" style="display: flex; flex-direction: column; gap: 15px; margin-bottom: 25px; background: rgba(22, 25, 35, 0.7); border: 1px solid var(--border-card); padding: 20px; border-radius: 16px; box-shadow: 0 4px 20px rgba(0,0,0,0.25);">
+                    <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 15px;">
                         <div>
-                            <h3 class="form-section-title" style="margin-bottom: 5px;">Gerenciador de Submenus & Organização</h3>
-                            <p style="color: var(--text-secondary); font-size: 0.95rem; margin: 0;">
-                                Crie, edite ou exclua submenus e agrupe as categorias do cardápio nos cards prioritários da tela inicial.
+                            <h3 style="font-size: 1.25rem; font-weight: 800; color: var(--text-primary); margin-bottom: 4px; display: flex; align-items: center; gap: 8px;">
+                                <ion-icon name="restaurant-outline" style="color: var(--accent);"></ion-icon> Gestão Unificada do Cardápio
+                            </h3>
+                            <p style="color: var(--text-secondary); font-size: 0.88rem; margin: 0;">
+                                Crie e organize Submenus, Categorias e Produtos em um único lugar com atualização em tempo real.
                             </p>
                         </div>
-                        <button class="add-item-btn" onclick="openSubmenuEditor()" style="background: var(--accent); color: #000; font-weight: 700; margin: 0;">
-                            <ion-icon name="add-circle-outline"></ion-icon>
-                            Criar Novo Submenu
-                        </button>
+                        <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+                            <button type="button" class="add-item-btn" onclick="openSubmenuEditor()" style="background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.12); color: var(--text-primary); margin: 0;">
+                                <ion-icon name="layers-outline"></ion-icon> + Novo Submenu
+                            </button>
+                            <button type="button" class="add-item-btn" id="add-category-btn-top" onclick="openCategoryModalDirect()" style="background: rgba(139, 252, 3, 0.12); border: 1px solid rgba(139, 252, 3, 0.3); color: var(--accent); margin: 0;">
+                                <ion-icon name="folder-open-outline"></ion-icon> + Nova Categoria
+                            </button>
+                            <button type="button" class="add-item-btn" id="add-item-btn-top" onclick="openItemEditorDirect()" style="background: var(--accent); color: #000; font-weight: 800; margin: 0; box-shadow: 0 0 12px rgba(139, 252, 3, 0.2);">
+                                <ion-icon name="add-circle-outline"></ion-icon> + Novo Produto
+                            </button>
+                        </div>
                     </div>
 
-                    <!-- List of Submenus Grid -->
-                    <div id="submenus-dashboard-grid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 20px;">
-                        <!-- Dynamically populated by dashboard.js -->
+                    <!-- Search Filter Bar -->
+                    <div style="display: flex; gap: 15px; align-items: center; border-top: 1px solid rgba(255, 255, 255, 0.05); padding-top: 15px; margin-top: 5px;">
+                        <div style="flex: 1; position: relative;">
+                            <input type="text" id="unified-menu-search-input" placeholder="🔍 Buscar por produto, categoria ou submenu..." oninput="renderCardapioTab()" class="category-select-control" style="width: 100%; padding-left: 15px; box-sizing: border-box; background: rgba(0,0,0,0.25);">
+                        </div>
                     </div>
+                </div>
+
+                <!-- Hierarchical Card Tree (Submenus -> Categories -> Products) -->
+                <div id="cardapio-unified-container" style="display: flex; flex-direction: column; gap: 25px;">
+                    <!-- Populated dynamically by dashboard.js -->
                 </div>
             </section>
 
