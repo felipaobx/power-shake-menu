@@ -10,11 +10,13 @@ let isSoundEnabled = true;
 let knownOrderIds = new Set();
 let pollInterval = null;
 let audioContext = null;
+let isFetchingOrders = false;
+let authRecheckInProgress = false;
 
 // Initialize Cozinha App
 document.addEventListener('DOMContentLoaded', () => {
     initClock();
-    checkAuthSession();
+    checkKitchenSessionResilient();
 
     document.getElementById('pin-submit-btn').addEventListener('click', handlePinLogin);
     document.getElementById('pin-input').addEventListener('keypress', (e) => {
@@ -23,6 +25,14 @@ document.addEventListener('DOMContentLoaded', () => {
 
     document.getElementById('sound-toggle-btn').addEventListener('click', toggleSound);
     document.getElementById('logout-btn').addEventListener('click', handleLogout);
+
+    document.addEventListener('visibilitychange', () => {
+        if (!document.hidden && document.getElementById('kitchen-app').style.display !== 'none') {
+            fetchOrders();
+        }
+    });
+    window.addEventListener('focus', () => fetchOrders());
+    window.addEventListener('online', () => fetchOrders());
 });
 
 // Real-time Clock
@@ -49,6 +59,41 @@ async function checkAuthSession() {
     showAuthModal(true);
 }
 
+
+async function checkKitchenSessionResilient() {
+    if (authRecheckInProgress) return false;
+    authRecheckInProgress = true;
+    try {
+        for (let attempt = 0; attempt < 3; attempt += 1) {
+            try {
+                const response = await fetch('/api/auth-session', {
+                    credentials: 'same-origin',
+                    cache: 'no-store'
+                });
+                const data = await response.json().catch(() => ({}));
+                if (response.ok && data.authenticated) {
+                    startKitchenApp();
+                    return true;
+                }
+                if (response.status === 401 || response.status === 403) break;
+            } catch (error) {
+                console.warn('Falha temporaria ao validar a sessao da cozinha.', error);
+            }
+            if (attempt < 2) await new Promise(resolve => setTimeout(resolve, 350 * (attempt + 1)));
+        }
+        showAuthModal(true);
+        return false;
+    } finally {
+        authRecheckInProgress = false;
+    }
+}
+
+function updateSyncStatus(connected, message) {
+    const status = document.getElementById('sync-status');
+    const text = document.getElementById('sync-status-text');
+    if (status) status.classList.toggle('offline', !connected);
+    if (text) text.textContent = message;
+}
 function showAuthModal(show) {
     document.getElementById('auth-modal').style.display = show ? 'flex' : 'none';
     document.getElementById('kitchen-app').style.display = show ? 'none' : 'flex';
@@ -60,7 +105,7 @@ function startKitchenApp() {
     fetchOrders();
     fetchMenuData();
     if (pollInterval) clearInterval(pollInterval);
-    pollInterval = setInterval(fetchOrders, 8000);
+    pollInterval = setInterval(fetchOrders, 5000);
 }
 
 async function handlePinLogin() {
@@ -151,7 +196,7 @@ function toggleSound() {
 }
 
 // Fetch Orders from Serverless API
-async function fetchOrders() {
+async function fetchOrdersLegacy() {
     try {
         const response = await fetch('/api/get-orders', { cache: 'no-store' });
         if (response.status === 401) {
@@ -167,6 +212,36 @@ async function fetchOrders() {
         }
     } catch (err) {
         console.warn('Pedidos temporariamente indisponíveis.');
+    }
+}
+
+async function fetchOrders() {
+    if (isFetchingOrders) return;
+    isFetchingOrders = true;
+    try {
+        const response = await fetch('/api/get-orders', {
+            credentials: 'same-origin',
+            cache: 'no-store'
+        });
+        const data = await response.json().catch(() => ({}));
+        if (response.status === 401 || response.status === 403) {
+            updateSyncStatus(false, 'Sessao expirada');
+            if (pollInterval) clearInterval(pollInterval);
+            pollInterval = null;
+            currentOrders = [];
+            showAuthModal(true);
+            return;
+        }
+        if (!response.ok || !data.success || !Array.isArray(data.orders)) {
+            throw new Error(data.error || 'Pedidos temporariamente indisponiveis.');
+        }
+        processOrdersData(data.orders);
+        updateSyncStatus(true, 'Pedidos sincronizados');
+    } catch (error) {
+        updateSyncStatus(false, navigator.onLine ? 'Falha na sincronizacao' : 'Sem internet');
+        console.warn('Falha ao buscar pedidos:', error.message);
+    } finally {
+        isFetchingOrders = false;
     }
 }
 
@@ -291,6 +366,9 @@ function createKanbanCard(order) {
     const totalFormatted = order.totalPrice ? Number(order.totalPrice).toFixed(2).replace('.', ',') : '0,00';
     const clientName = escapeHtml(order.clientName || order.customerName || 'Cliente');
     const currentStatus = order.status || 'pending';
+    const safeOrderId = escapeHtml(order.id);
+    const rawShortId = String(order.id).startsWith('#') ? order.id : `#${order.id}`;
+    const shortId = escapeHtml(rawShortId);
 
     const statusObj = {
         pending: { label: 'PENDENTE', class: 'badge-status-pending' },
@@ -358,9 +436,6 @@ function createKanbanCard(order) {
         `;
     }
 
-    const rawShortId = order.id.toString().startsWith('#') ? order.id : `#${order.id}`;
-    const safeOrderId = escapeHtml(order.id);
-    const shortId = escapeHtml(rawShortId);
     const kcalVal = parseFloat(order.totalKcal || 0).toFixed(1);
     const proteinVal = parseFloat(order.totalProtein || 0).toFixed(1);
 
@@ -553,4 +628,80 @@ function filterKitchenItems() {
         const text = row.textContent.toLowerCase();
         row.style.display = text.includes(term) ? 'flex' : 'none';
     });
+}
+
+// Final kitchen renderers keep the board resilient and provide useful empty states.
+function renderKanban() {
+    const columns = {
+        pending: document.getElementById('cards-pending'),
+        preparing: document.getElementById('cards-preparing'),
+        completed: document.getElementById('cards-completed'),
+        cancelled: document.getElementById('cards-cancelled')
+    };
+    const counts = { pending: 0, preparing: 0, completed: 0, cancelled: 0 };
+    Object.values(columns).forEach(column => { column.innerHTML = ''; });
+
+    [...currentOrders].sort((a, b) => {
+        const first = new Date(a.createdAt || a.timestamp || 0).getTime();
+        const second = new Date(b.createdAt || b.timestamp || 0).getTime();
+        return second - first;
+    }).forEach(order => {
+        const status = columns[order.status] ? order.status : 'pending';
+        counts[status] += 1;
+        columns[status].appendChild(createKanbanCard({ ...order, status }));
+    });
+
+    Object.entries(columns).forEach(([status, column]) => {
+        document.getElementById(`count-${status}`).textContent = counts[status];
+        if (counts[status] === 0) {
+            column.innerHTML = `
+                <div class="kanban-empty">
+                    <ion-icon name="file-tray-outline"></ion-icon>
+                    <strong>Nenhum pedido</strong>
+                    <span>${status === 'pending' ? 'Os novos pedidos aparecer\u00e3o aqui.' : 'Mova um pedido para esta etapa.'}</span>
+                </div>`;
+        }
+    });
+    document.getElementById('total-pending-badge').textContent = counts.pending;
+}
+
+function renderKitchenItemsManager() {
+    const container = document.getElementById('kitchen-categories-container');
+    if (!container) return;
+    if (!menuData || !Array.isArray(menuData.categories)) {
+        container.innerHTML = '<div class="kanban-empty"><ion-icon name="cloud-download-outline"></ion-icon><strong>Carregando card\u00e1pio</strong></div>';
+        return;
+    }
+
+    container.innerHTML = menuData.categories.map(category => {
+        const items = Array.isArray(category.items) ? category.items : [];
+        const itemRows = items.map(item => {
+            const media = item.image
+                ? `<img src="${escapeHtml(item.image)}" alt="">`
+                : (item.icon ? escapeHtml(item.icon) : escapeHtml(String(item.name || 'I').charAt(0).toUpperCase()));
+            return `
+                <div class="kitchen-item-row" id="item-row-${escapeHtml(item.id)}">
+                    <div class="kitchen-item-info">
+                        <span class="kitchen-item-icon">${media}</span>
+                        <div>
+                            <div class="kitchen-item-name">${escapeHtml(item.name || 'Item sem nome')}</div>
+                            <div class="kitchen-item-price">R$ ${Number(item.price || 0).toFixed(2).replace('.', ',')}</div>
+                        </div>
+                    </div>
+                    <label class="switch-toggle" title="Dispon\u00edvel no card\u00e1pio">
+                        <input type="checkbox" ${!item.outOfStock ? 'checked' : ''} onchange="toggleItemAvailability('${escapeHtml(category.id)}', '${escapeHtml(item.id)}', this.checked)">
+                        <span class="slider"></span>
+                    </label>
+                </div>`;
+        }).join('') || '<div class="kitchen-category-empty">Nenhum item cadastrado.</div>';
+
+        return `
+            <section class="kitchen-cat-block">
+                <header class="kitchen-cat-heading">
+                    <span class="kitchen-cat-media">${category.icon ? escapeHtml(category.icon) : escapeHtml(String(category.name || 'C').charAt(0).toUpperCase())}</span>
+                    <div><h3 class="kitchen-cat-title">${escapeHtml(category.name || 'Categoria')}</h3><span>${items.length} ${items.length === 1 ? 'item' : 'itens'}</span></div>
+                </header>
+                <div class="kitchen-items-list">${itemRows}</div>
+            </section>`;
+    }).join('') || '<div class="kanban-empty"><ion-icon name="folder-open-outline"></ion-icon><strong>Nenhuma categoria</strong></div>';
 }

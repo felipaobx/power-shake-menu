@@ -28,6 +28,37 @@ async function checkAdminSession() {
     return false;
 }
 
+async function checkAdminSessionResilient() {
+    let lastMessage = 'Nao foi possivel validar sua sessao.';
+    for (let attempt = 0; attempt < 3; attempt += 1) {
+        try {
+            const response = await fetch('/api/auth-session', {
+                credentials: 'same-origin',
+                cache: 'no-store'
+            });
+            const data = await response.json().catch(() => ({}));
+            if (response.ok && data.authenticated && data.user?.role === 'admin') {
+                showAdminAuth(false);
+                return true;
+            }
+            if (response.status === 401 || response.status === 403) {
+                showAdminAuth(true, 'Entre novamente para acessar o painel.');
+                return false;
+            }
+            lastMessage = data.error || lastMessage;
+        } catch (error) {
+            console.warn('Falha temporaria ao validar a sessao administrativa.', error);
+        }
+
+        if (attempt < 2) {
+            showAdminAuth(true, 'Reconectando sua sessao...');
+            await new Promise(resolve => setTimeout(resolve, 350 * (attempt + 1)));
+        }
+    }
+    showAdminAuth(true, lastMessage);
+    return false;
+}
+
 async function handleAdminLogin(event) {
     event.preventDefault();
     const input = document.getElementById('admin-pin-input');
@@ -376,6 +407,8 @@ MENU_DATA.categories.forEach(cat => {
 // Temporary file uploader state
 let uploadedProductImageBase64 = '';
 let uploadedCategoryImageBase64 = '';
+let editingItemCategoryId = '';
+let productImageProcessing = false;
 
 // Centralized, serialized save function for MENU_DATA and SETTINGS.
 // Local cache and open menu tabs are updated only after the cloud confirms the write.
@@ -432,6 +465,40 @@ function saveMenuDataAndSettings(showNotification = false) {
 }
 window.saveMenuDataAndSettings = saveMenuDataAndSettings;
 
+
+function publishMenuSnapshot() {
+    localStorage.setItem('power_shake_menu_data', JSON.stringify(MENU_DATA));
+    try {
+        if ('BroadcastChannel' in window) {
+            const channel = new BroadcastChannel('power_shake_channel');
+            channel.postMessage({ type: 'MENU_UPDATED', menuData: MENU_DATA });
+            channel.close();
+        }
+    } catch {}
+}
+
+async function saveMenuItemAndPublish(sourceCategoryId, targetCategoryId, item) {
+    try {
+        const response = await fetch('/api/save-menu-item', {
+            method: 'POST',
+            credentials: 'same-origin',
+            cache: 'no-store',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ sourceCategoryId, targetCategoryId, item })
+        });
+        const data = await response.json().catch(() => ({}));
+        if (response.status === 401) {
+            showAdminAuth(true, 'Sua sessao expirou. Entre novamente para salvar.');
+            throw new Error('Sessao expirada. O item nao foi salvo.');
+        }
+        if (!response.ok || !data.success) throw new Error(data.error || 'Nao foi possivel salvar o item.');
+        publishMenuSnapshot();
+        return true;
+    } catch (error) {
+        showToast(error.message || 'Nao foi possivel salvar o item.', 'error');
+        return false;
+    }
+}
 // DOM selectors
 const dom = {
     // General Settings Inputs
@@ -676,16 +743,20 @@ function setupUploaders() {
                 showToast('A imagem é muito grande! Escolha uma foto com tamanho menor que 5MB.', 'warning');
                 return;
             }
+            productImageProcessing = true;
             resizeProductImage(e.target.files[0], function(resizedBase64) {
                 uploadedProductImageBase64 = resizedBase64;
                 dom.productPreview.style.backgroundImage = `url('${resizedBase64}')`;
+                productImageProcessing = false;
+            }, function() {
+                productImageProcessing = false;
             });
         }
     });
 }
 
 // Helper to resize product image to 500x500 pixels (center crop aspect ratio)
-function resizeProductImage(file, callback) {
+function resizeProductImage(file, callback, errorCallback) {
     if (!file) return;
     const reader = new FileReader();
     reader.onload = function(evt) {
@@ -717,11 +788,13 @@ function resizeProductImage(file, callback) {
         };
         img.onerror = function() {
             showToast('Erro ao processar imagem. Tente outro arquivo.', 'danger');
+            if (errorCallback) errorCallback();
         };
         img.src = evt.target.result;
     };
     reader.onerror = function() {
         showToast('Erro ao ler arquivo.', 'danger');
+        if (errorCallback) errorCallback();
     };
     reader.readAsDataURL(file);
 }
@@ -1021,6 +1094,18 @@ function toggleItemMediaFields() {
     }
 }
 
+function closeItemEditorModal() {
+    if (dom.itemModal) dom.itemModal.style.display = 'none';
+}
+
+// Give the browser a chance to visually close the modal before starting
+// serialization, network I/O and the heavier dashboard renders.
+function waitForItemModalPaint() {
+    return new Promise(resolve => {
+        requestAnimationFrame(() => requestAnimationFrame(resolve));
+    });
+}
+
 // Modal Form Open Logic for Items
 window.openItemEditor = function(id = null, targetCatId = null) {
     const container = document.getElementById('toast-container');
@@ -1039,11 +1124,12 @@ window.openItemEditor = function(id = null, targetCatId = null) {
         return;
     }
     
-    if (dom.editItemId) dom.editItemId.value = id || '';
     if (dom.modalForm) dom.modalForm.reset();
+    if (dom.editItemId) dom.editItemId.value = id || '';
     if (dom.itemCategorySelect && catId) dom.itemCategorySelect.value = catId;
     uploadedProductImageBase64 = '';
     if (dom.productPreview) dom.productPreview.style.backgroundImage = 'none';
+    editingItemCategoryId = catId || '';
 
     // Show/hide fields
     const macrosWrapper = document.getElementById('macros-fields-wrapper');
@@ -1113,6 +1199,8 @@ window.openItemEditor = function(id = null, targetCatId = null) {
     }
 
     toggleItemMediaFields();
+    dom.itemModal.style.backdropFilter = 'none';
+    dom.itemModal.style.webkitBackdropFilter = 'none';
     dom.itemModal.style.display = 'flex';
 };
 
@@ -1841,6 +1929,171 @@ window.renderCardapioTab = function() {
     }).join('');
 };
 
+
+function renderAdminMedia(entity, fallbackIcon = 'nutrition-outline', className = 'menu-admin-media') {
+    if (entity && entity.image) {
+        return `<span class="${className}"><img src="${escapeHtml(entity.image)}" alt=""></span>`;
+    }
+    if (entity && entity.icon) {
+        return `<span class="${className}" aria-hidden="true">${escapeHtml(entity.icon)}</span>`;
+    }
+    const initial = String(entity?.name || 'Item').trim().charAt(0).toUpperCase() || 'I';
+    return `<span class="${className} fallback" aria-hidden="true">${escapeHtml(initial)}</span>`;
+}
+
+function getCategoryGroupKey(category) {
+    const validSubmenuIds = new Set((MENU_DATA.submenus || []).map(submenu => submenu.id));
+    return category.submenu && validSubmenuIds.has(category.submenu) ? category.submenu : '';
+}
+
+window.moveCategoryInGroup = async function(categoryId, direction) {
+    const index = MENU_DATA.categories.findIndex(category => category.id === categoryId);
+    if (index < 0) return;
+
+    const groupKey = getCategoryGroupKey(MENU_DATA.categories[index]);
+    const step = direction === 'up' ? -1 : 1;
+    let neighborIndex = index + step;
+    while (neighborIndex >= 0 && neighborIndex < MENU_DATA.categories.length) {
+        if (getCategoryGroupKey(MENU_DATA.categories[neighborIndex]) === groupKey) break;
+        neighborIndex += step;
+    }
+    if (neighborIndex < 0 || neighborIndex >= MENU_DATA.categories.length) return;
+
+    const previousMenu = cloneSerializable(MENU_DATA);
+    [MENU_DATA.categories[index], MENU_DATA.categories[neighborIndex]] = [MENU_DATA.categories[neighborIndex], MENU_DATA.categories[index]];
+    renderCardapioTab();
+    const saved = await saveMenuDataAndSettings(false);
+    if (!saved) {
+        MENU_DATA = previousMenu;
+        renderCardapioTab();
+        return;
+    }
+    showToast('Ordem das categorias atualizada.', 'success');
+};
+
+// Responsive card renderer for the unified menu manager.
+window.renderCardapioTab = function() {
+    const container = document.getElementById('cardapio-unified-container');
+    if (!container) return;
+
+    const search = (document.getElementById('unified-menu-search-input')?.value || '').toLowerCase().trim();
+    const submenus = (MENU_DATA.submenus || DEFAULT_MENU_DATA.submenus || []).filter(submenu => submenu.id !== 'all');
+    const validSubmenuIds = new Set(submenus.map(submenu => submenu.id));
+    const groups = [
+        { id: '', name: 'P\u00e1gina principal', subtitle: 'Categorias exibidas diretamente no card\u00e1pio', isRoot: true },
+        ...submenus.map(submenu => ({ ...submenu, isRoot: false }))
+    ];
+
+    const renderedGroups = groups.map(group => {
+        const categories = (MENU_DATA.categories || []).filter(category => {
+            const key = category.submenu && validSubmenuIds.has(category.submenu) ? category.submenu : '';
+            return key === group.id;
+        }).filter(category => {
+            if (!search) return true;
+            const categoryText = `${category.name || ''} ${category.subtitle || ''}`.toLowerCase();
+            const itemMatches = (category.items || []).some(item => `${item.name || ''} ${item.description || ''}`.toLowerCase().includes(search));
+            return categoryText.includes(search) || itemMatches;
+        });
+
+        if (search && !String(group.name || '').toLowerCase().includes(search) && categories.length === 0) return '';
+
+        const categoryCards = categories.map((category, categoryIndex) => {
+            const items = (category.items || []).filter(item => {
+                if (!search) return true;
+                const categoryMatches = `${category.name || ''} ${category.subtitle || ''}`.toLowerCase().includes(search);
+                return categoryMatches || `${item.name || ''} ${item.description || ''}`.toLowerCase().includes(search);
+            });
+
+            const productCards = items.map((item, itemIndex) => {
+                const details = [];
+                if (Number(item.kcal) > 0) details.push(`${item.kcal} kcal`);
+                if (Number(item.carbs) > 0) details.push(`${item.carbs}g carb`);
+                if (Number(item.protein) > 0) details.push(`${item.protein}g prot`);
+                if (item.description) details.push(escapeHtml(item.description));
+                return `
+                    <article class="menu-product-card ${item.outOfStock ? 'is-paused' : ''}">
+                        <div class="menu-product-main">
+                            ${renderAdminMedia(item)}
+                            <div class="menu-product-copy">
+                                <strong>${escapeHtml(item.name || 'Item sem nome')}</strong>
+                                <span>${details.join(' \u00b7 ') || 'Sem informa\u00e7\u00f5es adicionais'}</span>
+                            </div>
+                        </div>
+                        <div class="menu-product-meta">
+                            <span class="menu-price">${formatPricePill(item.price)}</span>
+                            <label class="menu-availability">
+                                <input type="checkbox" onchange="toggleItemAvailability('${escapeHtml(category.id)}', '${escapeHtml(item.id)}', this)" ${!item.outOfStock ? 'checked' : ''}>
+                                <span>${item.outOfStock ? 'Pausado' : 'Ativo'}</span>
+                            </label>
+                        </div>
+                        <div class="menu-card-actions" aria-label="A\u00e7\u00f5es do produto">
+                            <button type="button" onclick="moveItemUpDirect('${escapeHtml(category.id)}', '${escapeHtml(item.id)}')" ${itemIndex === 0 ? 'disabled' : ''} title="Mover item para cima"><span aria-hidden="true">&uarr;</span></button>
+                            <button type="button" onclick="moveItemDownDirect('${escapeHtml(category.id)}', '${escapeHtml(item.id)}')" ${itemIndex === items.length - 1 ? 'disabled' : ''} title="Mover item para baixo"><span aria-hidden="true">&darr;</span></button>
+                            <button type="button" onclick="openItemEditorDirect('${escapeHtml(category.id)}', '${escapeHtml(item.id)}')" title="Editar produto"><ion-icon name="create-outline"></ion-icon><span>Editar</span></button>
+                            <button type="button" class="danger" onclick="deleteMenuItemDirect('${escapeHtml(category.id)}', '${escapeHtml(item.id)}')" title="Excluir produto"><span>Excluir</span></button>
+                        </div>
+                    </article>`;
+            }).join('') || '<div class="menu-empty-inline"><ion-icon name="cube-outline"></ion-icon><span>Nenhum produto nesta categoria.</span></div>';
+
+            return `
+                <section class="menu-category-card ${category.hidden ? 'is-hidden' : ''}">
+                    <header class="menu-category-header">
+                        <div class="menu-category-identity">
+                            ${renderAdminMedia(category, 'folder-open-outline', 'menu-admin-media category')}
+                            <div>
+                                <div class="menu-title-row"><h4>${escapeHtml(category.name || 'Categoria sem nome')}</h4><span class="menu-order-number">${categoryIndex + 1}</span></div>
+                                <p>${escapeHtml(category.subtitle || 'Sem descri\u00e7\u00e3o')}</p>
+                                <div class="menu-badges">
+                                    <span>${category.selectionType === 'single' ? 'Escolha \u00fanica' : 'M\u00faltipla escolha'}</span>
+                                    <span>${category.required ? 'Obrigat\u00f3ria' : 'Opcional'}</span>
+                                    <span class="${category.hidden ? 'danger' : 'success'}">${category.hidden ? 'Oculta' : 'Vis\u00edvel'}</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="menu-category-actions">
+                            <div class="menu-order-controls" aria-label="Ordenar categoria">
+                                <span>Ordem</span>
+                                <button type="button" onclick="moveCategoryInGroup('${escapeHtml(category.id)}', 'up')" ${categoryIndex === 0 ? 'disabled' : ''} title="Mover categoria para cima"><span aria-hidden="true">&uarr;</span></button>
+                                <button type="button" onclick="moveCategoryInGroup('${escapeHtml(category.id)}', 'down')" ${categoryIndex === categories.length - 1 ? 'disabled' : ''} title="Mover categoria para baixo"><span aria-hidden="true">&darr;</span></button>
+                            </div>
+                            <button type="button" class="primary" onclick="openItemEditorDirect('${escapeHtml(category.id)}')"><ion-icon name="add-outline"></ion-icon><span>Produto</span></button>
+                            <button type="button" onclick="openCategoryModalDirect('${escapeHtml(group.id)}', '${escapeHtml(category.id)}')"><ion-icon name="create-outline"></ion-icon><span>Editar</span></button>
+                            <button type="button" class="danger" onclick="deleteCategoryDirect('${escapeHtml(category.id)}')" title="Excluir categoria"><span>Excluir</span></button>
+                        </div>
+                    </header>
+                    <div class="menu-products-grid">${productCards}</div>
+                </section>`;
+        }).join('') || '<div class="menu-empty-inline"><ion-icon name="folder-open-outline"></ion-icon><span>Nenhuma categoria neste grupo.</span></div>';
+
+        const groupActions = group.isRoot ? '' : `
+            <button type="button" onclick="toggleSubmenuVisibility('${escapeHtml(group.id)}')"><ion-icon name="${group.hidden ? 'eye-off-outline' : 'eye-outline'}"></ion-icon><span>${group.hidden ? 'Oculto' : 'Vis\u00edvel'}</span></button>
+            <button type="button" onclick="openSubmenuEditor('${escapeHtml(group.id)}')"><ion-icon name="create-outline"></ion-icon><span>Editar</span></button>
+            <button type="button" class="danger" onclick="deleteSubmenu('${escapeHtml(group.id)}')"><span>Excluir</span></button>`;
+
+        return `
+            <section class="menu-group-card ${group.hidden ? 'is-hidden' : ''}">
+                <header class="menu-group-header">
+                    <div class="menu-group-identity">
+                        ${renderAdminMedia(group, group.isRoot ? 'home-outline' : 'layers-outline', 'menu-admin-media group')}
+                        <div><h3>${escapeHtml(group.name || 'Grupo')}</h3><p>${escapeHtml(group.subtitle || (group.isRoot ? 'Categorias sem submenu' : 'Grupo do card\u00e1pio'))}</p></div>
+                    </div>
+                    <div class="menu-group-actions">
+                        <button type="button" class="primary" onclick="openCategoryModalDirect('${escapeHtml(group.id)}')"><ion-icon name="add-outline"></ion-icon><span>Categoria</span></button>
+                        ${groupActions}
+                    </div>
+                </header>
+                <div class="menu-categories-stack">${categoryCards}</div>
+            </section>`;
+    }).filter(Boolean).join('');
+
+    container.className = 'menu-admin-groups';
+    container.innerHTML = renderedGroups || `
+        <div class="menu-empty-state">
+            <ion-icon name="search-outline"></ion-icon>
+            <h3>Nenhum resultado</h3>
+            <p>Tente outro nome de produto, categoria ou submenu.</p>
+        </div>`;
+};
 window.openCategoryModalDirect = function(submenuId = null, catId = null) {
     if (catId) {
         const category = MENU_DATA.categories.find(c => c.id === catId);
@@ -2071,17 +2324,12 @@ function setupDashboardActions() {
     dom.addItemBtn.addEventListener('click', () => openItemEditor());
 
     // Item modal closes
-    dom.modalCloseBtn.addEventListener('click', closeModal);
-    dom.modalCancelBtn.addEventListener('click', closeModal);
+    dom.modalCloseBtn.addEventListener('click', closeItemEditorModal);
+    dom.modalCancelBtn.addEventListener('click', closeItemEditorModal);
     window.addEventListener('click', (e) => {
-        if (e.target === dom.itemModal) closeModal();
+        if (e.target === dom.itemModal) closeItemEditorModal();
         if (e.target === dom.catModal) dom.catModal.style.display = 'none';
     });
-
-    function closeModal() {
-        dom.itemModal.style.display = 'none';
-    }
-
     // Save All Changes to database securely using PIN
     dom.saveSettingsBtn.addEventListener('click', async function() {
         SETTINGS.heroTitle = dom.heroTitle ? dom.heroTitle.value.trim() : SETTINGS.heroTitle;
@@ -2849,14 +3097,20 @@ function addItemDirectToCategory(catId) {
 if (dom.modalForm) {
     dom.modalForm.addEventListener('submit', async function(e) {
         e.preventDefault();
-        const catId = (dom.itemCategorySelect ? dom.itemCategorySelect.value : null) || (dom.categorySelect ? dom.categorySelect.value : null);
-        const category = MENU_DATA.categories ? MENU_DATA.categories.find(c => c.id === catId) : null;
-        if (!category) {
+        const targetCategoryId = (dom.itemCategorySelect ? dom.itemCategorySelect.value : null) || (dom.categorySelect ? dom.categorySelect.value : null);
+        if (productImageProcessing) {
+            showToast('Aguarde a foto terminar de processar antes de salvar.', 'warning');
+            return;
+        }
+        const targetCategory = MENU_DATA.categories ? MENU_DATA.categories.find(c => c.id === targetCategoryId) : null;
+        if (!targetCategory) {
             showToast('Selecione uma categoria válida para adicionar ou editar o item.', 'error');
             return;
         }
 
         const id = dom.editItemId ? dom.editItemId.value : '';
+        const sourceCategoryId = editingItemCategoryId || targetCategoryId;
+        const sourceCategory = MENU_DATA.categories.find(c => c.id === sourceCategoryId);
         const name = dom.itemName ? dom.itemName.value.trim() : '';
         const mediaType = dom.itemMediaType ? dom.itemMediaType.value : 'icon';
         if (!name) {
@@ -2864,7 +3118,11 @@ if (dom.modalForm) {
             return;
         }
 
-        const existingItem = id ? category.items.find(i => i.id === id) : null;
+        const existingItem = id && sourceCategory ? sourceCategory.items.find(i => i.id === id) : null;
+        if (id && !existingItem) {
+            showToast('Este item nao existe mais. Atualize a pagina e tente novamente.', 'error');
+            return;
+        }
         const icon = mediaType === 'icon' && dom.itemIcon ? dom.itemIcon.value.trim() : '';
         const image = mediaType === 'image' ? (uploadedProductImageBase64 || (existingItem ? existingItem.image : '') || '') : '';
         const kcal = dom.itemKcal ? (parseFloat(dom.itemKcal.value) || 0) : 0;
@@ -2874,33 +3132,36 @@ if (dom.modalForm) {
         const price2 = dom.itemPrice2 ? (parseFloat(dom.itemPrice2.value) || 0) : 0;
         const description = dom.itemDesc ? dom.itemDesc.value.trim() : '';
         const rawVersions = dom.itemVersions ? dom.itemVersions.value.trim() : '';
-        const versions = catId === 'milks' && rawVersions
+        const versions = targetCategoryId === 'milks' && rawVersions
             ? rawVersions.split(',').map(v => v.trim()).filter(Boolean)
             : undefined;
         const outOfStock = dom.itemAvailableCheckbox ? !dom.itemAvailableCheckbox.checked : false;
-        const previousItems = cloneSerializable(category.items || []);
+        const previousMenu = cloneSerializable(MENU_DATA);
         const submitButton = dom.modalForm.querySelector('button[type="submit"]');
         if (submitButton) submitButton.disabled = true;
 
-        if (id) {
-            const index = category.items.findIndex(i => i.id === id);
-            if (index !== -1) {
-                category.items[index] = {
-                    ...category.items[index], name, icon, image, kcal, carbs, protein,
-                    price, price2, description, versions, outOfStock
-                };
-            }
-        } else {
-            category.items.push({
-                id: 'item_' + Date.now(), name, icon, image, kcal, carbs, protein,
-                price, price2, description, versions, outOfStock
-            });
-        }
+        const item = {
+            ...(existingItem || {}),
+            id: id || `item_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
+            name, icon, image, kcal, carbs, protein, price, price2,
+            description, versions, outOfStock
+        };
 
-        const saved = await saveMenuDataAndSettings(false);
+        if (id) {
+            sourceCategory.items = sourceCategory.items.filter(candidate => candidate.id !== id);
+        }
+        targetCategory.items.push(item);
+
+        closeItemEditorModal();
+        await waitForItemModalPaint();
+        renderItemsTable();
+
+        const saved = await saveMenuItemAndPublish(sourceCategoryId, targetCategoryId, item);
         if (submitButton) submitButton.disabled = false;
         if (!saved) {
-            category.items = previousItems;
+            MENU_DATA = previousMenu;
+            populateCategoryDropdown(dom.categorySelect ? dom.categorySelect.value : sourceCategoryId);
+            renderItemsTable();
             return;
         }
 
@@ -3461,7 +3722,7 @@ window.exportBoardToPng = exportBoardToPng;
 // Run initializations
 document.addEventListener('DOMContentLoaded', async () => {
     bindAdminAuth();
-    if (await checkAdminSession()) {
+    if (await checkAdminSessionResilient()) {
         dashboardInitialized = true;
         await initDashboard();
         renderBoardPreview();

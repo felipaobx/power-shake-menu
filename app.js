@@ -322,6 +322,7 @@ let orderState = {
     milkVersion: 'regular', // Keep Niho/Molico version check
     wheyScoops: 1 // Default to 1 scoop
 };
+let orderSubmissionInProgress = false;
 
 // Initialize selection structures in orderState
 MENU_DATA.categories.forEach(cat => {
@@ -1018,12 +1019,28 @@ function setupGlobalActions() {
         }
     });
     if (elements.nameForm) {
-        elements.nameForm.addEventListener('submit', function (e) {
+        elements.nameForm.addEventListener('submit', async function (e) {
             e.preventDefault();
+            if (orderSubmissionInProgress) return;
             const name = elements.clientNameInput.value.trim();
             if (name) {
-                elements.nameModal.style.display = 'none';
-                submitOrder(name);
+                const button = elements.nameForm.querySelector('button[type="submit"]');
+                const originalLabel = button ? button.textContent : '';
+                orderSubmissionInProgress = true;
+                if (button) {
+                    button.disabled = true;
+                    button.textContent = 'Enviando pedido...';
+                }
+                try {
+                    const sent = await submitOrder(name);
+                    if (sent) elements.nameModal.style.display = 'none';
+                } finally {
+                    orderSubmissionInProgress = false;
+                    if (button) {
+                        button.disabled = false;
+                        button.textContent = originalLabel;
+                    }
+                }
             }
         });
     }
@@ -1353,6 +1370,8 @@ async function submitOrder(clientName) {
     try {
         const response = await fetch('/api/save-order', {
             method: 'POST',
+            credentials: 'same-origin',
+            cache: 'no-store',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(orderData)
         });
@@ -1368,7 +1387,7 @@ async function submitOrder(clientName) {
         } catch {}
     } catch (error) {
         showToast(error.message || 'Pedido não enviado. Verifique a conexão e tente novamente.', 'error');
-        return;
+        return false;
     }
 
     // Render screen
@@ -1400,6 +1419,7 @@ async function submitOrder(clientName) {
     
     // Scroll to top so they see the receipt
     window.scrollTo({ top: 0, behavior: 'smooth' });
+    return true;
 }
 
 // Run initializations

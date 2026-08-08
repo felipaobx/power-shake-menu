@@ -110,13 +110,13 @@ async function createSession(client, user) {
 }
 
 function setSessionCookie(req, res, token) {
-    const secure = process.env.NODE_ENV === 'production' || (req.headers && req.headers['x-forwarded-proto'] === 'https');
-    res.setHeader('Set-Cookie', `${COOKIE_NAME}=${encodeURIComponent(token)}; Path=/; HttpOnly; SameSite=Strict; Max-Age=${SESSION_TTL_SECONDS}; Priority=High${secure ? '; Secure' : ''}`);
+    const secure = Boolean(req.headers && req.headers['x-forwarded-proto'] === 'https');
+    res.setHeader('Set-Cookie', `${COOKIE_NAME}=${encodeURIComponent(token)}; Path=/; HttpOnly; SameSite=Lax; Max-Age=${SESSION_TTL_SECONDS}; Priority=High${secure ? '; Secure' : ''}`);
 }
 
 function clearSessionCookie(req, res) {
-    const secure = process.env.NODE_ENV === 'production' || (req.headers && req.headers['x-forwarded-proto'] === 'https');
-    res.setHeader('Set-Cookie', `${COOKIE_NAME}=; Path=/; HttpOnly; SameSite=Strict; Max-Age=0${secure ? '; Secure' : ''}`);
+    const secure = Boolean(req.headers && req.headers['x-forwarded-proto'] === 'https');
+    res.setHeader('Set-Cookie', `${COOKIE_NAME}=; Path=/; HttpOnly; SameSite=Lax; Max-Age=0${secure ? '; Secure' : ''}`);
 }
 
 async function getSession(client, req) {

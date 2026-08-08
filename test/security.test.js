@@ -23,6 +23,7 @@ test('sessão administrativa permanece válida por 30 dias', () => {
     assert.match(res.headers['Set-Cookie'], /Max-Age=2592000/);
     assert.match(res.headers['Set-Cookie'], /HttpOnly/);
     assert.match(res.headers['Set-Cookie'], /Secure/);
+    assert.match(res.headers['Set-Cookie'], /SameSite=Lax/);
 });
 test('PINs são armazenados com salt e hash', () => {
     const stored = hashPin('739184');
