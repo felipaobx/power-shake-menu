@@ -39,6 +39,10 @@ power-shake-reference.png
 # vercel
 .vercel
 
+# generated marketplace agent helpers
+.agents/
+skills-lock.json
+
 /dist/
 /.wrangler/
 /outputs/
