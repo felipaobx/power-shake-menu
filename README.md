@@ -1,22 +1,40 @@
-# Power Shake Menu
+# Power Shake
 
-Cardápio digital com montagem de shakes, painel administrativo, fila operacional da cozinha e exportação de cardápio em PDF.
+Cardápio digital completo com três áreas separadas:
 
-## Configuração
+- Cardápio público para clientes montarem e enviarem pedidos.
+- Dashboard administrativo para produtos, categorias, identidade visual, configurações e usuários.
+- Painel da cozinha para acompanhar pedidos novos, em preparo, prontos e finalizados.
 
-1. Instale as dependências com `npm install`.
-2. Copie `.env.example` para o ambiente da implantação.
-3. Configure `REDIS_URL`, `ADMIN_PIN` e `APP_ORIGIN`.
-4. Execute `npm test` e `npm run check` antes de publicar.
+## Acesso inicial
 
-Em produção, `ADMIN_PIN` é obrigatório. Os usuários adicionais são cadastrados pelo painel e seus PINs são armazenados com salt e hash. As sessões expiram após oito horas e são mantidas em cookies inacessíveis ao JavaScript.
+- Usuário: `admin`
+- Senha: `admin`
 
-## Rotas
+O perfil **Administrador** acessa o Dashboard e a Cozinha. O perfil **Cozinha** acessa somente a Cozinha.
 
-- `/` — cardápio público.
-- `/dashboard` — administração, restrita a administradores.
-- `/cozinha` — fila e disponibilidade de produtos, restrita a usuários autenticados.
+## Executar localmente
 
-## Persistência
+```bash
+npm install
+npm run dev
+```
 
-O cardápio e as configurações públicas usam Redis. Cada pedido é salvo em uma chave individual e indexado por data, evitando que pedidos simultâneos sobrescrevam a lista inteira. Os 200 pedidos mais recentes são mantidos.
+Acesse `http://localhost:3000`.
+
+## Variáveis de ambiente
+
+Copie `.env.example` para `.env.local` e configure:
+
+- `DATABASE_URL`: banco PostgreSQL compatível com Neon.
+- `AUTH_SECRET`: chave longa e aleatória para assinar as sessões.
+- `BLOB_READ_WRITE_TOKEN`: opcional, usado para upload de imagens.
+
+Sem `DATABASE_URL`, o acesso inicial `admin/admin` funciona em modo local, mas novos usuários não são persistidos.
+
+## Verificação
+
+```bash
+npm run lint
+npm run build
+```
