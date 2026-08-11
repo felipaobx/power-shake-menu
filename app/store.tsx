@@ -1,7 +1,7 @@
 "use client";
 
 import { createContext, useContext, useEffect, useMemo, useRef, useState } from "react";
-import { initialOrders, initialProducts, type Order, type OrderStatus, type Product } from "./data";
+import { initialOrders, initialProducts, type AddonGroup, type Order, type OrderStatus, type Product } from "./data";
 
 type Theme = {
   primary: string;
@@ -22,6 +22,7 @@ type Settings = { address: string; hours: string; phone: string; instagram: stri
 type Store = {
   products: Product[];
   categories: string[];
+  addonGroups: AddonGroup[];
   orders: Order[];
   theme: Theme;
   settings: Settings;
@@ -30,6 +31,12 @@ type Store = {
   addCategory: (name: string) => boolean;
   renameCategory: (currentName: string, newName: string) => boolean;
   deleteCategory: (name: string) => boolean;
+  addAddonGroup: (name: string) => boolean;
+  updateAddonGroup: (id: number, value: Partial<Pick<AddonGroup, "name" | "required" | "maxSelections">>) => void;
+  deleteAddonGroup: (id: number) => void;
+  addAddonOption: (groupId: number, name: string, price: number) => boolean;
+  deleteAddonOption: (groupId: number, optionId: number) => void;
+  toggleAddonProduct: (groupId: number, productId: number) => void;
   toggleProduct: (id: number) => void;
   updateTheme: (value: Partial<Theme>) => void;
   updateSettings: (value: Partial<Settings>) => void;
@@ -69,6 +76,7 @@ async function persist(action: string, payload: unknown) {
 export function StoreProvider({ children }: { children: React.ReactNode }) {
   const [products, setProducts] = useState(initialProducts);
   const [categories, setCategories] = useState(defaultCategories);
+  const [addonGroups, setAddonGroups] = useState<AddonGroup[]>([]);
   const [orders, setOrders] = useState(initialOrders);
   const [theme, setTheme] = useState(defaultTheme);
   const [settings, setSettings] = useState(defaultSettings);
@@ -83,6 +91,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
           const parsed = JSON.parse(saved);
           if (parsed.products) setProducts(parsed.products);
           if (parsed.categories) setCategories(parsed.categories);
+          if (parsed.addonGroups) setAddonGroups(parsed.addonGroups);
           if (parsed.orders) setOrders(parsed.orders);
           if (parsed.theme) {
             const isLegacyTheme = !parsed.theme.background;
@@ -103,6 +112,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
         databaseConfigured.current = true;
         if (saved.products) setProducts(saved.products);
         if (saved.categories) setCategories(saved.categories);
+        if (saved.addonGroups) setAddonGroups(saved.addonGroups);
         if (saved.orders) setOrders(saved.orders);
         if (saved.theme) setTheme({ ...defaultTheme, ...saved.theme });
         if (saved.settings) setSettings(saved.settings);
@@ -111,8 +121,8 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   useEffect(() => {
-    if (hydrated) localStorage.setItem("brasa-store-v1", JSON.stringify({ products, categories, orders, theme, settings }));
-  }, [products, categories, orders, theme, settings, hydrated]);
+    if (hydrated) localStorage.setItem("brasa-store-v1", JSON.stringify({ products, categories, addonGroups, orders, theme, settings }));
+  }, [products, categories, addonGroups, orders, theme, settings, hydrated]);
 
   useEffect(() => {
     if (!databaseConfigured.current) return;
@@ -129,6 +139,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
   const value = useMemo<Store>(() => ({
     products,
     categories,
+    addonGroups,
     orders,
     theme,
     settings,
@@ -172,6 +183,42 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
       if (databaseConfigured.current) void persist("deleteCategory", { name, fallbackName }).catch(() => undefined);
       return true;
     },
+    addAddonGroup: (name) => {
+      const normalized = name.trim();
+      if (!normalized || addonGroups.some((group) => group.name.toLowerCase() === normalized.toLowerCase())) return false;
+      const temporaryId = -Date.now();
+      setAddonGroups((current) => [...current, { id: temporaryId, name: normalized, required: false, maxSelections: 1, productIds: [], options: [] }]);
+      if (databaseConfigured.current) void persist("addAddonGroup", { name: normalized }).then(({ id }) => setAddonGroups((current) => current.map((group) => group.id === temporaryId ? { ...group, id } : group))).catch(() => undefined);
+      return true;
+    },
+    updateAddonGroup: (id, changes) => {
+      setAddonGroups((current) => current.map((group) => group.id === id ? { ...group, ...changes } : group));
+      if (databaseConfigured.current && id > 0) void persist("updateAddonGroup", { id, ...changes }).catch(() => undefined);
+    },
+    deleteAddonGroup: (id) => {
+      setAddonGroups((current) => current.filter((group) => group.id !== id));
+      if (databaseConfigured.current && id > 0) void persist("deleteAddonGroup", { id }).catch(() => undefined);
+    },
+    addAddonOption: (groupId, name, price) => {
+      const normalized = name.trim();
+      const group = addonGroups.find((item) => item.id === groupId);
+      if (!group || !normalized || group.options.some((option) => option.name.toLowerCase() === normalized.toLowerCase())) return false;
+      const temporaryId = -Date.now();
+      setAddonGroups((current) => current.map((item) => item.id === groupId ? { ...item, options: [...item.options, { id: temporaryId, name: normalized, price }] } : item));
+      if (databaseConfigured.current && groupId > 0) void persist("addAddonOption", { groupId, name: normalized, price }).then(({ id }) => setAddonGroups((current) => current.map((item) => item.id === groupId ? { ...item, options: item.options.map((option) => option.id === temporaryId ? { ...option, id } : option) } : item))).catch(() => undefined);
+      return true;
+    },
+    deleteAddonOption: (groupId, optionId) => {
+      setAddonGroups((current) => current.map((group) => group.id === groupId ? { ...group, options: group.options.filter((option) => option.id !== optionId) } : group));
+      if (databaseConfigured.current && optionId > 0) void persist("deleteAddonOption", { id: optionId }).catch(() => undefined);
+    },
+    toggleAddonProduct: (groupId, productId) => {
+      const group = addonGroups.find((item) => item.id === groupId);
+      if (!group) return;
+      const selected = !group.productIds.includes(productId);
+      setAddonGroups((current) => current.map((item) => item.id === groupId ? { ...item, productIds: selected ? [...item.productIds, productId] : item.productIds.filter((id) => id !== productId) } : item));
+      if (databaseConfigured.current && groupId > 0 && productId > 0) void persist("toggleAddonProduct", { groupId, productId, selected }).catch(() => undefined);
+    },
     toggleProduct: (id) => {
       const product = products.find((item) => item.id === id);
       if (!product) return;
@@ -192,7 +239,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
       setOrders((current) => current.map((order) => order.id === id ? { ...order, status } : order));
       if (databaseConfigured.current) void persist("setOrderStatus", { id, status }).catch(() => undefined);
     },
-  }), [products, categories, orders, theme, settings]);
+  }), [products, categories, addonGroups, orders, theme, settings]);
 
   return <StoreContext.Provider value={value}>{children}</StoreContext.Provider>;
 }

@@ -1,4 +1,4 @@
-import { boolean, integer, numeric, pgEnum, pgTable, serial, text, timestamp, varchar } from "drizzle-orm/pg-core";
+import { boolean, integer, numeric, pgEnum, pgTable, primaryKey, serial, text, timestamp, varchar } from "drizzle-orm/pg-core";
 
 export const orderStatus = pgEnum("order_status", ["new", "preparing", "ready", "done"]);
 export const userRole = pgEnum("user_role", ["admin", "kitchen"]);
@@ -37,6 +37,26 @@ export const products = pgTable("products", {
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
 });
+
+export const addonGroups = pgTable("addon_groups", {
+  id: serial("id").primaryKey(),
+  name: varchar("name", { length: 120 }).notNull(),
+  required: boolean("required").notNull().default(false),
+  maxSelections: integer("max_selections").notNull().default(1),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+});
+
+export const addonOptions = pgTable("addon_options", {
+  id: serial("id").primaryKey(),
+  groupId: integer("group_id").notNull().references(() => addonGroups.id, { onDelete: "cascade" }),
+  name: varchar("name", { length: 120 }).notNull(),
+  price: numeric("price", { precision: 10, scale: 2 }).notNull().default("0"),
+});
+
+export const productAddonGroups = pgTable("product_addon_groups", {
+  productId: integer("product_id").notNull().references(() => products.id, { onDelete: "cascade" }),
+  groupId: integer("group_id").notNull().references(() => addonGroups.id, { onDelete: "cascade" }),
+}, (table) => [primaryKey({ columns: [table.productId, table.groupId] })]);
 
 export const orders = pgTable("orders", {
   id: integer("id").primaryKey(),

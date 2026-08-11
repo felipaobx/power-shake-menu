@@ -121,6 +121,7 @@ function MenuManagement({ onAdd, onEdit }: { onAdd: () => void; onEdit: (product
   const shown = filter === "Todos" ? products : products.filter((item) => item.category === filter);
   return <div className="dashboard-content"><PageTitle eyebrow="GESTÃO DE PRODUTOS" title="Seu cardápio" text={`${products.filter((item) => item.available).length} itens disponíveis no cardápio digital.`} action={<button className="solid-button" onClick={onAdd}><Plus size={17} /> Adicionar item</button>} />
     <CategoryManager activeFilter={filter} onRenameFilter={setFilter} />
+    <AddonManager />
     <div className="menu-toolbar"><div className="category-row compact">{["Todos", ...categories].map((item) => <button className={filter === item ? "active" : ""} onClick={() => setFilter(item)} key={item}>{item}</button>)}</div><label className="search-box"><Search size={16} /><input placeholder="Buscar item" /></label></div>
     <div className="admin-product-grid">{shown.map((product) => <article className={`admin-product-card ${!product.available ? "disabled" : ""}`} key={product.id}><Image src={product.image} alt={product.name} width={520} height={310} unoptimized style={{ objectPosition: `${product.imagePositionX ?? 50}% ${product.imagePositionY ?? 50}%` }} /><div className="admin-product-body"><div className="admin-product-title"><div><small>{product.category}</small><h3>{product.name}</h3></div><button aria-label={`Opções de ${product.name}`}><MoreHorizontal /></button></div><p>{product.description}</p><div className="admin-macros"><span>{product.calories} kcal</span><span>{product.protein}g proteína</span><span>{product.carbs}g carbo.</span></div><div className="admin-product-bottom"><strong>{money(product.price)}</strong><label className="switch-label"><span>{product.available ? "Disponível" : "Indisponível"}</span><button className={`toggle ${product.available ? "on" : ""}`} onClick={() => toggleProduct(product.id)}><i /></button></label></div><button className="edit-product" onClick={() => onEdit(product)}><Pencil size={14} /> Editar produto</button></div></article>)}</div>
   </div>;
@@ -160,6 +161,38 @@ function CategoryManager({ activeFilter, onRenameFilter }: { activeFilter: strin
   }
 
   return <section className="panel category-manager"><div className="category-manager-head"><div><h3>Categorias</h3><p>Crie, renomeie ou exclua as seções exibidas no cardápio.</p></div><form onSubmit={createCategory}><input aria-label="Nova categoria" value={newName} onChange={(event) => { setNewName(event.target.value); setCategoryMessage(null); }} placeholder="Nova categoria" /><button type="submit" className="solid-button"><Plus size={14} /> Adicionar</button></form></div>{categoryMessage && <p className={`category-message ${categoryMessage.type}`} role="status">{categoryMessage.text}</p>}<div className="category-manager-list">{categories.map((category) => editing === category ? <form className="category-edit" key={category} onSubmit={(event) => { event.preventDefault(); saveCategory(category); }}><input aria-label={`Editar ${category}`} value={editName} onChange={(event) => { setEditName(event.target.value); setCategoryMessage(null); }} onKeyDown={(event) => { if (event.key === "Escape") setEditing(null); }} /><button type="submit" aria-label="Salvar categoria"><Check size={14} /> Salvar</button><button type="button" aria-label="Cancelar edição" onClick={() => setEditing(null)}><X size={14} /> Cancelar</button></form> : <div key={category}><span>{category}</span><button type="button" aria-label={`Editar ${category}`} onClick={() => { setEditing(category); setEditName(category); setCategoryMessage(null); }}><Pencil size={13} /> Editar</button><button type="button" className="delete-category" aria-label={`Excluir ${category}`} onClick={() => removeCategory(category)}><Trash2 size={13} /> Excluir</button></div>)}</div></section>;
+}
+
+function AddonManager() {
+  const { addonGroups, addAddonGroup } = useStore();
+  const [name, setName] = useState("");
+  const [message, setMessage] = useState("");
+
+  function createGroup(event: React.FormEvent) {
+    event.preventDefault();
+    if (!addAddonGroup(name)) { setMessage("Digite um nome novo para o grupo de complementos."); return; }
+    setName("");
+    setMessage("");
+  }
+
+  return <section className="panel addon-manager"><div className="addon-manager-head"><div><span>COMPLEMENTOS</span><h3>Grupos de complementos</h3><p>Crie grupos, inclua opções e escolha em quais itens eles aparecem.</p></div><form onSubmit={createGroup}><input aria-label="Nome do grupo de complementos" value={name} onChange={(event) => setName(event.target.value)} placeholder="Ex.: Adicionais" /><button className="solid-button"><Plus size={14} /> Criar grupo</button></form></div>{message && <p className="category-message error">{message}</p>}{!addonGroups.length ? <div className="addon-empty"><Plus size={20} /><b>Nenhum grupo criado</b><small>Crie o primeiro grupo para oferecer molhos, extras, tamanhos ou outros complementos.</small></div> : <div className="addon-group-list">{addonGroups.map((group) => <AddonGroupCard key={group.id} groupId={group.id} />)}</div>}</section>;
+}
+
+function AddonGroupCard({ groupId }: { groupId: number }) {
+  const { addonGroups, products, updateAddonGroup, deleteAddonGroup, addAddonOption, deleteAddonOption, toggleAddonProduct } = useStore();
+  const group = addonGroups.find((item) => item.id === groupId);
+  const [optionName, setOptionName] = useState("");
+  const [optionPrice, setOptionPrice] = useState("");
+  const [error, setError] = useState("");
+  if (!group) return null;
+
+  function createOption(event: React.FormEvent) {
+    event.preventDefault();
+    if (!addAddonOption(groupId, optionName, Number(optionPrice || 0))) { setError("Informe uma opção com nome diferente das existentes."); return; }
+    setOptionName(""); setOptionPrice(""); setError("");
+  }
+
+  return <article className="addon-group-card"><header><input aria-label="Nome do grupo" value={group.name} onChange={(event) => updateAddonGroup(group.id, { name: event.target.value })} /><button type="button" aria-label={`Excluir grupo ${group.name}`} onClick={() => { if (window.confirm(`Excluir o grupo “${group.name}”?`)) deleteAddonGroup(group.id); }}><Trash2 size={15} /></button></header><div className="addon-rules"><label><input type="checkbox" checked={group.required} onChange={(event) => updateAddonGroup(group.id, { required: event.target.checked })} /><span>Escolha obrigatória</span></label><label><span>Máximo de escolhas</span><select value={group.maxSelections} onChange={(event) => updateAddonGroup(group.id, { maxSelections: Number(event.target.value) })}>{[1, 2, 3, 4, 5].map((value) => <option key={value}>{value}</option>)}</select></label></div><div className="addon-card-grid"><div className="addon-options"><b>Opções e preços</b>{group.options.map((option) => <div key={option.id}><span>{option.name}</span><strong>{option.price ? `+ ${money(option.price)}` : "Grátis"}</strong><button type="button" aria-label={`Excluir ${option.name}`} onClick={() => deleteAddonOption(group.id, option.id)}><X size={13} /></button></div>)}<form onSubmit={createOption}><input value={optionName} onChange={(event) => setOptionName(event.target.value)} placeholder="Nome da opção" aria-label="Nome da opção" /><input value={optionPrice} onChange={(event) => setOptionPrice(event.target.value)} placeholder="R$ 0,00" aria-label="Preço da opção" type="number" min="0" step="0.01" /><button aria-label="Adicionar opção"><Plus size={15} /></button></form>{error && <small className="addon-error">{error}</small>}</div><div className="addon-products"><b>Aparecer ao adicionar</b><p>Marque os itens que usarão este grupo.</p><div>{products.map((product) => <label key={product.id}><input type="checkbox" checked={group.productIds.includes(product.id)} onChange={() => toggleAddonProduct(group.id, product.id)} /><span>{product.name}</span></label>)}</div></div></div></article>;
 }
 
 function ProductModal({ product, onClose }: { product?: Product; onClose: () => void }) {

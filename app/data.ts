@@ -14,6 +14,21 @@ export type Product = {
   badge?: string;
 };
 
+export type AddonOption = {
+  id: number;
+  name: string;
+  price: number;
+};
+
+export type AddonGroup = {
+  id: number;
+  name: string;
+  required: boolean;
+  maxSelections: number;
+  productIds: number[];
+  options: AddonOption[];
+};
+
 export type OrderStatus = "new" | "preparing" | "ready" | "done";
 export type Order = {
   id: number;

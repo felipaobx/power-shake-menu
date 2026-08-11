@@ -1,8 +1,8 @@
-import { desc, eq } from "drizzle-orm";
+import { and, desc, eq } from "drizzle-orm";
 import { NextResponse } from "next/server";
 import { getDb, hasDatabase } from "../../../db";
 import { ensureSeedData } from "../../../db/seed";
-import { categories, orderItems, orders, products, restaurantSettings } from "../../../db/schema";
+import { addonGroups, addonOptions, categories, orderItems, orders, productAddonGroups, products, restaurantSettings } from "../../../db/schema";
 import { getSession } from "../../auth";
 
 export const runtime = "nodejs";
@@ -16,7 +16,7 @@ export async function GET() {
   await ensureSeedData();
   const db = getDb();
   const session = await getSession();
-  const [productRows, categoryRows, orderRows, itemRows, settings] = await Promise.all([
+  const [productRows, categoryRows, addonGroupRows, addonOptionRows, addonProductRows, orderRows, itemRows, settings] = await Promise.all([
     db.select({
       id: products.id,
       name: products.name,
@@ -33,6 +33,9 @@ export async function GET() {
       badge: products.badge,
     }).from(products).leftJoin(categories, eq(products.categoryId, categories.id)),
     db.select({ name: categories.name }).from(categories).orderBy(categories.sortOrder, categories.id),
+    db.select().from(addonGroups).orderBy(addonGroups.id),
+    db.select().from(addonOptions).orderBy(addonOptions.id),
+    db.select().from(productAddonGroups),
     db.select().from(orders).orderBy(desc(orders.id)),
     db.select().from(orderItems),
     db.select().from(restaurantSettings).where(eq(restaurantSettings.id, 1)).limit(1),
@@ -49,6 +52,14 @@ export async function GET() {
   return NextResponse.json({
     configured: true,
     categories: categoryRows.map((category) => category.name),
+    addonGroups: addonGroupRows.map((group) => ({
+      id: group.id,
+      name: group.name,
+      required: group.required,
+      maxSelections: group.maxSelections,
+      productIds: addonProductRows.filter((link) => link.groupId === group.id).map((link) => link.productId),
+      options: addonOptionRows.filter((option) => option.groupId === group.id).map((option) => ({ id: option.id, name: option.name, price: Number(option.price) })),
+    })),
     products: productRows.map((product) => ({
       ...product,
       category: product.category ?? "Outros",
@@ -123,6 +134,25 @@ export async function POST(request: Request) {
   if (action === "addCategory") {
     const existing = await db.select({ id: categories.id }).from(categories).where(eq(categories.name, payload.name)).limit(1);
     if (!existing.length) await db.insert(categories).values({ name: payload.name });
+  } else if (action === "addAddonGroup") {
+    const [created] = await db.insert(addonGroups).values({ name: payload.name }).returning({ id: addonGroups.id });
+    return NextResponse.json(created);
+  } else if (action === "updateAddonGroup") {
+    await db.update(addonGroups).set({
+      ...(payload.name !== undefined ? { name: payload.name } : {}),
+      ...(payload.required !== undefined ? { required: payload.required } : {}),
+      ...(payload.maxSelections !== undefined ? { maxSelections: payload.maxSelections } : {}),
+    }).where(eq(addonGroups.id, payload.id));
+  } else if (action === "deleteAddonGroup") {
+    await db.delete(addonGroups).where(eq(addonGroups.id, payload.id));
+  } else if (action === "addAddonOption") {
+    const [created] = await db.insert(addonOptions).values({ groupId: payload.groupId, name: payload.name, price: Number(payload.price).toFixed(2) }).returning({ id: addonOptions.id });
+    return NextResponse.json(created);
+  } else if (action === "deleteAddonOption") {
+    await db.delete(addonOptions).where(eq(addonOptions.id, payload.id));
+  } else if (action === "toggleAddonProduct") {
+    if (payload.selected) await db.insert(productAddonGroups).values({ groupId: payload.groupId, productId: payload.productId }).onConflictDoNothing();
+    else await db.delete(productAddonGroups).where(and(eq(productAddonGroups.groupId, payload.groupId), eq(productAddonGroups.productId, payload.productId)));
   } else if (action === "deleteCategory") {
     const [category] = await db.select({ id: categories.id }).from(categories).where(eq(categories.name, payload.name)).limit(1);
     if (category) {
