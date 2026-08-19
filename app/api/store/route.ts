@@ -31,6 +31,7 @@ export async function GET() {
       imagePositionY: products.imagePositionY,
       available: products.available,
       badge: products.badge,
+      updatedAt: products.updatedAt,
     }).from(products).leftJoin(categories, eq(products.categoryId, categories.id)),
     db.select({ name: categories.name }).from(categories).orderBy(categories.sortOrder, categories.id),
     db.select().from(addonGroups).orderBy(addonGroups.id),
@@ -64,8 +65,11 @@ export async function GET() {
       ...product,
       category: product.category ?? "Outros",
       price: Number(product.price),
-      image: product.image ?? "",
+      image: product.image?.startsWith("data:image/")
+        ? `/api/product-images/${product.id}?v=${product.updatedAt.getTime()}`
+        : product.image ?? "",
       badge: product.badge ?? undefined,
+      updatedAt: undefined,
     })),
     orders: session ? orderRows.map((order) => ({
       id: order.id,
@@ -98,7 +102,7 @@ export async function GET() {
       instagram: config.instagram ?? "",
       deliveryFee: Number(config.deliveryFee ?? 0).toLocaleString("pt-BR", { style: "currency", currency: "BRL" }),
     } : undefined,
-  });
+  }, { headers: { "Cache-Control": "private, no-store, max-age=0" } });
 }
 
 export async function POST(request: Request) {
@@ -169,6 +173,7 @@ export async function POST(request: Request) {
   } else if (action === "updateProduct") {
     let [category] = await db.select().from(categories).where(eq(categories.name, payload.category)).limit(1);
     if (!category) [category] = await db.insert(categories).values({ name: payload.category }).returning();
+    const keepsStoredInlineImage = typeof payload.image === "string" && payload.image.startsWith("/api/product-images/");
     await db.update(products).set({
       categoryId: category.id,
       name: payload.name,
@@ -177,7 +182,7 @@ export async function POST(request: Request) {
       calories: payload.calories,
       carbs: payload.carbs,
       protein: payload.protein,
-      imageUrl: payload.image,
+      ...(!keepsStoredInlineImage ? { imageUrl: payload.image } : {}),
       imagePositionX: payload.imagePositionX ?? 50,
       imagePositionY: payload.imagePositionY ?? 50,
       badge: payload.badge || null,

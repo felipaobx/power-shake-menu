@@ -69,6 +69,10 @@ async function persist(action: string, payload: unknown) {
     headers: { "content-type": "application/json" },
     body: JSON.stringify({ action, payload }),
   });
+  if (response.status === 401 && typeof window !== "undefined") {
+    const next = window.location.pathname.startsWith("/dashboard") ? "/dashboard" : "/cozinha";
+    window.location.assign(`/login?next=${encodeURIComponent(next)}&expired=1`);
+  }
   if (!response.ok) throw new Error("Não foi possível salvar no banco");
   return response.json();
 }
@@ -102,10 +106,9 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
           if (parsed.settings) setSettings(parsed.settings);
         }
       } catch { /* mantém os dados iniciais */ }
-      setHydrated(true);
     });
 
-    fetch("/api/store")
+    fetch("/api/store", { cache: "no-store", headers: { "cache-control": "no-cache" } })
       .then((response) => response.ok ? response.json() : null)
       .then((saved) => {
         if (!saved?.configured) return;
@@ -117,7 +120,8 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
         if (saved.theme) setTheme({ ...defaultTheme, ...saved.theme });
         if (saved.settings) setSettings(saved.settings);
       })
-      .catch(() => { /* segue com o modo local durante o desenvolvimento */ });
+      .catch(() => { /* segue com o modo local durante o desenvolvimento */ })
+      .finally(() => setHydrated(true));
   }, []);
 
   useEffect(() => {
