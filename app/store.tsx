@@ -70,8 +70,10 @@ async function persist(action: string, payload: unknown) {
     body: JSON.stringify({ action, payload }),
   });
   if (response.status === 401 && typeof window !== "undefined") {
-    const next = window.location.pathname.startsWith("/dashboard") ? "/dashboard" : "/cozinha";
-    window.location.assign(`/login?next=${encodeURIComponent(next)}&expired=1`);
+    const currentPath = window.location.pathname;
+    if (currentPath.startsWith("/dashboard") || currentPath.startsWith("/cozinha")) {
+      window.location.assign(`/login?next=${encodeURIComponent(currentPath)}&expired=1`);
+    }
   }
   if (!response.ok) throw new Error("Não foi possível salvar no banco");
   return response.json();
@@ -86,6 +88,8 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
   const [settings, setSettings] = useState(defaultSettings);
   const [hydrated, setHydrated] = useState(false);
   const databaseConfigured = useRef(false);
+  const themeDirty = useRef(false);
+  const settingsDirty = useRef(false);
 
   useEffect(() => {
     queueMicrotask(() => {
@@ -129,14 +133,22 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
   }, [products, categories, addonGroups, orders, theme, settings, hydrated]);
 
   useEffect(() => {
-    if (!databaseConfigured.current) return;
-    const timer = window.setTimeout(() => { void persist("updateTheme", theme).catch(() => undefined); }, 500);
+    if (!databaseConfigured.current || !themeDirty.current) return;
+    const timer = window.setTimeout(() => {
+      void persist("updateTheme", theme)
+        .then(() => { themeDirty.current = false; })
+        .catch(() => undefined);
+    }, 500);
     return () => window.clearTimeout(timer);
   }, [theme]);
 
   useEffect(() => {
-    if (!databaseConfigured.current) return;
-    const timer = window.setTimeout(() => { void persist("updateSettings", settings).catch(() => undefined); }, 500);
+    if (!databaseConfigured.current || !settingsDirty.current) return;
+    const timer = window.setTimeout(() => {
+      void persist("updateSettings", settings)
+        .then(() => { settingsDirty.current = false; })
+        .catch(() => undefined);
+    }, 500);
     return () => window.clearTimeout(timer);
   }, [settings]);
 
@@ -230,8 +242,14 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
       setProducts((current) => current.map((item) => item.id === id ? { ...item, available } : item));
       if (databaseConfigured.current) void persist("toggleProduct", { id, available }).catch(() => undefined);
     },
-    updateTheme: (value) => setTheme((current) => ({ ...current, ...value })),
-    updateSettings: (value) => setSettings((current) => ({ ...current, ...value })),
+    updateTheme: (value) => {
+      themeDirty.current = true;
+      setTheme((current) => ({ ...current, ...value }));
+    },
+    updateSettings: (value) => {
+      settingsDirty.current = true;
+      setSettings((current) => ({ ...current, ...value }));
+    },
     createOrder: (order) => {
       const id = Math.max(1050, ...orders.map((item) => item.id)) + 1;
       const created = { ...order, id, status: "new" as const, createdAt: new Date().toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" }) };
