@@ -37,6 +37,8 @@ export type Order = {
   total: number;
   status: OrderStatus;
   createdAt: string;
+  createdAtIso?: string;
+  updatedAtIso?: string;
   type: "Entrega" | "Retirada";
 };
 

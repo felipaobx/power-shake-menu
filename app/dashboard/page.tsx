@@ -6,7 +6,7 @@ import Link from "next/link";
 import { Bell, Check, ChevronDown, ChevronRight, CircleHelp, Clock3, Download, ExternalLink, Eye, FileText, Image as ImageIcon, LayoutDashboard, MapPin, Menu as MenuIcon, MoreHorizontal, Package, Palette, Pencil, Plus, Search, Settings, ShoppingBag, Trash2, TrendingUp, Upload, Users, X } from "lucide-react";
 import { Brand } from "../components";
 import { AccountChip } from "../account-controls";
-import type { Product } from "../data";
+import type { Order, Product } from "../data";
 import { money, useStore } from "../store";
 import { uploadImage } from "../upload-image";
 
@@ -46,19 +46,61 @@ function NavButton({ active, icon, label, onClick }: { active: boolean; icon: Re
 
 function Overview() {
   const { orders } = useStore();
-  const revenue = orders.reduce((sum, order) => sum + order.total, 0);
-  return <div className="dashboard-content"><PageTitle eyebrow="DOMINGO, 9 DE AGOSTO" title="Boa noite, Felipe!" text="Aqui está o resumo do seu negócio hoje." action={<><button className="outline-button"><Download size={16} /> Relatório</button><Link className="solid-button" href="/cozinha"><Package size={16} /> Ver cozinha</Link></>} />
-    <div className="stats-grid"><StatCard icon={<ShoppingBag />} label="Pedidos hoje" value={String(orders.length + 37)} delta="12,5%" note="vs. ontem" /><StatCard icon={<TrendingUp />} label="Faturamento" value={money(revenue + 1784)} delta="8,2%" note="vs. ontem" /><StatCard icon={<Users />} label="Ticket médio" value={money((revenue + 1784) / (orders.length + 37))} delta="3,1%" note="vs. ontem" /><StatCard icon={<Clock3 />} label="Tempo médio" value="18 min" delta="-2 min" note="mais rápido" good /></div>
-    <div className="overview-grid"><section className="panel revenue-panel"><div className="panel-head"><div><h3>Faturamento</h3><p>Movimentação dos últimos 7 dias</p></div><select><option>Últimos 7 dias</option></select></div><div className="chart-summary"><strong>R$ 12.840,60</strong><span><TrendingUp size={14} /> 18,4%</span></div><div className="bar-chart">{[48,62,43,78,67,91,74].map((height, index) => <div key={index}><i style={{ height: `${height}%` }} className={index === 5 ? "highlight" : ""} />{index === 5 && <b>R$ 2.410</b>}<span>{["Seg","Ter","Qua","Qui","Sex","Sáb","Dom"][index]}</span></div>)}</div></section>
-      <section className="panel live-orders"><div className="panel-head"><div><h3>Pedidos em andamento</h3><p>Atualizado agora</p></div><Link href="/cozinha">Ver todos <ExternalLink size={13} /></Link></div><div className="live-list">{orders.filter((item) => item.status !== "done").slice(0, 4).map((order) => <div key={order.id}><span className={`order-status-dot ${order.status}`} /><div><b>Pedido #{order.id}</b><small>{order.customer} · {order.items.length} itens</small></div><strong>{money(order.total)}</strong><em className={order.status}>{statusLabel(order.status)}</em></div>)}</div></section></div>
-    <section className="panel top-products"><div className="panel-head"><div><h3>Produtos mais vendidos</h3><p>Ranking de hoje por quantidade</p></div><button>Ver relatório <ExternalLink size={13} /></button></div><ProductRanking /></section>
+  const [now, setNow] = useState<Date | null>(null);
+  useEffect(() => {
+    queueMicrotask(() => setNow(new Date()));
+    const timer = window.setInterval(() => setNow(new Date()), 60_000);
+    return () => window.clearInterval(timer);
+  }, []);
+
+  const today = now ? ordersForDay(orders, now) : [];
+  const yesterdayDate = now ? new Date(now) : null;
+  if (yesterdayDate) yesterdayDate.setDate(yesterdayDate.getDate() - 1);
+  const yesterday = yesterdayDate ? ordersForDay(orders, yesterdayDate) : [];
+  const todayRevenue = totalRevenue(today);
+  const yesterdayRevenue = totalRevenue(yesterday);
+  const todayTicket = today.length ? todayRevenue / today.length : 0;
+  const yesterdayTicket = yesterday.length ? yesterdayRevenue / yesterday.length : 0;
+  const todayTime = averageCompletionMinutes(today);
+  const yesterdayTime = averageCompletionMinutes(yesterday);
+  const days = now ? lastSevenDays(now, orders) : Array.from({ length: 7 }, (_, index) => ({ key: String(index), label: "—", total: 0, today: false }));
+  const graphTotal = days.reduce((sum, day) => sum + day.total, 0);
+  const maxDayRevenue = Math.max(...days.map((day) => day.total), 0);
+  const previousPeriodTotal = now ? totalRevenue(orders.filter((order) => {
+    const created = order.createdAtIso ? new Date(order.createdAtIso) : null;
+    if (!created || Number.isNaN(created.getTime())) return false;
+    const start = new Date(now); start.setHours(0, 0, 0, 0); start.setDate(start.getDate() - 13);
+    const end = new Date(now); end.setHours(0, 0, 0, 0); end.setDate(end.getDate() - 6);
+    return created >= start && created < end;
+  })) : 0;
+  const countComparison = comparison(today.length, yesterday.length);
+  const revenueComparison = comparison(todayRevenue, yesterdayRevenue);
+  const ticketComparison = comparison(todayTicket, yesterdayTicket);
+  const graphComparison = comparison(graphTotal, previousPeriodTotal);
+  const timeDifference = todayTime !== null && yesterdayTime !== null ? Math.round(todayTime - yesterdayTime) : null;
+  const eyebrow = now ? now.toLocaleDateString("pt-BR", { weekday: "long", day: "numeric", month: "long" }).toUpperCase() : "RESUMO DE HOJE";
+  const greeting = now ? (now.getHours() < 12 ? "Bom dia" : now.getHours() < 18 ? "Boa tarde" : "Boa noite") : "Olá";
+  const activeOrders = orders.filter((item) => item.status !== "done").slice(0, 4);
+
+  return <div className="dashboard-content"><PageTitle eyebrow={eyebrow} title={`${greeting}, Felipe!`} text="Aqui está o resumo do seu negócio hoje." action={<><button className="outline-button"><Download size={16} /> Relatório</button><Link className="solid-button" href="/cozinha"><Package size={16} /> Ver cozinha</Link></>} />
+    <div className="stats-grid"><StatCard icon={<ShoppingBag />} label="Pedidos hoje" value={String(today.length)} delta={countComparison.delta} note={countComparison.note} /><StatCard icon={<TrendingUp />} label="Faturamento" value={money(todayRevenue)} delta={revenueComparison.delta} note={revenueComparison.note} /><StatCard icon={<Users />} label="Ticket médio" value={money(todayTicket)} delta={ticketComparison.delta} note={ticketComparison.note} /><StatCard icon={<Clock3 />} label="Tempo médio" value={todayTime === null ? "—" : `${Math.round(todayTime)} min`} delta={timeDifference === null ? "—" : `${Math.abs(timeDifference)} min`} note={timeDifference === null ? "sem comparação" : timeDifference <= 0 ? "mais rápido" : "mais lento"} good={timeDifference !== null && timeDifference <= 0} /></div>
+    <div className="overview-grid"><section className="panel revenue-panel"><div className="panel-head"><div><h3>Faturamento</h3><p>Movimentação dos últimos 7 dias</p></div><select aria-label="Período do faturamento"><option>Últimos 7 dias</option></select></div><div className="chart-summary"><strong>{money(graphTotal)}</strong><span><TrendingUp size={14} /> {graphComparison.delta}</span></div><div className="bar-chart">{days.map((day) => { const height = day.total && maxDayRevenue ? Math.max(6, (day.total / maxDayRevenue) * 91) : 0; return <div key={day.key}><i style={{ height: `${height}%` }} className={day.today ? "highlight" : ""} />{day.today && day.total > 0 && <b style={{ bottom: `${Math.min(height + 3, 94)}%` }}>{money(day.total)}</b>}<span>{day.label}</span></div>; })}</div></section>
+      <section className="panel live-orders"><div className="panel-head"><div><h3>Pedidos em andamento</h3><p>Atualizado agora</p></div><Link href="/cozinha">Ver todos <ExternalLink size={13} /></Link></div><div className="live-list">{activeOrders.map((order) => <div key={order.id}><span className={`order-status-dot ${order.status}`} /><div><b>Pedido #{order.id}</b><small>{order.customer} · {order.items.reduce((sum, item) => sum + item.quantity, 0)} itens</small></div><strong>{money(order.total)}</strong><em className={order.status}>{statusLabel(order.status)}</em></div>)}{!activeOrders.length && <p className="dashboard-empty">Nenhum pedido em andamento.</p>}</div></section></div>
+    <section className="panel top-products"><div className="panel-head"><div><h3>Produtos mais vendidos</h3><p>Ranking de hoje por quantidade</p></div><button>Ver relatório <ExternalLink size={13} /></button></div><ProductRanking orders={today} /></section>
   </div>;
 }
 
 function PageTitle({ eyebrow, title, text, action }: { eyebrow: string; title: string; text: string; action?: React.ReactNode }) { return <div className="page-title"><div><span>{eyebrow}</span><h1>{title}</h1><p>{text}</p></div>{action && <div className="page-actions">{action}</div>}</div>; }
 function StatCard({ icon, label, value, delta, note, good }: { icon: React.ReactNode; label: string; value: string; delta: string; note: string; good?: boolean }) { return <article className="stat-card"><div className="stat-icon">{icon}</div><span>{label}</span><strong>{value}</strong><small className={good ? "good" : ""}><b>{delta}</b> {note}</small></article>; }
 function statusLabel(status: string) { return status === "new" ? "Novo" : status === "preparing" ? "Preparando" : status === "ready" ? "Pronto" : "Finalizado"; }
-function ProductRanking() { const { products } = useStore(); return <div className="ranking-list">{products.slice(0, 4).map((product, index) => <div key={product.id}><span>{index + 1}</span><Image src={product.image} alt="" width={40} height={32} /><div><b>{product.name}</b><small>{product.category}</small></div><div className="rank-bar"><i style={{ width: `${92 - index * 14}%` }} /></div><strong>{84 - index * 11} vendas</strong><b>{money(product.price * (84 - index * 11))}</b></div>)}</div>; }
+function ProductRanking({ orders }: { orders: Order[] }) { const { products } = useStore(); const ranking = products.map((product) => { const quantity = orders.reduce((sum, order) => sum + order.items.filter((item) => item.name === product.name || item.name.startsWith(`${product.name} +`)).reduce((itemSum, item) => itemSum + item.quantity, 0), 0); return { product, quantity }; }).filter((item) => item.quantity > 0).sort((a, b) => b.quantity - a.quantity).slice(0, 4); const maxQuantity = ranking[0]?.quantity ?? 0; return <div className="ranking-list">{ranking.map(({ product, quantity }, index) => <div key={product.id}><span>{index + 1}</span><Image src={product.image} alt="" width={40} height={32} /><div><b>{product.name}</b><small>{product.category}</small></div><div className="rank-bar"><i style={{ width: `${maxQuantity ? (quantity / maxQuantity) * 100 : 0}%` }} /></div><strong>{quantity} {quantity === 1 ? "venda" : "vendas"}</strong><b>{money(product.price * quantity)}</b></div>)}{!ranking.length && <p className="dashboard-empty">Nenhum produto vendido hoje.</p>}</div>; }
+
+function ordersForDay(orders: Order[], date: Date) { const key = localDateKey(date); return orders.filter((order) => order.createdAtIso && localDateKey(new Date(order.createdAtIso)) === key); }
+function localDateKey(date: Date) { return Number.isNaN(date.getTime()) ? "" : `${date.getFullYear()}-${date.getMonth()}-${date.getDate()}`; }
+function totalRevenue(orders: Order[]) { return orders.reduce((sum, order) => sum + order.total, 0); }
+function averageCompletionMinutes(orders: Order[]) { const durations = orders.filter((order) => order.status === "done" && order.createdAtIso && order.updatedAtIso).map((order) => (new Date(order.updatedAtIso!).getTime() - new Date(order.createdAtIso!).getTime()) / 60_000).filter((minutes) => Number.isFinite(minutes) && minutes >= 0); return durations.length ? durations.reduce((sum, minutes) => sum + minutes, 0) / durations.length : null; }
+function comparison(current: number, previous: number) { if (!previous) return current ? { delta: "Hoje", note: "sem base ontem" } : { delta: "0%", note: "vs. ontem" }; const change = ((current - previous) / previous) * 100; return { delta: `${Math.abs(change).toLocaleString("pt-BR", { maximumFractionDigits: 1 })}%`, note: `${change >= 0 ? "acima" : "abaixo"} de ontem` }; }
+function lastSevenDays(now: Date, orders: Order[]) { return Array.from({ length: 7 }, (_, index) => { const date = new Date(now); date.setHours(0, 0, 0, 0); date.setDate(date.getDate() - (6 - index)); return { key: localDateKey(date), label: date.toLocaleDateString("pt-BR", { weekday: "short" }).replace(".", "").replace(/^./, (letter) => letter.toUpperCase()), total: totalRevenue(ordersForDay(orders, date)), today: index === 6 }; }); }
 
 type ManagedUser = { id: number; username: string; role: "admin" | "kitchen"; active: boolean; createdAt?: string };
 

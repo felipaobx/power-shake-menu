@@ -78,6 +78,8 @@ export async function GET() {
       total: Number(order.total),
       status: order.status,
       createdAt: order.createdAt.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" }),
+      createdAtIso: order.createdAt.toISOString(),
+      updatedAtIso: order.updatedAt.toISOString(),
       type: order.type,
     })) : undefined,
     theme: config ? {

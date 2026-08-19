@@ -252,13 +252,14 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
     },
     createOrder: (order) => {
       const id = Math.max(1050, ...orders.map((item) => item.id)) + 1;
-      const created = { ...order, id, status: "new" as const, createdAt: new Date().toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" }) };
+      const createdAt = new Date();
+      const created = { ...order, id, status: "new" as const, createdAt: createdAt.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" }), createdAtIso: createdAt.toISOString(), updatedAtIso: createdAt.toISOString() };
       setOrders((current) => [created, ...current]);
       if (databaseConfigured.current) void persist("createOrder", created).catch(() => undefined);
       return id;
     },
     setOrderStatus: (id, status) => {
-      setOrders((current) => current.map((order) => order.id === id ? { ...order, status } : order));
+      setOrders((current) => current.map((order) => order.id === id ? { ...order, status, updatedAtIso: new Date().toISOString() } : order));
       if (databaseConfigured.current) void persist("setOrderStatus", { id, status }).catch(() => undefined);
     },
   }), [products, categories, addonGroups, orders, theme, settings]);

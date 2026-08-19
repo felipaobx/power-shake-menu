@@ -665,6 +665,7 @@ html,body { max-width:100%; overflow-x:hidden; }.menu-page,.dashboard-shell,.kit
 .addon-picker>footer { position:sticky; bottom:0; display:flex; align-items:center; justify-content:space-between; gap:15px; padding:16px 22px; border-top:1px solid #2a3037; background:#15191e; }.addon-picker>footer>div { display:flex; flex-direction:column; gap:2px; }.addon-picker>footer span { color:#858e96; font-size:8px; text-transform:uppercase; }.addon-picker>footer strong { color:var(--power-accent); font-size:20px; }.addon-picker>footer>button { display:flex; align-items:center; justify-content:center; gap:7px; min-height:43px; border:0; border-radius:9px; padding:0 15px; color:#071006; background:var(--power-accent); font-size:10px; font-weight:900; }
 
 @media (max-width:900px) { .addon-group-list { grid-template-columns:1fr; } }
+.dashboard-empty { color:#8a928e; font-size:10px; margin:18px 0 4px; }
 @media (max-width:650px) {
   .addon-manager-head { align-items:flex-start; flex-direction:column; }.addon-manager-head form { width:100%; flex-wrap:wrap; }.addon-manager-head form input { flex:1 1 160px; }.addon-card-grid { grid-template-columns:1fr; }.addon-options { border-right:0; border-bottom:1px solid #282f37; }
   .addon-picker-backdrop { padding:0; place-items:end center; }.addon-picker { width:100%; max-height:94vh; border-radius:18px 18px 0 0; }.addon-picker>footer { align-items:stretch; flex-direction:column; }.addon-picker>footer>div { align-items:center; flex-direction:row; justify-content:space-between; }

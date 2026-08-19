@@ -36,3 +36,16 @@ test("dashboard and database persist complement groups", async () => {
   assert.match(schema, /pgTable\("addon_groups"/);
   assert.match(schema, /pgTable\("product_addon_groups"/);
 });
+
+test("dashboard metrics come from persisted orders", async () => {
+  const [dashboard, route] = await Promise.all([
+    source("app/dashboard/page.tsx"),
+    source("app/api/store/route.ts"),
+  ]);
+
+  assert.doesNotMatch(dashboard, /orders\.length \+ 37|revenue \+ 1784|R\$ 12\.840,60/);
+  assert.match(dashboard, /ordersForDay\(orders, now\)/);
+  assert.match(dashboard, /averageCompletionMinutes/);
+  assert.match(route, /createdAtIso: order\.createdAt\.toISOString\(\)/);
+  assert.match(route, /updatedAtIso: order\.updatedAt\.toISOString\(\)/);
+});
